@@ -9,6 +9,8 @@ Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/', [BookingController::class, 'create'])->name('create');
     Route::get('/availability', [BookingController::class, 'availability'])->name('availability');
+    Route::get('/payment', [BookingController::class, 'payment'])->name('payment');
+    Route::post('/payment', [BookingController::class, 'preparePayment'])->name('payment.prepare');
     Route::post('/', [BookingController::class, 'store'])->name('store');
     Route::get('/success/{booking:booking_code}', [BookingController::class, 'success'])->name('success');
 });

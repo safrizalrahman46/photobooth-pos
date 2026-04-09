@@ -95,10 +95,87 @@ class BookingController extends Controller
         ]);
     }
 
+    public function preparePayment(StoreBookingRequest $request): RedirectResponse
+    {
+        $payload = $request->validated();
+
+        $validation = $this->validateBookingPayload($payload);
+
+        if ($validation instanceof RedirectResponse) {
+            return $validation;
+        }
+
+        $request->session()->put('booking.payment_payload', $payload);
+
+        return redirect()->route('booking.payment');
+    }
+
+    public function payment(): View|RedirectResponse
+    {
+        $payload = session('booking.payment_payload');
+
+        if (! is_array($payload)) {
+            return redirect()
+                ->route('booking.create')
+                ->withErrors(['booking' => 'Lengkapi data booking terlebih dahulu sebelum ke halaman pembayaran.']);
+        }
+
+        $branch = Branch::query()->find($payload['branch_id'] ?? null);
+        $package = Package::query()->find($payload['package_id'] ?? null);
+        $designCatalog = null;
+
+        if (! empty($payload['design_catalog_id'])) {
+            $designCatalog = DesignCatalog::query()->find($payload['design_catalog_id']);
+        }
+
+        if (! $branch || ! $package) {
+            session()->forget('booking.payment_payload');
+
+            return redirect()
+                ->route('booking.create')
+                ->withErrors(['booking' => 'Data booking tidak lagi valid. Silakan pilih ulang paket dan jadwal.']);
+        }
+
+        return view('web.booking-payment', [
+            'bookingPayload' => $payload,
+            'branch' => $branch,
+            'package' => $package,
+            'designCatalog' => $designCatalog,
+            'oldValues' => [
+                'payment_type' => old('payment_type', 'full'),
+            ],
+        ]);
+    }
+
     public function store(StoreBookingRequest $request): RedirectResponse
     {
         $payload = $request->validated();
 
+        $validation = $this->validateBookingPayload($payload);
+
+        if ($validation instanceof RedirectResponse) {
+            return $validation;
+        }
+
+        $payload['source'] = BookingSource::Web;
+
+        try {
+            $booking = $this->bookingService->create($payload);
+
+            $request->session()->forget('booking.payment_payload');
+
+            return redirect()
+                ->route('booking.success', $booking->booking_code)
+                ->with('booking_created', true);
+        } catch (RuntimeException $exception) {
+            return back()
+                ->withErrors(['booking_time' => $exception->getMessage()])
+                ->withInput();
+        }
+    }
+
+    private function validateBookingPayload(array $payload): array|RedirectResponse
+    {
         $package = Package::query()->findOrFail($payload['package_id']);
 
         if ($package->branch_id !== null && (int) $package->branch_id !== (int) $payload['branch_id']) {
@@ -106,6 +183,8 @@ class BookingController extends Controller
                 ->withErrors(['package_id' => 'Paket tidak tersedia untuk cabang ini.'])
                 ->withInput();
         }
+
+        $design = null;
 
         if (! empty($payload['design_catalog_id'])) {
             $design = DesignCatalog::query()->find($payload['design_catalog_id']);
@@ -133,19 +212,11 @@ class BookingController extends Controller
                 ->withInput();
         }
 
-        $payload['source'] = BookingSource::Web;
-
-        try {
-            $booking = $this->bookingService->create($payload);
-
-            return redirect()
-                ->route('booking.success', $booking->booking_code)
-                ->with('booking_created', true);
-        } catch (RuntimeException $exception) {
-            return back()
-                ->withErrors(['booking_time' => $exception->getMessage()])
-                ->withInput();
-        }
+        return [
+            'package' => $package,
+            'design' => $design,
+            'slot' => $selectedSlot,
+        ];
     }
 
     public function success(Booking $booking): View
