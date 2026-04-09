@@ -28,6 +28,14 @@ const isMobile = ref(false);
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
+const toDayStamp = (value) => {
+    if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+        return Number.NaN;
+    }
+
+    return Date.UTC(value.getFullYear(), value.getMonth(), value.getDate());
+};
+
 const fallbackDate = props.modelValue ? new Date(props.modelValue) : new Date();
 const viewYear = ref(fallbackDate.getFullYear());
 const viewMonth = ref(fallbackDate.getMonth());
@@ -40,6 +48,16 @@ const normalizedMinDate = computed(() => {
     const date = new Date(props.minDate);
     date.setHours(0, 0, 0, 0);
     return date;
+});
+
+const effectiveMinDate = computed(() => {
+    const baseDate = new Date(today);
+
+    if (normalizedMinDate.value && normalizedMinDate.value > baseDate) {
+        return normalizedMinDate.value;
+    }
+
+    return baseDate;
 });
 
 const normalizedValue = computed(() => {
@@ -145,12 +163,17 @@ const goToNextMonth = () => {
 };
 
 const isDisabled = (value) => {
-    if (!normalizedMinDate.value) {
+    const valueStamp = toDayStamp(value);
+    const minStamp = toDayStamp(effectiveMinDate.value);
+
+    if (Number.isNaN(valueStamp) || Number.isNaN(minStamp)) {
         return false;
     }
 
-    return value < normalizedMinDate.value;
+    return valueStamp < minStamp;
 };
+
+const canSelectToday = computed(() => !isDisabled(today));
 
 const handleSelect = (entry) => {
     if (isDisabled(entry.date)) {
@@ -259,7 +282,7 @@ onBeforeUnmount(() => {
 
         <div
             v-if="open && !isMobile"
-            class="absolute left-0 right-0 z-[60] mt-2 rounded-2xl border border-gray-100 bg-white p-5 shadow-xl shadow-black/10"
+            class="absolute left-0 right-0 z-[60] mt-2 rounded-2xl border border-slate-300 bg-white p-5 shadow-xl shadow-black/10"
             style="min-width: 320px;"
         >
             <div class="mb-4 flex items-center justify-between">
@@ -307,7 +330,7 @@ onBeforeUnmount(() => {
                     type="button"
                     class="relative flex h-11 w-full items-center justify-center rounded-xl text-sm transition-all duration-150 sm:h-10"
                     :class="isDisabled(entry.date)
-                        ? 'cursor-not-allowed text-gray-200'
+                        ? 'pointer-events-none cursor-not-allowed select-none bg-slate-5 text-slate-400'
                         : normalizedValue && isSameDay(entry.date, normalizedValue)
                             ? 'bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/25'
                             : isSameDay(entry.date, today) && entry.current
@@ -327,11 +350,15 @@ onBeforeUnmount(() => {
                 </button>
             </div>
 
-            <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-50 pt-3">
+            <div class="mt-4 flex flex-wrap items-center gap-2 border-d border-slate-200 pt-3">
                 <button
                     type="button"
-                    class="rounded-lg bg-[#2563EB]/5 px-3 py-2 text-xs text-[#2563EB] transition-colors hover:bg-[#2563EB]/10 sm:py-1.5"
+                    class="rounded-lg px-3 py-2 text-xs transition-colors sm:py-1.5"
+                    :class="canSelectToday
+                        ? 'bg-[#2563EB]/5 text-[#2563EB] hover:bg-[#2563EB]/10'
+                        : 'pointer-events-none cursor-not-allowed select-none bg-gray-100 text-gray-300 opacity-80'"
                     style="font-weight: 500;"
+                    :disabled="!canSelectToday"
                     @click="selectToday"
                 >
                     Hari ini
@@ -422,7 +449,7 @@ onBeforeUnmount(() => {
                         type="button"
                         class="relative flex h-11 w-full items-center justify-center rounded-xl text-sm transition-all duration-150 sm:h-10"
                         :class="isDisabled(entry.date)
-                            ? 'cursor-not-allowed text-gray-200'
+                            ? 'pointer-events-none cursor-not-allowed select-none bg-slate-100 text-slate-400'
                             : normalizedValue && isSameDay(entry.date, normalizedValue)
                                 ? 'bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/25'
                                 : isSameDay(entry.date, today) && entry.current
@@ -445,8 +472,12 @@ onBeforeUnmount(() => {
                 <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-50 pt-3">
                     <button
                         type="button"
-                        class="rounded-lg bg-[#2563EB]/5 px-3 py-2 text-xs text-[#2563EB] transition-colors hover:bg-[#2563EB]/10 sm:py-1.5"
+                        class="rounded-lg px-3 py-2 text-xs transition-colors sm:py-1.5"
+                        :class="canSelectToday
+                            ? 'bg-[#2563EB]/5 text-[#2563EB] hover:bg-[#2563EB]/10'
+                            : 'pointer-events-none cursor-not-allowed select-none bg-gray-100 text-gray-300 opacity-80'"
                         style="font-weight: 500;"
+                        :disabled="!canSelectToday"
                         @click="selectToday"
                     >
                         Hari ini
