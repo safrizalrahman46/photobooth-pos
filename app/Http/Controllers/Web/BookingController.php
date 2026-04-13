@@ -45,7 +45,7 @@ class BookingController extends Controller
     {
         $payload = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
-            'customer_phone' => ['required', 'string', 'max:30'],
+            'customer_phone' => ['required', 'string', 'max:30', 'regex:/^[0-9]+$/'],
             'customer_email' => ['nullable', 'email', 'max:120'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'terms_accepted' => ['accepted'],

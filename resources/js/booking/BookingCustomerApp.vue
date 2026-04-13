@@ -22,17 +22,27 @@ const props = defineProps({
 });
 
 const asString = (value) => (value === null || value === undefined ? '' : String(value));
+const digitsOnly = (value) => asString(value).replace(/\D+/g, '');
 
 const customerName = ref(asString(props.oldValues.customer_name));
-const customerPhone = ref(asString(props.oldValues.customer_phone));
+const customerPhone = ref(digitsOnly(props.oldValues.customer_phone));
 const customerEmail = ref(asString(props.oldValues.customer_email));
 const notes = ref(asString(props.oldValues.notes));
 const termsAccepted = ref(Boolean(props.oldValues.terms_accepted));
 
+const onPhoneInput = (event) => {
+    const normalized = digitsOnly(event?.target?.value);
+    customerPhone.value = normalized;
+
+    if (event?.target) {
+        event.target.value = normalized;
+    }
+};
+
 const canSubmit = computed(() => {
     return Boolean(
         customerName.value.trim()
-        && customerPhone.value.trim()
+        && /^\d+$/.test(customerPhone.value)
         && termsAccepted.value,
     );
 });
@@ -94,7 +104,10 @@ const canSubmit = computed(() => {
                                     name="customer_phone"
                                     required
                                     maxlength="30"
-                                    type="number"
+                                    type="tel"
+                                    inputmode="numeric"
+                                    pattern="[0-9]*"
+                                    @input="onPhoneInput"
                                     class="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
                                 >
                             </label>

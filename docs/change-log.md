@@ -23,6 +23,7 @@
   - Saya bersedia menjaga properti studio dan bertanggung jawab atas kerusakan akibat kelalaian.
 - Menambahkan checkbox persetujuan S&K yang wajib dicentang sebelum tombol lanjut aktif.
 - Menambahkan validasi backend `terms_accepted` (`accepted`) agar tidak bisa bypass tanpa centang S&K.
+- Nomor HP pada Data Pemesan dibatasi angka saja (huruf tidak diperbolehkan) di frontend dan backend.
 
 ### Dashboard Admin (Filament + Vue)
 
