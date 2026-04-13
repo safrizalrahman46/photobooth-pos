@@ -14,6 +14,7 @@ use App\Services\BookingService;
 use App\Services\SlotService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use RuntimeException;
 use Throwable;
@@ -25,11 +26,48 @@ class BookingController extends Controller
         private readonly SlotService $slotService,
     ) {}
 
+    public function customer(): View
+    {
+        $prefill = session('booking.prefill_customer');
+
+        return view('web.booking-customer', [
+            'oldValues' => [
+                'customer_name' => old('customer_name', (string) data_get($prefill, 'customer_name', '')),
+                'customer_phone' => old('customer_phone', (string) data_get($prefill, 'customer_phone', '')),
+                'customer_email' => old('customer_email', (string) data_get($prefill, 'customer_email', '')),
+                'notes' => old('notes', (string) data_get($prefill, 'notes', '')),
+                'terms_accepted' => old('terms_accepted', (bool) data_get($prefill, 'terms_accepted', false)),
+            ],
+        ]);
+    }
+
+    public function storeCustomer(Request $request): RedirectResponse
+    {
+        $payload = $request->validate([
+            'customer_name' => ['required', 'string', 'max:120'],
+            'customer_phone' => ['required', 'string', 'max:30'],
+            'customer_email' => ['nullable', 'email', 'max:120'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'terms_accepted' => ['accepted'],
+        ]);
+
+        $request->session()->put('booking.prefill_customer', [
+            'customer_name' => (string) $payload['customer_name'],
+            'customer_phone' => (string) $payload['customer_phone'],
+            'customer_email' => (string) ($payload['customer_email'] ?? ''),
+            'notes' => (string) ($payload['notes'] ?? ''),
+            'terms_accepted' => true,
+        ]);
+
+        return redirect()->route('booking.create');
+    }
+
     public function create(): View
     {
         $branches = collect();
         $packages = collect();
         $designCatalogs = collect();
+        $prefillValues = session('booking.prefill_customer', []);
 
         try {
             $branches = Branch::query()
@@ -55,6 +93,7 @@ class BookingController extends Controller
             'branches' => $branches,
             'packages' => $packages,
             'designCatalogs' => $designCatalogs,
+            'prefillValues' => is_array($prefillValues) ? $prefillValues : [],
         ]);
     }
 
@@ -116,7 +155,7 @@ class BookingController extends Controller
 
         if (! is_array($payload)) {
             return redirect()
-                ->route('booking.create')
+                ->route('booking.customer')
                 ->withErrors(['booking' => 'Lengkapi data booking terlebih dahulu sebelum ke halaman pembayaran.']);
         }
 
@@ -132,7 +171,7 @@ class BookingController extends Controller
             session()->forget('booking.payment_payload');
 
             return redirect()
-                ->route('booking.create')
+                ->route('booking.customer')
                 ->withErrors(['booking' => 'Data booking tidak lagi valid. Silakan pilih ulang paket dan jadwal.']);
         }
 
@@ -162,7 +201,7 @@ class BookingController extends Controller
         try {
             $booking = $this->bookingService->create($payload);
 
-            $request->session()->forget('booking.payment_payload');
+            $request->session()->forget(['booking.payment_payload', 'booking.prefill_customer']);
 
             return redirect()
                 ->route('booking.success', $booking->booking_code)

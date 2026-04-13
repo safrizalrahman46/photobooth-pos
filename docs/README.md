@@ -11,5 +11,6 @@ Folder ini menyimpan dokumentasi konfigurasi dan perubahan implementasi proyek.
 ## Daftar Dokumen
 
 - `configuration-overview.md`: ringkasan konfigurasi stack, environment, build, dan runtime.
+- `booking-flow.md`: alur booking publik termasuk page data pemesan sebelum booking sesi foto.
 - `admin-dashboard-config.md`: konfigurasi dashboard admin (Filament + Vue + endpoint data).
 - `change-log.md`: catatan perubahan yang sudah diimplementasikan.

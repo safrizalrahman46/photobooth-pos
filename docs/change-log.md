@@ -2,6 +2,28 @@
 
 ## 2026-04-14
 
+### Booking Public Flow
+
+- Menambahkan page baru sebelum booking sesi foto: Data Pemesan + Pilih Paket.
+- Menambahkan route baru:
+  - `GET /booking/data-pemesan` (`booking.customer`)
+  - `POST /booking/data-pemesan` (`booking.customer.store`)
+- Menambahkan halaman Vue baru `BookingCustomerApp.vue` dengan tema visual yang konsisten dengan halaman Booking Sesi Foto.
+- Menambahkan session prefill (`booking.prefill_customer`) untuk mengisi otomatis data customer di halaman `booking.create`.
+- Mengubah CTA landing agar masuk ke page Data Pemesan terlebih dahulu.
+
+### Booking Customer Step Adjustment
+
+- Menghapus pilihan paket dari page Data Pemesan, karena paket dipilih di page Booking Sesi Foto.
+- Menambahkan daftar S&K di page Data Pemesan:
+  - Baca terlebih dahulu S&K.
+  - Saya bersedia datang minimal 10 menit sebelum sesi dimulai.
+  - Jika terlambat waktu sesi dihitung sesuai jadwal booking.
+  - Booking dianggap sah setelah melakukan pembayaran.
+  - Saya bersedia menjaga properti studio dan bertanggung jawab atas kerusakan akibat kelalaian.
+- Menambahkan checkbox persetujuan S&K yang wajib dicentang sebelum tombol lanjut aktif.
+- Menambahkan validasi backend `terms_accepted` (`accepted`) agar tidak bisa bypass tanpa centang S&K.
+
 ### Dashboard Admin (Filament + Vue)
 
 - Menambahkan dashboard admin kustom berbasis Vue yang dirender di page Filament.
