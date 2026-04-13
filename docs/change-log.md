@@ -25,6 +25,14 @@
 - Menambahkan validasi backend `terms_accepted` (`accepted`) agar tidak bisa bypass tanpa centang S&K.
 - Nomor HP pada Data Pemesan dibatasi angka saja (huruf tidak diperbolehkan) di frontend dan backend.
 
+### Booking Confirmation UI
+
+- Menyesuaikan tampilan halaman konfirmasi setelah pembayaran agar selaras dengan referensi `UI_Booking`.
+- Menambahkan blok `Detail Booking Confirm` dengan susunan ringkas: data pemesan, jadwal, paket, total, dibayar, dan status pembayaran.
+- Memperbarui gaya visual halaman sukses menjadi pola card putih + aksen warna yang konsisten dengan halaman pembayaran.
+- Mengubah halaman konfirmasi booking agar dirender menggunakan Vue (`BookingSuccessApp.vue`) melalui mount point Blade.
+- Menambahkan motion bertahap (staggered reveal + success icon pulse) pada halaman konfirmasi untuk meningkatkan kesan interaksi frontend.
+
 ### Dashboard Admin (Filament + Vue)
 
 - Menambahkan dashboard admin kustom berbasis Vue yang dirender di page Filament.

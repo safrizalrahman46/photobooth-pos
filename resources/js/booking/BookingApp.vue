@@ -47,7 +47,7 @@ const addOnCatalog = [
 ];
 
 const addOnMax = {
-    'extra-person': 5,
+    'extra-person': 10,
     'extra-print': 10,
     'extra-time': 3,
     costume: 5,
