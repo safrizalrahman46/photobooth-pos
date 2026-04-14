@@ -33,6 +33,10 @@
 - Mengubah halaman konfirmasi booking agar dirender menggunakan Vue (`BookingSuccessApp.vue`) melalui mount point Blade.
 - Menambahkan motion bertahap (staggered reveal + success icon pulse) pada halaman konfirmasi untuk meningkatkan kesan interaksi frontend.
 
+### Admin Login Theme
+
+- Menyetel ulang tone warna login ke palet biru-slate yang konsisten dengan Form Booking Sesi Foto (`#F8FAFC`, `#1F2937`, `#2563EB`).
+
 ### Dashboard Admin (Filament + Vue)
 
 - Menambahkan dashboard admin kustom berbasis Vue yang dirender di page Filament.
