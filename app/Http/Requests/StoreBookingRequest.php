@@ -31,7 +31,7 @@ class StoreBookingRequest extends FormRequest
                 Rule::exists('design_catalogs', 'id')->where(fn ($query) => $query->where('is_active', true)->whereNull('deleted_at')),
             ],
             'customer_name' => ['required', 'string', 'max:120'],
-            'customer_phone' => ['required', 'string', 'max:30'],
+            'customer_phone' => ['required', 'string', 'max:30', 'regex:/^[0-9]+$/'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'booking_time' => ['required', 'date_format:H:i'],

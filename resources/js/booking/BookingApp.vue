@@ -47,7 +47,7 @@ const addOnCatalog = [
 ];
 
 const addOnMax = {
-    'extra-person': 5,
+    'extra-person': 10,
     'extra-print': 10,
     'extra-time': 3,
     costume: 5,
@@ -872,7 +872,7 @@ onBeforeUnmount(() => {
                                     </div>
                                 </div>
 
-                                <div class="space-y-4 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+                                <!-- <div class="space-y-4 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
                                     <h3 class="text-[#1F2937]" style="font-size: 0.875rem; font-weight: 600;">Data Pemesan</h3>
 
                                     <div class="grid gap-4 sm:grid-cols-2">
@@ -919,7 +919,7 @@ onBeforeUnmount(() => {
                                             ></textarea>
                                         </label>
                                     </div>
-                                </div>
+                                </div> -->
                             </div>
                         </section>
                     </div>
@@ -963,7 +963,7 @@ onBeforeUnmount(() => {
                                     <span class="text-sm text-[#1F2937]" style="font-weight: 600;">{{ selectedBranch.name }}</span>
                                 </div>
 
-                                <div v-if="activeAddons.length" class="rounded-lg border border-slate-00 bg-gray-50 p-3">
+                                <div v-if="activeAddons.length" class="rounded-lg border border-slate-300 bg-gray-50 p-3">
                                     <p class="mb-1.5 text-sm text-gray-500">Add-on:</p>
                                     <div
                                         v-for="addon in activeAddons"
