@@ -17,7 +17,7 @@ class AdminDashboardDataController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $paginator = $service->paginatedRows(
+        $rowsPayload = $service->rowsPayload(
             (string) ($payload['search'] ?? ''),
             (string) ($payload['status'] ?? 'all'),
             (int) ($payload['per_page'] ?? 15),
@@ -26,13 +26,8 @@ class AdminDashboardDataController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'rows' => $paginator->items(),
-                'pagination' => [
-                    'current_page' => $paginator->currentPage(),
-                    'per_page' => $paginator->perPage(),
-                    'total' => $paginator->total(),
-                    'last_page' => $paginator->lastPage(),
-                ],
+                'rows' => $rowsPayload['rows'],
+                'pagination' => $rowsPayload['pagination'],
             ],
         ]);
     }

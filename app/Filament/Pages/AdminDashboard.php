@@ -20,6 +20,16 @@ class AdminDashboard extends Page
 
     protected string $view = 'filament.pages.admin-dashboard';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
+    public function mount(): void
+    {
+        $this->redirectRoute('admin.dashboard');
+    }
+
     public function getHeading(): string | Htmlable | null
     {
         return null;
@@ -33,6 +43,14 @@ class AdminDashboard extends Page
 
         return [
             'initialStats' => $service->stats(),
+            'summaryCards' => $service->summaryCards(),
+            'revenueOverview' => $service->revenueOverview(),
+            'ownerHighlights' => $service->ownerHighlights(),
+            'ownerModules' => $service->ownerModules(),
+            'queueLive' => $service->queueLive(),
+            'recentTransactions' => $service->recentTransactions(),
+            'recentActivities' => $service->recentActivities(),
+            'queueSnapshot' => $service->queueSnapshot(),
             'initialRows' => $paginator->items(),
             'initialPagination' => [
                 'current_page' => $paginator->currentPage(),

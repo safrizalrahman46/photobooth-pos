@@ -7,6 +7,11 @@ use Illuminate\Contracts\Support\Htmlable;
 
 class Login extends BaseLogin
 {
+    protected function getRedirectUrl(): string
+    {
+        return route('admin.dashboard');
+    }
+
     public function getTitle(): string | Htmlable
     {
         return 'Login Admin';

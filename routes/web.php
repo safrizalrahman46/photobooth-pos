@@ -1,9 +1,10 @@
 <?php
 
+use App\Http\Controllers\Web\AdminDashboardController;
 use App\Http\Controllers\Web\BookingController;
 use App\Http\Controllers\Web\AdminDashboardDataController;
+use App\Http\Controllers\Web\AdminDashboardReportController;
 use App\Http\Controllers\Web\LandingController;
-use Filament\Http\Middleware\Authenticate as FilamentAuthenticate;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
@@ -19,6 +20,15 @@ Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/success/{booking:booking_code}', [BookingController::class, 'success'])->name('success');
 });
 
-Route::prefix('admin')->name('admin.')->middleware([FilamentAuthenticate::class])->group(function () {
-    Route::get('/dashboard-data', AdminDashboardDataController::class)->name('dashboard.data');
-});
+Route::prefix('admin')
+    ->name('admin.')
+    ->middleware('auth')
+    ->group(function () {
+        Route::get('/', AdminDashboardController::class)->name('dashboard');
+        Route::get('/dashboard-data', AdminDashboardDataController::class)->name('dashboard.data');
+        Route::get('/dashboard-report', AdminDashboardReportController::class)->name('dashboard.report');
+    });
+
+Route::get('/admin/{path}', function (string $path) {
+    return redirect()->to('/panel/' . ltrim($path, '/'));
+})->where('path', '.*');
