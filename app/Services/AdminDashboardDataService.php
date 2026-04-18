@@ -630,7 +630,7 @@ class AdminDashboardDataService
             [
                 'label' => 'Kelola Booking',
                 'description' => 'Monitoring booking, ubah status, dan cek detail pelanggan.',
-                'url' => url('/panel/bookings'),
+                'url' => url('/admin/bookings'),
                 'badge' => number_format(Booking::query()->count()),
                 'tone' => 'blue',
                 'icon' => 'calendar',
@@ -638,7 +638,7 @@ class AdminDashboardDataService
             [
                 'label' => 'Transaksi',
                 'description' => 'Pantau pembayaran dan performa transaksi harian.',
-                'url' => url('/panel/transactions'),
+                'url' => url('/admin/transactions'),
                 'badge' => number_format(Transaction::query()->count()),
                 'tone' => 'emerald',
                 'icon' => 'receipt',
@@ -646,7 +646,7 @@ class AdminDashboardDataService
             [
                 'label' => 'Antrian Studio',
                 'description' => 'Pantau antrean pelanggan aktif secara real-time.',
-                'url' => url('/panel/queue-tickets'),
+                'url' => url('/admin/queue'),
                 'badge' => number_format(QueueTicket::query()->count()),
                 'tone' => 'violet',
                 'icon' => 'queue',
@@ -654,7 +654,7 @@ class AdminDashboardDataService
             [
                 'label' => 'Paket',
                 'description' => 'Atur paket foto, harga, durasi, dan status aktif.',
-                'url' => url('/panel/packages'),
+                'url' => url('/admin/packages'),
                 'badge' => number_format(Package::query()->count()),
                 'tone' => 'amber',
                 'icon' => 'box',
@@ -662,7 +662,7 @@ class AdminDashboardDataService
             [
                 'label' => 'Design Catalog',
                 'description' => 'Kelola tema template dan materi desain photobooth.',
-                'url' => url('/panel/design-catalogs'),
+                'url' => url('/admin/design-catalogs'),
                 'badge' => number_format(DesignCatalog::query()->count()),
                 'tone' => 'pink',
                 'icon' => 'image',
@@ -670,7 +670,7 @@ class AdminDashboardDataService
             [
                 'label' => 'User Admin/Cashier',
                 'description' => 'Manajemen akun owner dan cashier.',
-                'url' => url('/panel/users'),
+                'url' => url('/admin/users'),
                 'badge' => number_format(User::query()->count()),
                 'tone' => 'slate',
                 'icon' => 'users',

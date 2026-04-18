@@ -15,7 +15,7 @@ class AdminDashboardController extends Controller
             [
                 'dataUrl' => route('admin.dashboard.data'),
                 'reportUrl' => route('admin.dashboard.report'),
-                'panelUrl' => url('/panel'),
+                'panelUrl' => url('/admin'),
             ],
         );
 
