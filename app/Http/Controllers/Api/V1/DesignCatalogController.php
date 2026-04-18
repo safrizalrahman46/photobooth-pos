@@ -3,32 +3,26 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DesignCatalogIndexRequest;
 use App\Http\Resources\DesignCatalogResource;
 use App\Models\DesignCatalog;
+use App\Services\DesignCatalogReadService;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class DesignCatalogController extends Controller
 {
     public function __construct(
+        private readonly DesignCatalogReadService $designCatalogReadService,
         private readonly ApiResponder $responder,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(DesignCatalogIndexRequest $request): JsonResponse
     {
-        $perPage = min((int) $request->integer('per_page', 15), 100);
+        $payload = $request->validated();
+        $perPage = (int) ($payload['per_page'] ?? 15);
 
-        $query = DesignCatalog::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name');
-
-        if ($request->filled('package_id')) {
-            $query->where('package_id', $request->integer('package_id'));
-        }
-
-        $designs = $query->paginate($perPage)->withQueryString();
+        $designs = $this->designCatalogReadService->paginateActive($payload, $perPage);
 
         return $this->responder->paginated($designs, DesignCatalogResource::collection($designs), 'Daftar desain berhasil dimuat.');
     }

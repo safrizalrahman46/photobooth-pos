@@ -37,6 +37,14 @@ class StoreBookingRequest extends FormRequest
             'booking_time' => ['required', 'date_format:H:i'],
             'source' => ['nullable', Rule::in(['web', 'walk_in', 'admin'])],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'add_ons' => ['sometimes', 'array'],
+            'add_ons.*.add_on_id' => [
+                'required',
+                'integer',
+                'distinct',
+                Rule::exists('add_ons', 'id')->where(fn ($query) => $query->where('is_active', true)),
+            ],
+            'add_ons.*.qty' => ['required', 'integer', 'min:1', 'max:99'],
         ];
     }
 }

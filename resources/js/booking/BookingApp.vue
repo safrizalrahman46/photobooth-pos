@@ -16,6 +16,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    addOns: {
+        type: Array,
+        default: () => [],
+    },
     oldValues: {
         type: Object,
         default: () => ({}),
@@ -35,26 +39,6 @@ const props = defineProps({
 });
 
 const stepLabels = ['Paket', 'Tanggal', 'Waktu', 'Add-on'];
-
-const addOnCatalog = [
-    { id: 'extra-person', label: '+ 1 orang (include cetak 1 4R)', price: 15000 },
-    { id: 'extra-print', label: '+ 1 cetak 4R', price: 15000 },
-    { id: 'extra-time', label: '+ 5 menit durasi foto', price: 20000 },
-    { id: 'costume', label: 'Sewa 1 kostum', price: 10000 },
-    { id: 'ganci-bening', label: 'Ganci bening 1 pcs', price: 10000 },
-    { id: 'ganci-besi', label: 'Ganci besi 1 pcs', price: 20000 },
-    { id: 'diy', label: 'DIY 1 pcs', price: 5000 },
-];
-
-const addOnMax = {
-    'extra-person': 10,
-    'extra-print': 10,
-    'extra-time': 3,
-    costume: 5,
-    'ganci-bening': 10,
-    'ganci-besi': 10,
-    diy: 10,
-};
 
 const packageAccentTokens = ['#2563eb', '#ec4899', '#22c55e', '#f59e0b', '#0ea5e9', '#8b5cf6'];
 
@@ -106,6 +90,21 @@ const packagePhotoCatalog = {
 const asString = (value) => (value === null || value === undefined ? '' : String(value));
 const normalizeTime = (value) => asString(value).slice(0, 5);
 
+const initialAddonQty = () => {
+    const source = Array.isArray(props.oldValues?.add_ons) ? props.oldValues.add_ons : [];
+
+    return source.reduce((carry, row) => {
+        const addOnId = asString(row?.add_on_id);
+        const qty = Number(row?.qty || 0);
+
+        if (addOnId && qty > 0) {
+            carry[addOnId] = qty;
+        }
+
+        return carry;
+    }, {});
+};
+
 const now = new Date();
 const minDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
@@ -119,7 +118,7 @@ const customerPhone = ref(asString(props.oldValues.customer_phone));
 const customerEmail = ref(asString(props.oldValues.customer_email));
 const notes = ref(asString(props.oldValues.notes));
 
-const addonQty = ref({});
+const addonQty = ref(initialAddonQty());
 const slots = ref([]);
 const slotLoading = ref(false);
 const slotMessage = ref('Pilih cabang, paket, dan tanggal untuk melihat slot.');
@@ -154,6 +153,25 @@ const filteredDesignCatalogs = computed(() => {
 
 const selectedPackage = computed(() => {
     return props.packages.find((item) => asString(item.id) === asString(packageId.value)) ?? null;
+});
+
+const allAddOnOptions = computed(() => {
+    return (Array.isArray(props.addOns) ? props.addOns : []).map((item) => ({
+        id: asString(item?.id),
+        code: asString(item?.code),
+        package_id: item?.package_id ? asString(item.package_id) : null,
+        label: asString(item?.name || '-'),
+        price: Number(item?.price || 0),
+        max_qty: Math.max(1, Number(item?.max_qty || 1)),
+    }));
+});
+
+const availableAddOns = computed(() => {
+    const selectedPackageId = asString(packageId.value);
+
+    return allAddOnOptions.value.filter((item) => {
+        return item.package_id === null || !selectedPackageId || item.package_id === selectedPackageId;
+    });
 });
 
 const showBranchSelector = computed(() => props.branches.length > 1);
@@ -214,7 +232,7 @@ const selectedBranch = computed(() => {
 });
 
 const activeAddons = computed(() => {
-    return addOnCatalog.filter((item) => Number(addonQty.value[item.id] || 0) > 0);
+    return availableAddOns.value.filter((item) => Number(addonQty.value[item.id] || 0) > 0);
 });
 
 const addOnTotal = computed(() => {
@@ -227,7 +245,21 @@ const basePrice = computed(() => Number(selectedPackage.value?.base_price || 0))
 
 const totalPrice = computed(() => basePrice.value + addOnTotal.value);
 
-const totalPeople = computed(() => 2 + Number(addonQty.value['extra-person'] || 0));
+const extraPersonAddOn = computed(() => {
+    return availableAddOns.value.find((item) => item.code === 'extra-person') ?? null;
+});
+
+const totalPeople = computed(() => {
+    const addOnId = asString(extraPersonAddOn.value?.id);
+    return 2 + Number(addonQty.value[addOnId] || 0);
+});
+
+const selectedAddOnsForSubmit = computed(() => {
+    return activeAddons.value.map((item) => ({
+        add_on_id: Number(item.id),
+        qty: Number(addonQty.value[item.id] || 0),
+    }));
+});
 
 const canSubmit = computed(() => {
     return Boolean(
@@ -428,26 +460,35 @@ const chooseSlot = (slot) => {
 };
 
 const incAddon = (addonId) => {
-    const current = Number(addonQty.value[addonId] || 0);
+    const id = asString(addonId);
+    const option = availableAddOns.value.find((item) => item.id === id);
+
+    if (!option) {
+        return;
+    }
+
+    const current = Number(addonQty.value[id] || 0);
+
     addonQty.value = {
         ...addonQty.value,
-        [addonId]: Math.min(current + 1, Number(addOnMax[addonId] || 5)),
+        [id]: Math.min(current + 1, Number(option.max_qty || 1)),
     };
 };
 
 const decAddon = (addonId) => {
-    const current = Number(addonQty.value[addonId] || 0);
+    const id = asString(addonId);
+    const current = Number(addonQty.value[id] || 0);
 
     if (current <= 1) {
         const clone = { ...addonQty.value };
-        delete clone[addonId];
+        delete clone[id];
         addonQty.value = clone;
         return;
     }
 
     addonQty.value = {
         ...addonQty.value,
-        [addonId]: current - 1,
+        [id]: current - 1,
     };
 };
 
@@ -539,6 +580,27 @@ watch(packageId, () => {
     submitError.value = '';
 });
 
+watch(availableAddOns, (nextOptions) => {
+    const allowedIds = new Set(nextOptions.map((item) => item.id));
+    const limits = new Map(nextOptions.map((item) => [item.id, Number(item.max_qty || 1)]));
+    const nextQty = {};
+
+    for (const [id, qty] of Object.entries(addonQty.value)) {
+        if (!allowedIds.has(id)) {
+            continue;
+        }
+
+        const maxQty = Math.max(1, Number(limits.get(id) || 1));
+        const normalizedQty = Math.max(1, Math.min(maxQty, Number(qty || 0)));
+
+        if (normalizedQty > 0) {
+            nextQty[id] = normalizedQty;
+        }
+    }
+
+    addonQty.value = nextQty;
+}, { immediate: true });
+
 watch([branchId, packageId, bookingDate], () => {
     loadAvailability();
 }, { immediate: true });
@@ -589,6 +651,10 @@ onBeforeUnmount(() => {
                 <input type="hidden" name="customer_phone" :value="customerPhone">
                 <input type="hidden" name="customer_email" :value="customerEmail">
                 <input type="hidden" name="notes" :value="notes">
+                <template v-for="(addon, index) in selectedAddOnsForSubmit" :key="`submit-addon-${addon.add_on_id}`">
+                    <input type="hidden" :name="`add_ons[${index}][add_on_id]`" :value="addon.add_on_id">
+                    <input type="hidden" :name="`add_ons[${index}][qty]`" :value="addon.qty">
+                </template>
 
                 <div
                     v-if="props.errors.length || submitError"
@@ -835,7 +901,7 @@ onBeforeUnmount(() => {
                             <div class="space-y-4 p-4 sm:p-6">
                                 <div class="grid gap-2 sm:grid-cols-2">
                                     <div
-                                        v-for="addon in addOnCatalog"
+                                        v-for="addon in availableAddOns"
                                         :key="addon.id"
                                         class="flex items-center justify-between rounded-xl border border-slate-300 px-4 py-3 transition-all duration-200"
                                         :class="Number(addonQty[addon.id] || 0) > 0 ? 'border-[#2563EB] bg-[#2563EB]/5' : 'border-gray-200 bg-white'"
@@ -862,8 +928,8 @@ onBeforeUnmount(() => {
                                             <button
                                                 type="button"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg transition-all"
-                                                :class="Number(addonQty[addon.id] || 0) >= Number(addOnMax[addon.id] || 5) ? 'cursor-not-allowed bg-gray-100 text-gray-300' : 'bg-[#2563EB] text-white shadow-sm hover:bg-[#2563EB]/90'"
-                                                :disabled="Number(addonQty[addon.id] || 0) >= Number(addOnMax[addon.id] || 5)"
+                                                :class="Number(addonQty[addon.id] || 0) >= Number(addon.max_qty || 1) ? 'cursor-not-allowed bg-gray-100 text-gray-300' : 'bg-[#2563EB] text-white shadow-sm hover:bg-[#2563EB]/90'"
+                                                :disabled="Number(addonQty[addon.id] || 0) >= Number(addon.max_qty || 1)"
                                                 @click="incAddon(addon.id)"
                                             >
                                                 +

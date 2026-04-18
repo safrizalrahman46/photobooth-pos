@@ -74,7 +74,7 @@ defineProps({
         <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div class="rounded-2xl border p-5 lg:col-span-2" style="border-color: #DCFCE7; background: #FFFFFF; box-shadow: 0 1px 3px rgba(21,128,61,0.08), 0 8px 20px rgba(21,128,61,0.08);">
                 <h3 class="text-sm font-semibold text-[#1F2937]">Daily Revenue Trend</h3>
-                <p class="text-xs text-[#94A3B8]">Source: /admin/dashboard-report</p>
+                <p class="text-xs text-[#94A3B8]">{{ reportDailyMinDate }} to {{ reportDailyMaxDate }}</p>
 
                 <div v-if="reportLoading" class="py-16 text-center text-sm text-[#94A3B8]">Loading report...</div>
                 <div v-else-if="!reportDailyRows.length" class="py-16 text-center text-sm text-[#94A3B8]">No report data in selected range.</div>

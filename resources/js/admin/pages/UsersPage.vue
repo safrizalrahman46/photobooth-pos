@@ -1,16 +1,33 @@
 <script setup>
-import { computed } from 'vue';
-import { Shield, UserRound, UsersRound } from 'lucide-vue-next';
+import { computed, reactive, ref } from 'vue';
+import { Plus, RefreshCw, Shield, UserRound, UsersRound } from 'lucide-vue-next';
 
 const props = defineProps({
     userRows: { type: Array, default: () => [] },
     initialsFromName: { type: Function, required: true },
     panelBaseUrl: { type: String, default: '/admin' },
+    roleOptions: { type: Array, default: () => [] },
+    loading: { type: Boolean, default: false },
+    saving: { type: Boolean, default: false },
+    errorMessage: { type: String, default: '' },
 });
+
+const emit = defineEmits(['refresh-users', 'create-user']);
 
 const ownerCount = computed(() => props.userRows.filter((item) => String(item.role || '').toLowerCase() === 'owner').length);
 const cashierCount = computed(() => props.userRows.filter((item) => String(item.role || '').toLowerCase() === 'cashier').length);
 const activeCount = computed(() => props.userRows.filter((item) => String(item.status || '').toLowerCase() === 'active').length);
+
+const modalOpen = ref(false);
+const localError = ref('');
+const form = reactive({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: '',
+    is_active: true,
+});
 
 const roleTone = (role) => {
     const normalized = String(role || '').toLowerCase();
@@ -23,7 +40,73 @@ const roleTone = (role) => {
         return { bg: '#EFF6FF', color: '#2563EB' };
     }
 
+    if (normalized === 'admin') {
+        return { bg: '#E0EAFF', color: '#1D4ED8' };
+    }
+
     return { bg: '#F8FAFC', color: '#64748B' };
+};
+
+const resetForm = () => {
+    form.name = '';
+    form.email = '';
+    form.phone = '';
+    form.password = '';
+    form.role = '';
+    form.is_active = true;
+    localError.value = '';
+};
+
+const openAddModal = () => {
+    resetForm();
+    modalOpen.value = true;
+};
+
+const closeModal = () => {
+    modalOpen.value = false;
+    localError.value = '';
+};
+
+const validateForm = () => {
+    if (!String(form.name || '').trim()) {
+        localError.value = 'Name is required.';
+        return false;
+    }
+
+    if (!String(form.email || '').trim()) {
+        localError.value = 'Email is required.';
+        return false;
+    }
+
+    if (!String(form.password || '').trim() || String(form.password || '').trim().length < 8) {
+        localError.value = 'Password must be at least 8 characters.';
+        return false;
+    }
+
+    localError.value = '';
+    return true;
+};
+
+const submitForm = async () => {
+    if (!validateForm()) {
+        return;
+    }
+
+    const payload = {
+        name: String(form.name || '').trim(),
+        email: String(form.email || '').trim(),
+        phone: String(form.phone || '').trim(),
+        password: String(form.password || ''),
+        role: String(form.role || '').trim() || null,
+        is_active: Boolean(form.is_active),
+    };
+
+    try {
+        await emit('create-user', payload);
+        modalOpen.value = false;
+    } catch {
+        // Parent component handles server error messages.
+    }
 };
 </script>
 
@@ -39,9 +122,28 @@ const roleTone = (role) => {
                     <h2 class="text-[1.35rem] font-bold text-white">Users</h2>
                     <p class="text-sm" style="color: rgba(255,255,255,0.72);">Owner, cashier, and staff accounts overview.</p>
                 </div>
-                <a :href="`${panelBaseUrl}/users/create`" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #0F172A;">Invite User</a>
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        class="inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-semibold"
+                        style="border-color: rgba(255,255,255,0.34); background: rgba(255,255,255,0.1); color: #FFFFFF;"
+                        :disabled="loading"
+                        @click="emit('refresh-users')"
+                    >
+                        <RefreshCw class="mr-1.5 h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
+                        Refresh
+                    </button>
+                    <button type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #0F172A;" @click="openAddModal">
+                        <Plus class="mr-1 inline h-3.5 w-3.5" />
+                        Add User
+                    </button>
+                </div>
             </div>
         </section>
+
+        <p v-if="errorMessage" class="rounded-xl border px-4 py-3 text-sm" style="border-color: #FECACA; background: #FEF2F2; color: #B91C1C;">
+            {{ errorMessage }}
+        </p>
 
         <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <article class="rounded-2xl border p-4" style="border-color: #E2E8F0; background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 6px 18px rgba(15,23,42,0.06);">
@@ -67,6 +169,7 @@ const roleTone = (role) => {
                 <thead>
                     <tr style="border-bottom: 1px solid #E2E8F0; background: #F8FAFC;">
                         <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Name</th>
+                        <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Email</th>
                         <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Role</th>
                         <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Status</th>
                         <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Source</th>
@@ -82,6 +185,7 @@ const roleTone = (role) => {
                                 <span class="text-sm text-[#1F2937]">{{ user.name }}</span>
                             </div>
                         </td>
+                        <td class="px-5 py-3.5 text-sm text-[#334155]">{{ user.email || '-' }}</td>
                         <td class="px-5 py-3.5 text-sm text-[#64748B]">
                             <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs" :style="{ background: roleTone(user.role).bg, color: roleTone(user.role).color }">
                                 <Shield v-if="String(user.role || '').toLowerCase() === 'owner'" class="h-3 w-3" />
@@ -97,10 +201,73 @@ const roleTone = (role) => {
                     </tr>
 
                     <tr v-if="!userRows.length">
-                        <td colspan="4" class="px-5 py-10 text-center text-sm text-[#94A3B8]">No user data found.</td>
+                        <td colspan="5" class="px-5 py-10 text-center text-sm text-[#94A3B8]">No user data found.</td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <div v-if="modalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
+            <div class="w-full max-w-xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-[#0F172A]">Add User</h3>
+                    <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeModal">Close</button>
+                </div>
+
+                <p v-if="localError" class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #FECACA; background: #FEF2F2; color: #B91C1C;">
+                    {{ localError }}
+                </p>
+
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label class="text-sm text-[#475569]">
+                        Full Name
+                        <input v-model="form.name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                    </label>
+
+                    <label class="text-sm text-[#475569]">
+                        Email
+                        <input v-model="form.email" type="email" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                    </label>
+
+                    <label class="text-sm text-[#475569]">
+                        Phone (optional)
+                        <input v-model="form.phone" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                    </label>
+
+                    <label class="text-sm text-[#475569]">
+                        Password
+                        <input v-model="form.password" type="password" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                    </label>
+
+                    <label class="text-sm text-[#475569]">
+                        Role
+                        <select v-model="form.role" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
+                            <option value="">No role</option>
+                            <option v-for="role in roleOptions" :key="`role-option-${role.value}`" :value="role.value">
+                                {{ role.label }}
+                            </option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="mt-3 inline-flex items-center gap-2 text-sm text-[#475569]">
+                    <input v-model="form.is_active" type="checkbox" >
+                    Active user
+                </label>
+
+                <div class="mt-5 flex items-center justify-end gap-2">
+                    <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeModal">Cancel</button>
+                    <button
+                        type="button"
+                        class="rounded-xl px-4 py-2 text-sm font-semibold"
+                        style="background: #0F172A; color: #FFFFFF;"
+                        :disabled="saving"
+                        @click="submitForm"
+                    >
+                        {{ saving ? 'Saving...' : 'Create User' }}
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </template>

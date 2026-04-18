@@ -12,12 +12,14 @@
         'customer_phone' => old('customer_phone', $prefillValues['customer_phone'] ?? null),
         'customer_email' => old('customer_email', $prefillValues['customer_email'] ?? null),
         'notes' => old('notes', $prefillValues['notes'] ?? null),
+        'add_ons' => old('add_ons', []),
     ];
 
     $bootstrap = [
         'branches' => $branches->values(),
         'packages' => $packages->values(),
         'designCatalogs' => $designCatalogs->values(),
+        'addOns' => ($addOns ?? collect())->values(),
         'oldValues' => $oldValues,
         'errors' => $errors->all(),
         'routes' => [

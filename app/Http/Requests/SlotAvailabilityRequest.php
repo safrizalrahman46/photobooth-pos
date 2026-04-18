@@ -16,6 +16,7 @@ class SlotAvailabilityRequest extends FormRequest
     {
         return [
             'date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'booking_id' => ['nullable', 'integer', Rule::exists('bookings', 'id')],
             'package_id' => [
                 'required',
                 'integer',

@@ -47,7 +47,16 @@ let countdownTimer = null;
 
 const packageAccentTokens = ['#2563eb', '#ec4899', '#22c55e', '#f59e0b', '#0ea5e9', '#8b5cf6'];
 
-const totalPrice = computed(() => Number(props.package?.base_price || 0));
+const selectedAddOnsForSubmit = computed(() => {
+    const source = Array.isArray(props.bookingPayload?.add_ons) ? props.bookingPayload.add_ons : [];
+
+    return source
+        .map((item) => ({
+            add_on_id: Number(item?.add_on_id || 0),
+            qty: Number(item?.qty || 0),
+        }))
+        .filter((item) => item.add_on_id > 0 && item.qty > 0);
+});
 
 const selectedAddons = computed(() => {
     if (!Array.isArray(props.bookingPayload?.addons)) {
@@ -62,6 +71,20 @@ const selectedAddons = computed(() => {
             qty: Number(item.qty || 1),
             price: Number(item.price || 0),
         }));
+});
+
+const addOnTotal = computed(() => {
+    return selectedAddons.value.reduce((sum, item) => sum + (item.price * item.qty), 0);
+});
+
+const totalPrice = computed(() => {
+    const payloadTotal = Number(props.bookingPayload?.total_amount || 0);
+
+    if (payloadTotal > 0) {
+        return payloadTotal;
+    }
+
+    return Number(props.package?.base_price || 0) + addOnTotal.value;
 });
 
 const packageColor = computed(() => {
@@ -380,6 +403,10 @@ onBeforeUnmount(() => {
                     <input type="hidden" name="customer_phone" :value="props.bookingPayload.customer_phone">
                     <input type="hidden" name="customer_email" :value="props.bookingPayload.customer_email || ''">
                     <input type="hidden" name="notes" :value="props.bookingPayload.notes || ''">
+                    <template v-for="(addon, index) in selectedAddOnsForSubmit" :key="`submit-payment-addon-${addon.add_on_id}`">
+                        <input type="hidden" :name="`add_ons[${index}][add_on_id]`" :value="addon.add_on_id">
+                        <input type="hidden" :name="`add_ons[${index}][qty]`" :value="addon.qty">
+                    </template>
                     <input type="hidden" name="payment_type" :value="paymentType">
 
                     <button

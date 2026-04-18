@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
 use App\Jobs\SendBookingNotificationJob;
+use App\Models\AddOn;
 use App\Models\Booking;
 use App\Models\BookingStatusLog;
 use App\Models\Package;
@@ -23,6 +24,8 @@ class BookingService
     {
         return DB::transaction(function () use ($payload): Booking {
             $package = Package::query()->findOrFail($payload['package_id']);
+            $selectedAddOns = $this->resolveSelectedAddOns($payload, $package);
+            $addOnTotal = (float) collect($selectedAddOns)->sum('line_total');
             $startAt = Carbon::parse($payload['booking_date'].' '.$payload['booking_time']);
             $endAt = $startAt->copy()->addMinutes((int) $package->duration_minutes);
 
@@ -45,9 +48,11 @@ class BookingService
                 'end_at' => $endAt,
                 'status' => BookingStatus::Pending,
                 'source' => $payload['source'] ?? BookingSource::Web,
-                'total_amount' => $package->base_price,
+                'total_amount' => (float) $package->base_price + $addOnTotal,
                 'notes' => $payload['notes'] ?? null,
             ]);
+
+            $booking->addOns()->sync($this->buildAddOnSyncData($selectedAddOns));
 
             BookingStatusLog::query()->create([
                 'booking_id' => $booking->id,
@@ -60,6 +65,86 @@ class BookingService
 
             return $booking;
         });
+    }
+
+    private function resolveSelectedAddOns(array $payload, Package $package): array
+    {
+        $requested = collect($payload['add_ons'] ?? [])
+            ->filter(fn ($row): bool => is_array($row))
+            ->map(fn (array $row): array => [
+                'add_on_id' => (int) ($row['add_on_id'] ?? 0),
+                'qty' => (int) ($row['qty'] ?? 0),
+            ])
+            ->filter(fn (array $row): bool => $row['add_on_id'] > 0 && $row['qty'] > 0)
+            ->groupBy('add_on_id')
+            ->map(fn ($group, $addOnId): array => [
+                'add_on_id' => (int) $addOnId,
+                'qty' => (int) collect($group)->sum('qty'),
+            ])
+            ->values();
+
+        if ($requested->isEmpty()) {
+            return [];
+        }
+
+        $ids = $requested->pluck('add_on_id')->all();
+
+        $addOns = AddOn::query()
+            ->whereIn('id', $ids)
+            ->where('is_active', true)
+            ->get(['id', 'package_id', 'name', 'price', 'max_qty'])
+            ->keyBy('id');
+
+        if ($addOns->count() !== count($ids)) {
+            throw new RuntimeException('Ada add-on yang tidak tersedia.');
+        }
+
+        $resolved = [];
+
+        foreach ($requested as $item) {
+            $addOn = $addOns->get((int) $item['add_on_id']);
+
+            if (! $addOn) {
+                throw new RuntimeException('Ada add-on yang tidak tersedia.');
+            }
+
+            if ($addOn->package_id !== null && (int) $addOn->package_id !== (int) $package->id) {
+                throw new RuntimeException('Add-on tidak valid untuk paket yang dipilih.');
+            }
+
+            $maxQty = max(1, (int) $addOn->max_qty);
+            $qty = (int) $item['qty'];
+
+            if ($qty > $maxQty) {
+                throw new RuntimeException(sprintf('Maksimum qty untuk %s adalah %d.', (string) $addOn->name, $maxQty));
+            }
+
+            $unitPrice = (float) $addOn->price;
+
+            $resolved[] = [
+                'id' => (int) $addOn->id,
+                'qty' => $qty,
+                'unit_price' => $unitPrice,
+                'line_total' => $qty * $unitPrice,
+            ];
+        }
+
+        return $resolved;
+    }
+
+    private function buildAddOnSyncData(array $selectedAddOns): array
+    {
+        $syncData = [];
+
+        foreach ($selectedAddOns as $item) {
+            $syncData[(int) $item['id']] = [
+                'qty' => (int) $item['qty'],
+                'unit_price' => (float) $item['unit_price'],
+                'line_total' => (float) $item['line_total'],
+            ];
+        }
+
+        return $syncData;
     }
 
     public function updateStatus(Booking $booking, BookingStatus $toStatus, ?int $actorId = null, ?string $reason = null): Booking

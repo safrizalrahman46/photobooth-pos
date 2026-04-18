@@ -6,6 +6,7 @@ use App\Enums\BookingSource;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SlotAvailabilityRequest;
 use App\Http\Requests\StoreBookingRequest;
+use App\Models\AddOn;
 use App\Models\Booking;
 use App\Models\Branch;
 use App\Models\DesignCatalog;
@@ -67,6 +68,7 @@ class BookingController extends Controller
         $branches = collect();
         $packages = collect();
         $designCatalogs = collect();
+        $addOns = collect();
         $prefillValues = session('booking.prefill_customer', []);
 
         try {
@@ -86,6 +88,12 @@ class BookingController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'package_id', 'name', 'theme', 'preview_url']);
+
+            $addOns = AddOn::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'package_id', 'code', 'name', 'price', 'max_qty']);
         } catch (Throwable) {
         }
 
@@ -93,6 +101,7 @@ class BookingController extends Controller
             'branches' => $branches,
             'packages' => $packages,
             'designCatalogs' => $designCatalogs,
+            'addOns' => $addOns,
             'prefillValues' => is_array($prefillValues) ? $prefillValues : [],
         ]);
     }
@@ -113,7 +122,12 @@ class BookingController extends Controller
         }
 
         $slots = $this->slotService
-            ->getAvailability($payload['date'], (int) $payload['package_id'], $branchId)
+            ->getAvailability(
+                $payload['date'],
+                (int) $payload['package_id'],
+                $branchId,
+                isset($payload['booking_id']) ? (int) $payload['booking_id'] : null,
+            )
             ->map(function (array $slot) {
                 return [
                     'slot_id' => $slot['slot_id'],
@@ -143,6 +157,10 @@ class BookingController extends Controller
         if ($validation instanceof RedirectResponse) {
             return $validation;
         }
+
+        $payload['add_ons'] = $validation['add_ons_payload'];
+        $payload['addons'] = $validation['add_ons_summary'];
+        $payload['total_amount'] = $validation['total_amount'];
 
         $request->session()->put('booking.payment_payload', $payload);
 
@@ -196,6 +214,9 @@ class BookingController extends Controller
             return $validation;
         }
 
+        $payload['add_ons'] = $validation['add_ons_payload'];
+        $payload['total_amount'] = $validation['total_amount'];
+
         $payload['source'] = BookingSource::Web;
 
         try {
@@ -208,7 +229,7 @@ class BookingController extends Controller
                 ->with('booking_created', true);
         } catch (RuntimeException $exception) {
             return back()
-                ->withErrors(['booking_time' => $exception->getMessage()])
+                ->withErrors(['booking' => $exception->getMessage()])
                 ->withInput();
         }
     }
@@ -251,11 +272,114 @@ class BookingController extends Controller
                 ->withInput();
         }
 
+        $resolvedAddOns = $this->resolveSelectedAddOns($payload, $package);
+
+        if ($resolvedAddOns instanceof RedirectResponse) {
+            return $resolvedAddOns;
+        }
+
+        $totalAmount = (float) $package->base_price + (float) collect($resolvedAddOns)->sum('line_total');
+
         return [
             'package' => $package,
             'design' => $design,
             'slot' => $selectedSlot,
+            'add_ons_payload' => collect($resolvedAddOns)
+                ->map(fn (array $item): array => [
+                    'add_on_id' => (int) $item['add_on_id'],
+                    'qty' => (int) $item['qty'],
+                ])
+                ->values()
+                ->all(),
+            'add_ons_summary' => collect($resolvedAddOns)
+                ->map(fn (array $item): array => [
+                    'id' => (int) $item['id'],
+                    'code' => (string) $item['code'],
+                    'label' => (string) $item['name'],
+                    'qty' => (int) $item['qty'],
+                    'price' => (float) $item['unit_price'],
+                    'line_total' => (float) $item['line_total'],
+                ])
+                ->values()
+                ->all(),
+            'total_amount' => $totalAmount,
         ];
+    }
+
+    private function resolveSelectedAddOns(array $payload, Package $package): array|RedirectResponse
+    {
+        $requested = collect($payload['add_ons'] ?? [])
+            ->filter(fn ($row): bool => is_array($row))
+            ->map(fn (array $row): array => [
+                'add_on_id' => (int) ($row['add_on_id'] ?? 0),
+                'qty' => (int) ($row['qty'] ?? 0),
+            ])
+            ->filter(fn (array $row): bool => $row['add_on_id'] > 0 && $row['qty'] > 0)
+            ->groupBy('add_on_id')
+            ->map(fn ($group, $addOnId): array => [
+                'add_on_id' => (int) $addOnId,
+                'qty' => (int) collect($group)->sum('qty'),
+            ])
+            ->values();
+
+        if ($requested->isEmpty()) {
+            return [];
+        }
+
+        $ids = $requested->pluck('add_on_id')->all();
+
+        $addOns = AddOn::query()
+            ->whereIn('id', $ids)
+            ->where('is_active', true)
+            ->get(['id', 'package_id', 'code', 'name', 'price', 'max_qty'])
+            ->keyBy('id');
+
+        if ($addOns->count() !== count($ids)) {
+            return back()
+                ->withErrors(['add_ons' => 'Ada add-on yang tidak tersedia.'])
+                ->withInput();
+        }
+
+        $resolved = [];
+
+        foreach ($requested as $item) {
+            $addOn = $addOns->get((int) $item['add_on_id']);
+
+            if (! $addOn) {
+                return back()
+                    ->withErrors(['add_ons' => 'Ada add-on yang tidak tersedia.'])
+                    ->withInput();
+            }
+
+            if ($addOn->package_id !== null && (int) $addOn->package_id !== (int) $package->id) {
+                return back()
+                    ->withErrors(['add_ons' => 'Add-on tidak valid untuk paket yang dipilih.'])
+                    ->withInput();
+            }
+
+            $maxQty = max(1, (int) $addOn->max_qty);
+            $qty = (int) $item['qty'];
+
+            if ($qty > $maxQty) {
+                return back()
+                    ->withErrors(['add_ons' => sprintf('Maksimum qty untuk %s adalah %d.', (string) $addOn->name, $maxQty)])
+                    ->withInput();
+            }
+
+            $unitPrice = (float) $addOn->price;
+
+            $resolved[] = [
+                'id' => (int) $addOn->id,
+                'add_on_id' => (int) $addOn->id,
+                'code' => (string) $addOn->code,
+                'name' => (string) $addOn->name,
+                'qty' => $qty,
+                'unit_price' => $unitPrice,
+                'line_total' => $qty * $unitPrice,
+            ];
+        }
+
+        return $resolved;
     }
 
     public function success(Booking $booking): View

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ReportSummaryRequest;
 use App\Services\ReportService;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
@@ -15,12 +15,9 @@ class ReportController extends Controller
         private readonly ApiResponder $responder,
     ) {}
 
-    public function summary(Request $request): JsonResponse
+    public function summary(ReportSummaryRequest $request): JsonResponse
     {
-        $payload = $request->validate([
-            'from' => ['required', 'date_format:Y-m-d'],
-            'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
-        ]);
+        $payload = $request->validated();
 
         $from = $payload['from'];
         $to = $payload['to'];

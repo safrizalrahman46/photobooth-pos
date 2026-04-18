@@ -10,6 +10,7 @@ use App\Models\QueueTicket;
 use App\Support\CodeGenerator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class QueueService
 {
@@ -41,6 +42,36 @@ class QueueService
 
             return $ticket;
         });
+    }
+
+    public function checkInByBookingId(int $bookingId): QueueTicket
+    {
+        $booking = Booking::query()
+            ->with('queueTicket:id,booking_id')
+            ->findOrFail($bookingId);
+
+        if ($booking->queueTicket) {
+            throw ValidationException::withMessages([
+                'booking_id' => 'Booking ini sudah memiliki tiket antrean.',
+            ]);
+        }
+
+        $allowedStatuses = [
+            BookingStatus::Pending->value,
+            BookingStatus::Confirmed->value,
+            BookingStatus::Paid->value,
+            BookingStatus::CheckedIn->value,
+        ];
+
+        $bookingStatus = (string) ($booking->status?->value ?? $booking->status);
+
+        if (! in_array($bookingStatus, $allowedStatuses, true)) {
+            throw ValidationException::withMessages([
+                'booking_id' => 'Status booking tidak dapat ditambahkan ke antrean.',
+            ]);
+        }
+
+        return $this->checkInBooking($booking);
     }
 
     public function createWalkIn(array $payload): QueueTicket
@@ -117,6 +148,23 @@ class QueueService
         }
 
         return $this->transition($ticket, QueueStatus::Called);
+    }
+
+    public function callNextForBranch(int $branchId, ?string $queueDate = null): ?QueueTicket
+    {
+        $date = $queueDate ?: now()->toDateString();
+
+        return $this->callNext($branchId, $date);
+    }
+
+    public function createWalkInFromPayload(array $payload): QueueTicket
+    {
+        return $this->createWalkIn([
+            'branch_id' => (int) $payload['branch_id'],
+            'queue_date' => (string) ($payload['queue_date'] ?? now()->toDateString()),
+            'customer_name' => (string) $payload['customer_name'],
+            'customer_phone' => $payload['customer_phone'] ?? null,
+        ]);
     }
 
     private function nextQueueNumber(int $branchId, string $queueDate): int

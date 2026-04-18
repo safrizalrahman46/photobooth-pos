@@ -18,6 +18,7 @@ import AdminTopBar from './components/AdminTopBar.vue';
 import ActivityLogsPage from './pages/ActivityLogsPage.vue';
 import BookingsPage from './pages/BookingsPage.vue';
 import DashboardPage from './pages/DashboardPage.vue';
+import AddOnsPage from './pages/AddOnsPage.vue';
 import DesignsPage from './pages/DesignsPage.vue';
 import PackagesPage from './pages/PackagesPage.vue';
 import QueuePage from './pages/QueuePage.vue';
@@ -42,6 +43,10 @@ const props = defineProps({
     queueLive: {
         type: Object,
         default: () => ({}),
+    },
+    queueBookingOptions: {
+        type: Array,
+        default: () => [],
     },
     ownerHighlights: {
         type: Array,
@@ -84,6 +89,112 @@ const props = defineProps({
         type: String,
         default: '',
     },
+    packagesDataUrl: {
+        type: String,
+        default: '',
+    },
+    packageStoreUrl: {
+        type: String,
+        default: '',
+    },
+    packageBaseUrl: {
+        type: String,
+        default: '/admin/packages',
+    },
+    addOnsDataUrl: {
+        type: String,
+        default: '',
+    },
+    addOnStoreUrl: {
+        type: String,
+        default: '',
+    },
+    addOnBaseUrl: {
+        type: String,
+        default: '/admin/add-ons',
+    },
+    designsDataUrl: {
+        type: String,
+        default: '',
+    },
+    designStoreUrl: {
+        type: String,
+        default: '',
+    },
+    designBaseUrl: {
+        type: String,
+        default: '/admin/designs',
+    },
+    usersDataUrl: {
+        type: String,
+        default: '',
+    },
+    userStoreUrl: {
+        type: String,
+        default: '',
+    },
+    queueDataUrl: {
+        type: String,
+        default: '',
+    },
+    queueCallNextUrl: {
+        type: String,
+        default: '',
+    },
+    queueCheckInUrl: {
+        type: String,
+        default: '',
+    },
+    queueWalkInUrl: {
+        type: String,
+        default: '',
+    },
+    queueBaseUrl: {
+        type: String,
+        default: '/admin/queue',
+    },
+    bookingStoreUrl: {
+        type: String,
+        default: '',
+    },
+    bookingBaseUrl: {
+        type: String,
+        default: '/admin/bookings',
+    },
+    bookingAvailabilityUrl: {
+        type: String,
+        default: '/booking/availability',
+    },
+    initialPackages: {
+        type: Array,
+        default: () => [],
+    },
+    initialAddOns: {
+        type: Array,
+        default: () => [],
+    },
+    initialDesigns: {
+        type: Array,
+        default: () => [],
+    },
+    initialUsers: {
+        type: Array,
+        default: () => [],
+    },
+    initialUserRoles: {
+        type: Array,
+        default: () => [],
+    },
+    initialBookingOptions: {
+        type: Object,
+        default: () => ({
+            branches: [],
+            packages: [],
+            designs: [],
+            payment_methods: [],
+            add_ons: [],
+        }),
+    },
     panelUrl: {
         type: String,
         default: '/admin',
@@ -110,6 +221,7 @@ const pagination = ref({
 let debounceTimer = null;
 let reportDebounceTimer = null;
 let activeRequestController = null;
+let queueRefreshInterval = null;
 
 const filterTabs = [
     { key: 'all', label: 'All' },
@@ -132,6 +244,8 @@ const queueStatusMap = {
     checked_in: { bg: '#F0F9FF', color: '#0284C7' },
     in_session: { bg: '#ECFDF5', color: '#059669' },
     finished: { bg: '#F8FAFC', color: '#64748B' },
+    skipped: { bg: '#FFF7ED', color: '#EA580C' },
+    cancelled: { bg: '#FEF2F2', color: '#DC2626' },
 };
 
 const transactionStatusMap = {
@@ -170,6 +284,34 @@ const formatDuration = (seconds) => {
     const remainingSeconds = safeSeconds % 60;
 
     return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+};
+
+const formatRelativeDate = (value) => {
+    if (!value) {
+        return 'just now';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return 'just now';
+    }
+
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    if (diffMs < 60 * 60 * 1000) {
+        return 'today';
+    }
+
+    if (diffMs < dayMs) {
+        return 'today';
+    }
+
+    const days = Math.floor(diffMs / dayMs);
+
+    return days <= 1 ? '1 day ago' : `${days} days ago`;
 };
 
 const initialsFromName = (name) => {
@@ -236,7 +378,7 @@ const navGroups = [
 ];
 
 const queueStats = computed(() => {
-    const stats = props.queueLive?.stats || {};
+    const stats = queueLiveState.value?.stats || {};
 
     return {
         in_queue: Number(stats.in_queue || 0),
@@ -265,6 +407,7 @@ const navItems = computed(() => {
     const items = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/admin', group: 'overview' },
         { id: 'packages', label: 'Packages', icon: Package, href: `${panelBaseUrl.value}/packages`, group: 'management' },
+        { id: 'add-ons', label: 'Add-ons', icon: Package, href: `${panelBaseUrl.value}/add-ons`, group: 'management' },
         { id: 'designs', label: 'Designs', icon: Palette, href: `${panelBaseUrl.value}/design-catalogs`, group: 'management' },
         { id: 'users', label: 'Users', icon: Users, href: `${panelBaseUrl.value}/users`, group: 'management' },
         { id: 'bookings', label: 'Bookings', icon: Calendar, href: panelBookingsUrl.value, group: 'operations' },
@@ -309,6 +452,7 @@ const activeModuleId = computed(() => {
 
     const map = [
         { id: 'packages', path: `${base}/packages` },
+        { id: 'add-ons', path: `${base}/add-ons` },
         { id: 'designs', path: `${base}/design-catalogs` },
         { id: 'users', path: `${base}/users` },
         { id: 'bookings', path: `${base}/bookings` },
@@ -327,6 +471,7 @@ const activeModuleId = computed(() => {
 const topbarMetaById = {
     dashboard: { title: 'Dashboard', subtitle: 'Business overview and key metrics' },
     packages: { title: 'Packages', subtitle: 'Manage your photobooth packages' },
+    'add-ons': { title: 'Add-ons', subtitle: 'Manage package add-ons and pricing' },
     designs: { title: 'Designs', subtitle: 'Photo design templates and themes' },
     users: { title: 'Users', subtitle: 'Manage staff and customer accounts' },
     bookings: { title: 'Bookings', subtitle: 'Track and manage all reservations' },
@@ -409,32 +554,94 @@ const bookingTotal = computed(() => {
     return normalizedRevenueSeries.value.reduce((sum, item) => sum + Number(item.bookings || 0), 0);
 });
 
+const queueLiveState = ref(props.queueLive && typeof props.queueLive === 'object' ? props.queueLive : {});
+
+const resolveNextQueueStatus = (status) => {
+    const current = String(status || '').toLowerCase();
+
+    if (current === 'waiting') {
+        return 'called';
+    }
+
+    if (current === 'called') {
+        return 'checked_in';
+    }
+
+    if (current === 'checked_in') {
+        return 'in_session';
+    }
+
+    if (current === 'in_session') {
+        return 'finished';
+    }
+
+    return null;
+};
+
+const resolvePreviousQueueStatus = (status) => {
+    const current = String(status || '').toLowerCase();
+
+    if (current === 'called') {
+        return 'waiting';
+    }
+
+    if (current === 'checked_in') {
+        return 'called';
+    }
+
+    if (current === 'in_session') {
+        return 'checked_in';
+    }
+
+    return null;
+};
+
 const currentQueue = computed(() => {
-    const value = props.queueLive?.current;
+    const value = queueLiveState.value?.current;
 
     if (!value || typeof value !== 'object') {
         return null;
     }
 
     return {
+        ticket_id: value.ticket_id ? Number(value.ticket_id) : null,
+        booking_id: value.booking_id ? Number(value.booking_id) : null,
+        branch_id: value.branch_id ? Number(value.branch_id) : null,
+        queue_date: String(value.queue_date || ''),
+        source_type: String(value.source_type || ''),
         queue_code: String(value.queue_code || '-'),
+        queue_number: Number(value.queue_number || 0),
         customer_name: String(value.customer_name || '-'),
         package_name: String(value.package_name || '-'),
         status: String(value.status || 'waiting'),
+        status_label: String(value.status_label || value.status || 'Waiting'),
         progress_percentage: Number(value.progress_percentage || 0),
         remaining_seconds: Number(value.remaining_seconds || 0),
         session_duration_seconds: Number(value.session_duration_seconds || 0),
+        can_complete: Boolean(value.can_complete),
+        can_skip: Boolean(value.can_skip),
     };
 });
 
 const waitingQueue = computed(() => {
-    const list = Array.isArray(props.queueLive?.waiting) ? props.queueLive.waiting : [];
+    const list = Array.isArray(queueLiveState.value?.waiting) ? queueLiveState.value.waiting : [];
 
     return list.slice(0, 5).map((item, index) => ({
+        ticket_id: item.ticket_id ? Number(item.ticket_id) : null,
+        booking_id: item.booking_id ? Number(item.booking_id) : null,
+        branch_id: item.branch_id ? Number(item.branch_id) : null,
+        queue_date: String(item.queue_date || ''),
+        source_type: String(item.source_type || ''),
         queue_code: String(item.queue_code || `Q${String(index + 1).padStart(3, '0')}`),
+        queue_number: Number(item.queue_number || index + 1),
         customer_name: String(item.customer_name || '-'),
         package_name: String(item.package_name || '-'),
         status: String(item.status || 'waiting'),
+        status_label: String(item.status_label || item.status || 'Waiting'),
+        next_status: String(item.next_status || resolveNextQueueStatus(item.status) || ''),
+        previous_status: String(item.previous_status || resolvePreviousQueueStatus(item.status) || ''),
+        can_cancel: item.can_cancel !== false,
+        added_at: String(item.added_at || '-'),
     }));
 });
 
@@ -459,16 +666,45 @@ const queueSessionDurationText = computed(() => {
 
 const normalizedRows = computed(() => {
     return (rows.value || []).map((row) => ({
+        record_id: Number(row.record_id || 0),
         id: String(row.id || '-'),
+        booking_code: String(row.booking_code || row.id || '-'),
+        branch_id: row.branch_id ? Number(row.branch_id) : null,
+        branch_name: String(row.branch_name || '-'),
+        package_id: row.package_id ? Number(row.package_id) : null,
+        design_catalog_id: row.design_catalog_id ? Number(row.design_catalog_id) : null,
         name: String(row.name || '-'),
+        customer_phone: String(row.customer_phone || ''),
+        customer_email: String(row.customer_email || ''),
         pkg: String(row.pkg || '-'),
+        design_name: String(row.design_name || '-'),
         date: String(row.date || '-'),
         time: String(row.time || '-'),
+        booking_date_iso: String(row.booking_date_iso || ''),
+        start_time: String(row.start_time || ''),
         status: String(row.status || 'pending'),
+        status_raw: String(row.status_raw || 'pending'),
         payment: String(row.payment || '-'),
+        payment_status: String(row.payment_status || 'unpaid'),
         amount: Number(row.amount || 0),
         amount_text: String(row.amount_text || formatRupiah(row.amount || 0)),
+        total_amount: Number(row.total_amount || row.amount || 0),
+        paid_amount: Number(row.paid_amount || 0),
+        remaining_amount: Number(row.remaining_amount || 0),
+        notes: String(row.notes || ''),
+        transaction_id: row.transaction_id ? Number(row.transaction_id) : null,
+        can_confirm_booking: Boolean(row.can_confirm_booking),
+        can_confirm_payment: Boolean(row.can_confirm_payment),
+        add_ons: Array.isArray(row.add_ons)
+            ? row.add_ons.map((item) => ({
+                add_on_id: item.add_on_id ? Number(item.add_on_id) : null,
+                label: String(item.label || '-'),
+                qty: Number(item.qty || 0),
+                line_total: Number(item.line_total || 0),
+            }))
+            : [],
         add_ons_count: Number(row.add_ons_count || 0),
+        add_ons_total: Number(row.add_ons_total || 0),
     }));
 });
 
@@ -531,108 +767,80 @@ const normalizedRecentActivities = computed(() => {
 });
 
 const packageCards = computed(() => {
-    const grouped = normalizedRows.value.reduce((accumulator, row) => {
-        const key = String(row.pkg || '-');
+    return (packages.value || []).map((item) => {
+        const revenue = Number(item.this_month_revenue || 0);
+        const addOns = Array.isArray(item.add_ons)
+            ? item.add_ons.map((addOn) => ({
+                id: Number(addOn?.id || 0),
+                code: String(addOn?.code || ''),
+                name: String(addOn?.name || ''),
+                description: String(addOn?.description || ''),
+                price: Number(addOn?.price || 0),
+                max_qty: Math.max(1, Number(addOn?.max_qty || 1)),
+                is_active: Boolean(addOn?.is_active),
+                sort_order: Number(addOn?.sort_order || 0),
+            }))
+            : [];
 
-        if (!accumulator[key]) {
-            accumulator[key] = {
-                name: key,
-                bookings: 0,
-                revenue: 0,
-                pending: 0,
-                completed: 0,
-            };
-        }
+        return {
+            id: Number(item.id || 0),
+            code: String(item.code || ''),
+            name: String(item.name || '-'),
+            description: String(item.description || ''),
+            duration_minutes: Number(item.duration_minutes || 0),
+            base_price: Number(item.base_price || 0),
+            is_active: Boolean(item.is_active),
+            sort_order: Number(item.sort_order || 0),
+            bookings: Number(item.this_month_bookings || 0),
+            total_bookings: Number(item.total_bookings || 0),
+            pending: Number(item.pending_bookings || 0),
+            completed: Number(item.completed_bookings || 0),
+            add_ons_count: Number(item.add_ons_count || addOns.length || 0),
+            add_ons: addOns,
+            revenue,
+            revenueText: formatRupiah(revenue),
+        };
+    });
+});
 
-        accumulator[key].bookings += 1;
-        accumulator[key].revenue += Number(row.amount || 0);
-
-        if (row.status === 'pending' || row.status === 'booked') {
-            accumulator[key].pending += 1;
-        }
-
-        if (row.status === 'used') {
-            accumulator[key].completed += 1;
-        }
-
-        return accumulator;
-    }, {});
-
-    return Object.values(grouped)
-        .sort((left, right) => right.bookings - left.bookings)
-        .map((item, index) => ({
-            ...item,
-            revenueText: formatRupiah(item.revenue),
-            tone: defaultCardPalette[index % defaultCardPalette.length],
-        }));
+const packageOptions = computed(() => {
+    return packageCards.value.map((item) => ({
+        id: Number(item.id || 0),
+        name: String(item.name || '-'),
+    }));
 });
 
 const designCards = computed(() => {
-    const source = packageCards.value.length
-        ? packageCards.value
-        : [
-            { name: 'Blue Elegance', bookings: 0, revenue: 0, pending: 0, completed: 0 },
-            { name: 'Golden Hour', bookings: 0, revenue: 0, pending: 0, completed: 0 },
-            { name: 'Vintage Rose', bookings: 0, revenue: 0, pending: 0, completed: 0 },
-        ];
-
-    return source.slice(0, 6).map((item, index) => ({
-        id: `${item.name}-${index}`,
-        name: `${item.name} Theme`,
-        bookings: item.bookings,
-        status: index % 3 === 0 ? 'draft' : 'active',
-        updated: index % 2 === 0 ? '2 days ago' : 'today',
+    return (designs.value || []).map((item, index) => ({
+        id: Number(item.id || 0),
+        package_id: item.package_id ? Number(item.package_id) : null,
+        package_name: String(item.package_name || '-'),
+        code: String(item.code || ''),
+        name: String(item.name || '-'),
+        theme: String(item.theme || ''),
+        preview_url: String(item.preview_url || ''),
+        is_active: Boolean(item.is_active),
+        sort_order: Number(item.sort_order || 0),
+        bookings: Number(item.this_month_bookings || item.total_bookings || 0),
+        total_bookings: Number(item.total_bookings || 0),
+        status: Boolean(item.is_active) ? 'active' : 'inactive',
+        updated: formatRelativeDate(item.updated_at),
         tone: defaultCardPalette[index % defaultCardPalette.length],
     }));
 });
 
 const userRows = computed(() => {
-    const registry = new Map();
-
-    normalizedRecentActivities.value.forEach((activity) => {
-        const name = String(activity.actor || '').trim();
-
-        if (!name || name === 'System') {
-            return;
-        }
-
-        if (!registry.has(name)) {
-            registry.set(name, {
-                name,
-                role: name.toLowerCase().includes('owner') ? 'Owner' : 'Staff',
-                status: 'active',
-                source: 'activity',
-            });
-        }
-    });
-
-    normalizedRecentTransactions.value.forEach((transaction) => {
-        const cashierName = String(transaction.cashier || '').trim();
-
-        if (!cashierName || cashierName === '-') {
-            return;
-        }
-
-        if (!registry.has(cashierName)) {
-            registry.set(cashierName, {
-                name: cashierName,
-                role: 'Cashier',
-                status: 'active',
-                source: 'transaction',
-            });
-        }
-    });
-
-    const list = Array.from(registry.values());
-
-    if (!list.length) {
-        return [
-            { name: 'Ahmad Owner', role: 'Owner', status: 'active', source: 'seed' },
-            { name: 'Cashier Team', role: 'Cashier', status: 'active', source: 'seed' },
-        ];
-    }
-
-    return list;
+    return (users.value || []).map((item) => ({
+        id: Number(item.id || 0),
+        name: String(item.name || '-'),
+        email: String(item.email || ''),
+        phone: String(item.phone || ''),
+        role: String(item.role || 'Staff'),
+        role_key: String(item.role_key || '').toLowerCase(),
+        status: String(item.status || 'inactive'),
+        is_active: Boolean(item.is_active),
+        source: String(item.source || 'database'),
+    }));
 });
 
 const activitySearch = ref('');
@@ -686,6 +894,57 @@ const reportFilters = ref({
 const reportLoading = ref(false);
 const reportError = ref('');
 const reportData = ref(null);
+const packages = ref(Array.isArray(props.initialPackages) ? props.initialPackages : []);
+const addOns = ref(Array.isArray(props.initialAddOns) ? props.initialAddOns : []);
+const designs = ref(Array.isArray(props.initialDesigns) ? props.initialDesigns : []);
+const users = ref(Array.isArray(props.initialUsers) ? props.initialUsers : []);
+const userRoles = ref(Array.isArray(props.initialUserRoles) ? props.initialUserRoles : []);
+const bookingOptions = ref(props.initialBookingOptions && typeof props.initialBookingOptions === 'object'
+    ? props.initialBookingOptions
+    : {
+        branches: [],
+        packages: [],
+        designs: [],
+        payment_methods: [],
+    });
+const packageLoading = ref(false);
+const packageSaving = ref(false);
+const packageError = ref('');
+const deletingPackageId = ref(null);
+const addOnLoading = ref(false);
+const addOnSaving = ref(false);
+const addOnError = ref('');
+const deletingAddOnId = ref(null);
+const designLoading = ref(false);
+const designSaving = ref(false);
+const designError = ref('');
+const deletingDesignId = ref(null);
+const userLoading = ref(false);
+const userSaving = ref(false);
+const userError = ref('');
+const bookingSaving = ref(false);
+const bookingError = ref('');
+const deletingBookingId = ref(null);
+const processingBookingId = ref(null);
+const queueLoading = ref(false);
+const queueActionLoading = ref(false);
+const queueError = ref('');
+const queueProcessingTicketId = ref(null);
+const queueBookingOptions = ref(Array.isArray(props.queueBookingOptions) ? props.queueBookingOptions : []);
+
+const queueBranchOptions = computed(() => {
+    const branches = bookingOptions.value?.branches;
+
+    return Array.isArray(branches) ? branches : [];
+});
+
+const defaultQueueBranchId = computed(() => {
+    const fromCurrent = currentQueue.value?.branch_id;
+    const fromWaiting = waitingQueue.value[0]?.branch_id;
+    const fromOptions = queueBranchOptions.value[0]?.id;
+
+    return Number(fromCurrent || fromWaiting || fromOptions || 0) || null;
+});
 
 const setDefaultReportRange = () => {
     const now = new Date();
@@ -834,6 +1093,46 @@ watch(activeModuleId, (nextValue) => {
     fetchReportSummary();
 }, { immediate: true });
 
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'packages' && nextValue !== 'designs' && nextValue !== 'add-ons') {
+        return;
+    }
+
+    if (!packages.value.length && !packageLoading.value) {
+        fetchPackagesData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'add-ons') {
+        return;
+    }
+
+    if (!addOnLoading.value) {
+        fetchAddOnsData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'designs') {
+        return;
+    }
+
+    if (!designs.value.length && !designLoading.value) {
+        fetchDesignsData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'users') {
+        return;
+    }
+
+    if (!users.value.length && !userLoading.value) {
+        fetchUsersData();
+    }
+}, { immediate: true });
+
 watch(
     () => [
         reportFilters.value.from,
@@ -856,6 +1155,927 @@ const resolveBookingStatus = (status) => {
         bg: '#F8FAFC',
         color: '#64748B',
     };
+};
+
+const getCsrfToken = () => {
+    if (typeof document === 'undefined') {
+        return '';
+    }
+
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+};
+
+const parseRequestError = async (response) => {
+    try {
+        const json = await response.json();
+        const firstValidationMessage = Object.values(json?.errors || {})?.[0]?.[0];
+
+        return String(firstValidationMessage || json?.message || `HTTP ${response.status}`);
+    } catch {
+        return `HTTP ${response.status}`;
+    }
+};
+
+const applyPackagesPayload = (payload) => {
+    const nextPackages = payload?.data?.packages;
+
+    if (Array.isArray(nextPackages)) {
+        packages.value = nextPackages;
+    }
+};
+
+const applyAddOnsPayload = (payload) => {
+    const nextAddOns = payload?.data?.add_ons;
+
+    if (Array.isArray(nextAddOns)) {
+        addOns.value = nextAddOns;
+    }
+};
+
+const applyDesignsPayload = (payload) => {
+    const nextDesigns = payload?.data?.designs;
+
+    if (Array.isArray(nextDesigns)) {
+        designs.value = nextDesigns;
+    }
+};
+
+const applyUsersPayload = (payload) => {
+    const nextUsers = payload?.data?.users;
+    const nextRoles = payload?.data?.roles;
+
+    if (Array.isArray(nextUsers)) {
+        users.value = nextUsers;
+    }
+
+    if (Array.isArray(nextRoles)) {
+        userRoles.value = nextRoles;
+    }
+};
+
+const applyQueuePayload = (payload) => {
+    const nextQueueLive = payload?.data?.queue_live;
+    const nextQueueBookingOptions = payload?.data?.queue_booking_options;
+
+    if (nextQueueLive && typeof nextQueueLive === 'object') {
+        queueLiveState.value = nextQueueLive;
+    }
+
+    if (Array.isArray(nextQueueBookingOptions)) {
+        queueBookingOptions.value = nextQueueBookingOptions;
+    }
+};
+
+const fetchQueueData = async ({ silent = false } = {}) => {
+    if (!props.queueDataUrl) {
+        return;
+    }
+
+    if (!silent) {
+        queueLoading.value = true;
+    }
+
+    queueError.value = '';
+
+    try {
+        const response = await fetch(props.queueDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyQueuePayload(payload);
+    } catch (error) {
+        if (!silent) {
+            queueError.value = error instanceof Error ? error.message : 'Failed to load queue data.';
+        }
+    } finally {
+        if (!silent) {
+            queueLoading.value = false;
+        }
+    }
+};
+
+const startQueueAutoRefresh = () => {
+    if (queueRefreshInterval) {
+        return;
+    }
+
+    queueRefreshInterval = setInterval(() => {
+        if (activeModuleId.value !== 'queue') {
+            return;
+        }
+
+        fetchQueueData({ silent: true });
+    }, 15000);
+};
+
+const stopQueueAutoRefresh = () => {
+    if (!queueRefreshInterval) {
+        return;
+    }
+
+    clearInterval(queueRefreshInterval);
+    queueRefreshInterval = null;
+};
+
+const fetchPackagesData = async () => {
+    if (!props.packagesDataUrl) {
+        return;
+    }
+
+    packageLoading.value = true;
+    packageError.value = '';
+
+    try {
+        const response = await fetch(props.packagesDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyPackagesPayload(payload);
+    } catch (error) {
+        packageError.value = error instanceof Error ? error.message : 'Failed to load packages.';
+    } finally {
+        packageLoading.value = false;
+    }
+};
+
+const createPackage = async (formPayload) => {
+    if (!props.packageStoreUrl) {
+        return;
+    }
+
+    packageSaving.value = true;
+    packageError.value = '';
+
+    try {
+        const response = await fetch(props.packageStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyPackagesPayload(payload);
+    } catch (error) {
+        packageError.value = error instanceof Error ? error.message : 'Failed to create package.';
+        throw error;
+    } finally {
+        packageSaving.value = false;
+    }
+};
+
+const updatePackage = async ({ id, payload }) => {
+    if (!id || !props.packageBaseUrl) {
+        return;
+    }
+
+    packageSaving.value = true;
+    packageError.value = '';
+
+    try {
+        const response = await fetch(`${props.packageBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyPackagesPayload(result);
+    } catch (error) {
+        packageError.value = error instanceof Error ? error.message : 'Failed to update package.';
+        throw error;
+    } finally {
+        packageSaving.value = false;
+    }
+};
+
+const deletePackage = async (id) => {
+    if (!id || !props.packageBaseUrl) {
+        return;
+    }
+
+    deletingPackageId.value = Number(id);
+    packageError.value = '';
+
+    try {
+        const response = await fetch(`${props.packageBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyPackagesPayload(payload);
+    } catch (error) {
+        packageError.value = error instanceof Error ? error.message : 'Failed to delete package.';
+        throw error;
+    } finally {
+        deletingPackageId.value = null;
+    }
+};
+
+const fetchAddOnsData = async () => {
+    if (!props.addOnsDataUrl) {
+        return;
+    }
+
+    addOnLoading.value = true;
+    addOnError.value = '';
+
+    try {
+        const response = await fetch(props.addOnsDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyAddOnsPayload(payload);
+    } catch (error) {
+        addOnError.value = error instanceof Error ? error.message : 'Failed to load add-ons.';
+    } finally {
+        addOnLoading.value = false;
+    }
+};
+
+const createAddOn = async (formPayload) => {
+    if (!props.addOnStoreUrl) {
+        return;
+    }
+
+    addOnSaving.value = true;
+    addOnError.value = '';
+
+    try {
+        const response = await fetch(props.addOnStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyAddOnsPayload(payload);
+    } catch (error) {
+        addOnError.value = error instanceof Error ? error.message : 'Failed to create add-on.';
+        throw error;
+    } finally {
+        addOnSaving.value = false;
+    }
+};
+
+const updateAddOn = async ({ id, payload }) => {
+    if (!id || !props.addOnBaseUrl) {
+        return;
+    }
+
+    addOnSaving.value = true;
+    addOnError.value = '';
+
+    try {
+        const response = await fetch(`${props.addOnBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyAddOnsPayload(result);
+    } catch (error) {
+        addOnError.value = error instanceof Error ? error.message : 'Failed to update add-on.';
+        throw error;
+    } finally {
+        addOnSaving.value = false;
+    }
+};
+
+const deleteAddOn = async (id) => {
+    if (!id || !props.addOnBaseUrl) {
+        return;
+    }
+
+    deletingAddOnId.value = Number(id);
+    addOnError.value = '';
+
+    try {
+        const response = await fetch(`${props.addOnBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyAddOnsPayload(payload);
+    } catch (error) {
+        addOnError.value = error instanceof Error ? error.message : 'Failed to delete add-on.';
+        throw error;
+    } finally {
+        deletingAddOnId.value = null;
+    }
+};
+
+const addOnRows = computed(() => {
+    return (addOns.value || []).map((item) => ({
+        id: Number(item.id || 0),
+        package_id: item.package_id ? Number(item.package_id) : null,
+        package_name: String(item.package_name || 'Global'),
+        code: String(item.code || ''),
+        name: String(item.name || ''),
+        description: String(item.description || ''),
+        price: Number(item.price || 0),
+        price_text: String(item.price_text || formatRupiah(Number(item.price || 0))),
+        max_qty: Math.max(1, Number(item.max_qty || 1)),
+        is_active: Boolean(item.is_active),
+        sort_order: Number(item.sort_order || 0),
+        updated_at: item.updated_at || null,
+    }));
+});
+
+const fetchDesignsData = async () => {
+    if (!props.designsDataUrl) {
+        return;
+    }
+
+    designLoading.value = true;
+    designError.value = '';
+
+    try {
+        const response = await fetch(props.designsDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyDesignsPayload(payload);
+    } catch (error) {
+        designError.value = error instanceof Error ? error.message : 'Failed to load designs.';
+    } finally {
+        designLoading.value = false;
+    }
+};
+
+const createDesign = async (formPayload) => {
+    if (!props.designStoreUrl) {
+        return;
+    }
+
+    designSaving.value = true;
+    designError.value = '';
+
+    try {
+        const response = await fetch(props.designStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyDesignsPayload(payload);
+    } catch (error) {
+        designError.value = error instanceof Error ? error.message : 'Failed to create design.';
+        throw error;
+    } finally {
+        designSaving.value = false;
+    }
+};
+
+const updateDesign = async ({ id, payload }) => {
+    if (!id || !props.designBaseUrl) {
+        return;
+    }
+
+    designSaving.value = true;
+    designError.value = '';
+
+    try {
+        const response = await fetch(`${props.designBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyDesignsPayload(result);
+    } catch (error) {
+        designError.value = error instanceof Error ? error.message : 'Failed to update design.';
+        throw error;
+    } finally {
+        designSaving.value = false;
+    }
+};
+
+const deleteDesign = async (id) => {
+    if (!id || !props.designBaseUrl) {
+        return;
+    }
+
+    deletingDesignId.value = Number(id);
+    designError.value = '';
+
+    try {
+        const response = await fetch(`${props.designBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyDesignsPayload(payload);
+    } catch (error) {
+        designError.value = error instanceof Error ? error.message : 'Failed to delete design.';
+        throw error;
+    } finally {
+        deletingDesignId.value = null;
+    }
+};
+
+const fetchUsersData = async () => {
+    if (!props.usersDataUrl) {
+        return;
+    }
+
+    userLoading.value = true;
+    userError.value = '';
+
+    try {
+        const response = await fetch(props.usersDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyUsersPayload(payload);
+    } catch (error) {
+        userError.value = error instanceof Error ? error.message : 'Failed to load users.';
+    } finally {
+        userLoading.value = false;
+    }
+};
+
+const createUser = async (formPayload) => {
+    if (!props.userStoreUrl) {
+        return;
+    }
+
+    userSaving.value = true;
+    userError.value = '';
+
+    try {
+        const response = await fetch(props.userStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyUsersPayload(payload);
+    } catch (error) {
+        userError.value = error instanceof Error ? error.message : 'Failed to create user.';
+        throw error;
+    } finally {
+        userSaving.value = false;
+    }
+};
+
+const refreshBookings = async (page = Number(pagination.value.current_page || 1)) => {
+    await fetchRows(page);
+};
+
+const createBooking = async (formPayload) => {
+    if (!props.bookingStoreUrl) {
+        return;
+    }
+
+    bookingSaving.value = true;
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(props.bookingStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(1);
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to create booking.';
+        throw error;
+    } finally {
+        bookingSaving.value = false;
+    }
+};
+
+const updateBooking = async ({ id, payload }) => {
+    if (!id || !props.bookingBaseUrl) {
+        return;
+    }
+
+    bookingSaving.value = true;
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(`${props.bookingBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(Number(pagination.value.current_page || 1));
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to update booking.';
+        throw error;
+    } finally {
+        bookingSaving.value = false;
+    }
+};
+
+const deleteBooking = async (id) => {
+    if (!id || !props.bookingBaseUrl) {
+        return;
+    }
+
+    deletingBookingId.value = Number(id);
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(`${props.bookingBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(Number(pagination.value.current_page || 1));
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to delete booking.';
+        throw error;
+    } finally {
+        deletingBookingId.value = null;
+    }
+};
+
+const confirmBooking = async ({ id, reason = '' }) => {
+    if (!id || !props.bookingBaseUrl) {
+        return;
+    }
+
+    processingBookingId.value = Number(id);
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(`${props.bookingBaseUrl}/${id}/confirm`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ reason }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(Number(pagination.value.current_page || 1));
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to confirm booking.';
+        throw error;
+    } finally {
+        processingBookingId.value = null;
+    }
+};
+
+const confirmBookingPayment = async ({ id, payload }) => {
+    if (!id || !props.bookingBaseUrl) {
+        return;
+    }
+
+    processingBookingId.value = Number(id);
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(`${props.bookingBaseUrl}/${id}/confirm-payment`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(Number(pagination.value.current_page || 1));
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to confirm payment.';
+        throw error;
+    } finally {
+        processingBookingId.value = null;
+    }
+};
+
+const callNextQueue = async ({ branch_id, queue_date } = {}) => {
+    const branchId = Number(branch_id || defaultQueueBranchId.value || 0);
+
+    if (!branchId || !props.queueCallNextUrl) {
+        return;
+    }
+
+    queueActionLoading.value = true;
+    queueError.value = '';
+    queueProcessingTicketId.value = null;
+
+    try {
+        const response = await fetch(props.queueCallNextUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({
+                branch_id: branchId,
+                queue_date: queue_date || new Date().toISOString().slice(0, 10),
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyQueuePayload(payload);
+    } catch (error) {
+        queueError.value = error instanceof Error ? error.message : 'Failed to call next queue.';
+        throw error;
+    } finally {
+        queueActionLoading.value = false;
+        queueProcessingTicketId.value = null;
+    }
+};
+
+const transitionQueueTicket = async ({ ticketId, status }) => {
+    const id = Number(ticketId || 0);
+    const nextStatus = String(status || '').trim();
+
+    if (!id || !nextStatus || !props.queueBaseUrl) {
+        return;
+    }
+
+    queueActionLoading.value = true;
+    queueError.value = '';
+    queueProcessingTicketId.value = id;
+
+    try {
+        const response = await fetch(`${props.queueBaseUrl}/${id}/status`, {
+            method: 'PATCH',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ status: nextStatus }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyQueuePayload(payload);
+    } catch (error) {
+        queueError.value = error instanceof Error ? error.message : 'Failed to update queue status.';
+        throw error;
+    } finally {
+        queueActionLoading.value = false;
+        queueProcessingTicketId.value = null;
+    }
+};
+
+const addQueueBooking = async (formPayload) => {
+    const bookingId = Number(formPayload?.booking_id || 0);
+
+    if (!props.queueCheckInUrl || !bookingId) {
+        return;
+    }
+
+    queueActionLoading.value = true;
+    queueError.value = '';
+    queueProcessingTicketId.value = null;
+
+    try {
+        const response = await fetch(props.queueCheckInUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ booking_id: bookingId }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyQueuePayload(payload);
+    } catch (error) {
+        queueError.value = error instanceof Error ? error.message : 'Failed to add booking into queue.';
+        throw error;
+    } finally {
+        queueActionLoading.value = false;
+        queueProcessingTicketId.value = null;
+    }
+};
+
+const addQueueWalkIn = async (formPayload) => {
+    if (!props.queueWalkInUrl) {
+        return;
+    }
+
+    queueActionLoading.value = true;
+    queueError.value = '';
+    queueProcessingTicketId.value = null;
+
+    try {
+        const response = await fetch(props.queueWalkInUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyQueuePayload(payload);
+    } catch (error) {
+        queueError.value = error instanceof Error ? error.message : 'Failed to add queue ticket.';
+        throw error;
+    } finally {
+        queueActionLoading.value = false;
+        queueProcessingTicketId.value = null;
+    }
 };
 
 const resolveQueueStatus = (status) => {
@@ -996,6 +2216,16 @@ watch(search, () => {
     }, 350);
 });
 
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'queue') {
+        stopQueueAutoRefresh();
+        return;
+    }
+
+    fetchQueueData();
+    startQueueAutoRefresh();
+}, { immediate: true });
+
 onBeforeUnmount(() => {
     if (debounceTimer) {
         clearTimeout(debounceTimer);
@@ -1008,6 +2238,8 @@ onBeforeUnmount(() => {
     if (activeRequestController) {
         activeRequestController.abort();
     }
+
+    stopQueueAutoRefresh();
 });
 </script>
 
@@ -1060,12 +2292,44 @@ onBeforeUnmount(() => {
                             :package-cards="packageCards"
                             :panel-base-url="panelBaseUrl"
                             :format-rupiah="formatRupiah"
+                            :loading="packageLoading"
+                            :saving="packageSaving"
+                            :deleting-package-id="deletingPackageId"
+                            :error-message="packageError"
+                            @refresh-packages="fetchPackagesData"
+                            @create-package="createPackage"
+                            @update-package="updatePackage"
+                            @delete-package="deletePackage"
+                        />
+
+                        <AddOnsPage
+                            v-else-if="activeModuleId === 'add-ons'"
+                            :add-on-rows="addOnRows"
+                            :package-options="packageOptions"
+                            :format-rupiah="formatRupiah"
+                            :loading="addOnLoading"
+                            :saving="addOnSaving"
+                            :deleting-add-on-id="deletingAddOnId"
+                            :error-message="addOnError"
+                            @refresh-add-ons="fetchAddOnsData"
+                            @create-add-on="createAddOn"
+                            @update-add-on="updateAddOn"
+                            @delete-add-on="deleteAddOn"
                         />
 
                         <DesignsPage
                             v-else-if="activeModuleId === 'designs'"
                             :design-cards="designCards"
                             :panel-base-url="panelBaseUrl"
+                            :package-options="packageOptions"
+                            :loading="designLoading"
+                            :saving="designSaving"
+                            :deleting-design-id="deletingDesignId"
+                            :error-message="designError"
+                            @refresh-designs="fetchDesignsData"
+                            @create-design="createDesign"
+                            @update-design="updateDesign"
+                            @delete-design="deleteDesign"
                         />
 
                         <UsersPage
@@ -1073,6 +2337,12 @@ onBeforeUnmount(() => {
                             :user-rows="userRows"
                             :initials-from-name="initialsFromName"
                             :panel-base-url="panelBaseUrl"
+                            :role-options="userRoles"
+                            :loading="userLoading"
+                            :saving="userSaving"
+                            :error-message="userError"
+                            @refresh-users="fetchUsersData"
+                            @create-user="createUser"
                         />
 
                         <BookingsPage
@@ -1083,6 +2353,12 @@ onBeforeUnmount(() => {
                             :panel-bookings-url="panelBookingsUrl"
                             :normalized-rows="normalizedRows"
                             :loading="loading"
+                            :saving="bookingSaving"
+                            :booking-error="bookingError"
+                            :booking-options="bookingOptions"
+                            :availability-url="bookingAvailabilityUrl"
+                            :deleting-booking-id="deletingBookingId"
+                            :processing-booking-id="processingBookingId"
                             :booking-result-caption="bookingResultCaption"
                             :can-go-prev="canGoPrev"
                             :can-go-next="canGoNext"
@@ -1090,6 +2366,12 @@ onBeforeUnmount(() => {
                             :resolve-booking-status="resolveBookingStatus"
                             @update:search="search = $event"
                             @set-filter-status="setFilterStatus"
+                            @refresh-bookings="refreshBookings()"
+                            @create-booking="createBooking"
+                            @update-booking="updateBooking"
+                            @delete-booking="deleteBooking"
+                            @confirm-booking="confirmBooking"
+                            @confirm-booking-payment="confirmBookingPayment"
                             @go-prev-page="goToPrevPage"
                             @go-next-page="goToNextPage"
                         />
@@ -1103,6 +2385,18 @@ onBeforeUnmount(() => {
                             :queue-remaining-text="queueRemainingText"
                             :queue-session-duration-text="queueSessionDurationText"
                             :resolve-queue-status="resolveQueueStatus"
+                            :queue-loading="queueLoading"
+                            :queue-action-loading="queueActionLoading"
+                            :queue-processing-ticket-id="queueProcessingTicketId"
+                            :queue-error="queueError"
+                            :branch-options="queueBranchOptions"
+                            :booking-options="queueBookingOptions"
+                            :default-branch-id="defaultQueueBranchId"
+                            @refresh-queue="fetchQueueData()"
+                            @call-next="callNextQueue"
+                            @transition-ticket="transitionQueueTicket"
+                            @add-booking="addQueueBooking"
+                            @add-walk-in="addQueueWalkIn"
                         />
 
                         <TransactionsPage

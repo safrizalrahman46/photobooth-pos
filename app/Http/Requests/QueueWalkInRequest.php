@@ -20,7 +20,7 @@ class QueueWalkInRequest extends FormRequest
                 'integer',
                 Rule::exists('branches', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
-            'queue_date' => ['required', 'date_format:Y-m-d'],
+            'queue_date' => ['nullable', 'date_format:Y-m-d'],
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
         ];
