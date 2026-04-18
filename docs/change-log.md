@@ -1,5 +1,17 @@
 # Change Log
 
+## 2026-04-15
+
+### Admin Dashboard Vue 1:1 Rewrite
+
+- Merombak `AdminDashboardApp.vue` ke struktur desain dashboard utama 1:1 (hero header, summary cards, revenue chart, queue monitor, booking monitoring, recent transactions, activity log).
+- Menghubungkan seluruh blok utama ke payload backend yang sudah ada (`summaryCards`, `revenueOverview`, `queueLive`, `initialRows`, `initialPagination`).
+- Mempertahankan interaksi server-driven pada tabel booking (`search`, `status`, dan pagination) melalui endpoint `admin.dashboard.data`.
+
+### Dashboard Data Payload Adjustment
+
+- Memperluas data `recentTransactions()` di `AdminDashboardDataService` dengan field `customer` (dari relasi booking) dan `method` (dari pembayaran terbaru) untuk memenuhi kebutuhan tampilan transaksi baru.
+
 ## 2026-04-14
 
 ### Booking Public Flow
@@ -32,6 +44,19 @@
 - Memperbarui gaya visual halaman sukses menjadi pola card putih + aksen warna yang konsisten dengan halaman pembayaran.
 - Mengubah halaman konfirmasi booking agar dirender menggunakan Vue (`BookingSuccessApp.vue`) melalui mount point Blade.
 - Menambahkan motion bertahap (staggered reveal + success icon pulse) pada halaman konfirmasi untuk meningkatkan kesan interaksi frontend.
+
+### Admin Login Theme
+
+- Menyetel ulang tone warna login ke palet biru-slate yang konsisten dengan Form Booking Sesi Foto (`#F8FAFC`, `#1F2937`, `#2563EB`).
+
+### Owner Feature on /admin (Vue)
+
+- Mengimplementasikan fitur owner di halaman `/admin` menggunakan frontend Vue pada dashboard utama.
+- Menambahkan `Owner Feature Modules` (shortcut cepat ke bookings, transactions, queue, packages, design catalogs, users).
+- Menambahkan `ownerHighlights` untuk ringkasan operasional owner (pendapatan hari ini, booking aktif, antrean menunggu, transaksi belum lunas).
+- Menambahkan panel `Queue Snapshot Hari Ini`, `Aktivitas Terbaru`, dan `Transaksi Terbaru`.
+- Memperluas `AdminDashboardDataService` untuk menyuplai data owner-centric ke Vue bootstrap payload.
+- Menambahkan navbar owner yang sticky pada dashboard Vue untuk navigasi cepat antar modul owner dengan indikator menu aktif.
 
 ### Dashboard Admin (Filament + Vue)
 
