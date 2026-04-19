@@ -165,6 +165,33 @@ const props = defineProps({
         type: String,
         default: '/booking/availability',
     },
+    initialSettings: {
+        type: Object,
+        default: () => ({
+            default_branch_id: null,
+            branches: [],
+        }),
+    },
+    defaultBranchId: {
+        type: [Number, String, null],
+        default: null,
+    },
+    settingsDataUrl: {
+        type: String,
+        default: '',
+    },
+    settingsDefaultBranchUrl: {
+        type: String,
+        default: '',
+    },
+    settingsBranchStoreUrl: {
+        type: String,
+        default: '',
+    },
+    settingsBranchBaseUrl: {
+        type: String,
+        default: '/admin/settings/branches',
+    },
     initialPackages: {
         type: Array,
         default: () => [],
@@ -876,14 +903,35 @@ const filteredActivityRows = computed(() => {
     });
 });
 
-const settingsTab = ref('business');
+const settingsTab = ref('branch');
 const settingsTabs = [
-    { id: 'business', label: 'Business Info' },
+    { id: 'branch', label: 'Branch Setting' },
     { id: 'hours', label: 'Operating Hours' },
-    { id: 'payment', label: 'Payment' },
-    { id: 'notifications', label: 'Notifications' },
     { id: 'security', label: 'Security' },
 ];
+
+const normalizeSettings = (source) => {
+    const settingsSource = source && typeof source === 'object' ? source : {};
+    const branchesSource = Array.isArray(settingsSource.branches) ? settingsSource.branches : [];
+
+    const branches = branchesSource
+        .map((branch) => ({
+            id: Number(branch?.id || 0),
+            code: String(branch?.code || ''),
+            name: String(branch?.name || '-'),
+            timezone: String(branch?.timezone || 'Asia/Jakarta'),
+            phone: String(branch?.phone || ''),
+            address: String(branch?.address || ''),
+        }))
+        .filter((branch) => branch.id > 0);
+
+    const defaultBranch = Number(settingsSource.default_branch_id || 0);
+
+    return {
+        default_branch_id: defaultBranch > 0 ? defaultBranch : null,
+        branches,
+    };
+};
 
 const reportFilters = ref({
     from: '',
@@ -907,6 +955,11 @@ const bookingOptions = ref(props.initialBookingOptions && typeof props.initialBo
         designs: [],
         payment_methods: [],
     });
+const settings = ref(normalizeSettings(props.initialSettings));
+const settingsLoading = ref(false);
+const settingsSaving = ref(false);
+const settingsError = ref('');
+const settingsSuccess = ref('');
 const packageLoading = ref(false);
 const packageSaving = ref(false);
 const packageError = ref('');
@@ -936,6 +989,37 @@ const queueBranchOptions = computed(() => {
     const branches = bookingOptions.value?.branches;
 
     return Array.isArray(branches) ? branches : [];
+});
+
+const settingsBranchOptions = computed(() => {
+    if (settings.value.branches.length) {
+        return settings.value.branches;
+    }
+
+    return queueBranchOptions.value
+        .map((branch) => ({
+            id: Number(branch?.id || 0),
+            name: String(branch?.name || '-'),
+        }))
+        .filter((branch) => branch.id > 0);
+});
+
+const resolvedDefaultBranchId = computed(() => {
+    const fromSettings = Number(settings.value.default_branch_id || 0);
+
+    if (fromSettings > 0) {
+        return fromSettings;
+    }
+
+    const fromProps = Number(props.defaultBranchId || 0);
+
+    if (fromProps > 0) {
+        return fromProps;
+    }
+
+    const fromOptions = Number(settingsBranchOptions.value[0]?.id || 0);
+
+    return fromOptions > 0 ? fromOptions : null;
 });
 
 const defaultQueueBranchId = computed(() => {
@@ -1133,6 +1217,16 @@ watch(activeModuleId, (nextValue) => {
     }
 }, { immediate: true });
 
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'settings') {
+        return;
+    }
+
+    if (!settingsLoading.value) {
+        fetchSettingsData();
+    }
+}, { immediate: true });
+
 watch(
     () => [
         reportFilters.value.from,
@@ -1223,6 +1317,210 @@ const applyQueuePayload = (payload) => {
 
     if (Array.isArray(nextQueueBookingOptions)) {
         queueBookingOptions.value = nextQueueBookingOptions;
+    }
+};
+
+const applySettingsPayload = (payload) => {
+    const nextSettings = payload?.data?.settings;
+
+    if (!nextSettings || typeof nextSettings !== 'object') {
+        return;
+    }
+
+    settings.value = normalizeSettings(nextSettings);
+
+    bookingOptions.value = {
+        ...bookingOptions.value,
+        branches: settings.value.branches.map((branch) => ({
+            id: Number(branch.id || 0),
+            name: String(branch.name || '-'),
+        })),
+    };
+};
+
+const fetchSettingsData = async ({ silent = false } = {}) => {
+    if (!props.settingsDataUrl) {
+        return;
+    }
+
+    if (!silent) {
+        settingsLoading.value = true;
+    }
+
+    settingsError.value = '';
+
+    try {
+        const response = await fetch(props.settingsDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applySettingsPayload(payload);
+    } catch (error) {
+        if (!silent) {
+            settingsError.value = error instanceof Error ? error.message : 'Failed to load settings.';
+        }
+    } finally {
+        if (!silent) {
+            settingsLoading.value = false;
+        }
+    }
+};
+
+const saveDefaultBranch = async (branchId) => {
+    const id = Number(branchId || 0);
+
+    if (!props.settingsDefaultBranchUrl || id <= 0) {
+        settingsError.value = 'Please select a valid default branch.';
+        return;
+    }
+
+    settingsSaving.value = true;
+    settingsError.value = '';
+    settingsSuccess.value = '';
+
+    try {
+        const response = await fetch(props.settingsDefaultBranchUrl, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ branch_id: id }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applySettingsPayload(payload);
+        settingsSuccess.value = 'Default branch updated.';
+    } catch (error) {
+        settingsError.value = error instanceof Error ? error.message : 'Failed to save settings.';
+        throw error;
+    } finally {
+        settingsSaving.value = false;
+    }
+};
+
+const createBranchSetting = async (payload) => {
+    if (!props.settingsBranchStoreUrl) {
+        return;
+    }
+
+    settingsSaving.value = true;
+    settingsError.value = '';
+    settingsSuccess.value = '';
+
+    try {
+        const response = await fetch(props.settingsBranchStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applySettingsPayload(result);
+        settingsSuccess.value = 'Branch created.';
+    } catch (error) {
+        settingsError.value = error instanceof Error ? error.message : 'Failed to create branch.';
+        throw error;
+    } finally {
+        settingsSaving.value = false;
+    }
+};
+
+const updateBranchSetting = async ({ id, payload }) => {
+    const branchId = Number(id || 0);
+
+    if (!branchId || !props.settingsBranchBaseUrl) {
+        return;
+    }
+
+    settingsSaving.value = true;
+    settingsError.value = '';
+    settingsSuccess.value = '';
+
+    try {
+        const response = await fetch(`${props.settingsBranchBaseUrl}/${branchId}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applySettingsPayload(result);
+        settingsSuccess.value = 'Branch updated.';
+    } catch (error) {
+        settingsError.value = error instanceof Error ? error.message : 'Failed to update branch.';
+        throw error;
+    } finally {
+        settingsSaving.value = false;
+    }
+};
+
+const removeBranchSetting = async (id) => {
+    const branchId = Number(id || 0);
+
+    if (!branchId || !props.settingsBranchBaseUrl) {
+        return;
+    }
+
+    settingsSaving.value = true;
+    settingsError.value = '';
+    settingsSuccess.value = '';
+
+    try {
+        const response = await fetch(`${props.settingsBranchBaseUrl}/${branchId}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applySettingsPayload(result);
+        settingsSuccess.value = 'Branch removed from available list.';
+    } catch (error) {
+        settingsError.value = error instanceof Error ? error.message : 'Failed to remove branch.';
+        throw error;
+    } finally {
+        settingsSaving.value = false;
     }
 };
 
@@ -2356,6 +2654,7 @@ onBeforeUnmount(() => {
                             :saving="bookingSaving"
                             :booking-error="bookingError"
                             :booking-options="bookingOptions"
+                            :default-branch-id="resolvedDefaultBranchId"
                             :availability-url="bookingAvailabilityUrl"
                             :deleting-booking-id="deletingBookingId"
                             :processing-booking-id="processingBookingId"
@@ -2436,7 +2735,19 @@ onBeforeUnmount(() => {
                             v-else-if="activeModuleId === 'settings'"
                             :settings-tab="settingsTab"
                             :settings-tabs="settingsTabs"
+                            :settings="settings"
+                            :branch-options="settingsBranchOptions"
+                            :default-branch-id="resolvedDefaultBranchId"
+                            :loading="settingsLoading"
+                            :saving="settingsSaving"
+                            :error-message="settingsError"
+                            :success-message="settingsSuccess"
                             @update:settings-tab="settingsTab = $event"
+                            @refresh-settings="fetchSettingsData()"
+                            @save-default-branch="saveDefaultBranch"
+                            @create-branch="createBranchSetting"
+                            @update-branch="updateBranchSetting"
+                            @remove-branch="removeBranchSetting"
                         />
                     </div>
                 </main>

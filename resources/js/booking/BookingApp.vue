@@ -24,6 +24,14 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    defaultBranchId: {
+        type: [Number, String, null],
+        default: null,
+    },
+    lockBranchSelection: {
+        type: Boolean,
+        default: false,
+    },
     errors: {
         type: Array,
         default: () => [],
@@ -108,7 +116,7 @@ const initialAddonQty = () => {
 const now = new Date();
 const minDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-const branchId = ref(asString(props.oldValues.branch_id));
+const branchId = ref(asString(props.oldValues.branch_id || props.defaultBranchId || ''));
 const packageId = ref(asString(props.oldValues.package_id));
 const designCatalogId = ref(asString(props.oldValues.design_catalog_id));
 const bookingDate = ref(asString(props.oldValues.booking_date));
@@ -121,7 +129,7 @@ const notes = ref(asString(props.oldValues.notes));
 const addonQty = ref(initialAddonQty());
 const slots = ref([]);
 const slotLoading = ref(false);
-const slotMessage = ref('Pilih cabang, paket, dan tanggal untuk melihat slot.');
+const slotMessage = ref('Pilih paket dan tanggal untuk melihat slot.');
 const submitError = ref('');
 
 const isMobile = ref(false);
@@ -174,7 +182,7 @@ const availableAddOns = computed(() => {
     });
 });
 
-const showBranchSelector = computed(() => props.branches.length > 1);
+const showBranchSelector = computed(() => props.branches.length > 1 && !props.lockBranchSelection);
 
 const selectedPackagePhotoSet = computed(() => {
     const selected = selectedPackage.value;
@@ -378,7 +386,7 @@ const resetSlots = (message) => {
 
 const loadAvailability = async () => {
     if (!branchId.value || !packageId.value || !bookingDate.value) {
-        resetSlots('Pilih cabang, paket, dan tanggal untuk melihat slot.');
+        resetSlots('Pilih paket dan tanggal untuk melihat slot.');
         return;
     }
 
@@ -514,7 +522,7 @@ const prevStep = () => {
 
 const validateBeforeSubmit = () => {
     if (!branchId.value) {
-        submitError.value = 'Cabang harus dipilih.';
+        submitError.value = 'Cabang default belum diatur di settings admin.';
         activeMobileStep.value = 0;
         return false;
     }
@@ -606,8 +614,12 @@ watch([branchId, packageId, bookingDate], () => {
 }, { immediate: true });
 
 onMounted(() => {
-    if (!branchId.value && props.branches.length) {
-        branchId.value = asString(props.branches[0].id);
+    if (!branchId.value) {
+        if (props.defaultBranchId) {
+            branchId.value = asString(props.defaultBranchId);
+        } else if (props.branches.length) {
+            branchId.value = asString(props.branches[0].id);
+        }
     }
 
     updateMobileState();

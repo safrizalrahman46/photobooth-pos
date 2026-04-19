@@ -1072,6 +1072,11 @@ class AdminDashboardDataService
             $amount = (float) $booking->paid_amount;
         }
 
+        $totalAmount = (float) $booking->total_amount;
+        $paidAmount = (float) $booking->paid_amount;
+        $remainingAmount = max($totalAmount - $paidAmount, 0);
+        $paymentStatus = $this->resolveBookingPaymentStatus($booking);
+
         return [
             'record_id' => (int) $booking->id,
             'id' => (string) $booking->booking_code,
@@ -1090,21 +1095,23 @@ class AdminDashboardDataService
             'status' => $status,
             'status_raw' => (string) $booking->status->value,
             'payment' => $this->paymentLabel($booking),
-            'payment_status' => (string) ($booking->transaction?->status?->value ?? 'unpaid'),
+            'payment_status' => $paymentStatus,
             'pkg' => (string) ($booking->package?->name ?? '-'),
             'design_name' => (string) ($booking->designCatalog?->name ?? '-'),
             'amount' => $amount,
             'amount_text' => $amount > 0 ? $this->formatRupiah($amount) : '-',
-            'total_amount' => (float) $booking->total_amount,
-            'paid_amount' => (float) $booking->paid_amount,
-            'remaining_amount' => max((float) $booking->total_amount - (float) $booking->paid_amount, 0),
+            'total_amount' => $totalAmount,
+            'paid_amount' => $paidAmount,
+            'remaining_amount' => $remainingAmount,
             'notes' => (string) ($booking->notes ?? ''),
             'transaction_id' => $booking->transaction?->id ? (int) $booking->transaction->id : null,
             'can_confirm_booking' => (string) $booking->status->value === BookingStatus::Pending->value,
-            'can_confirm_payment' => ! in_array((string) $booking->status->value, [
-                BookingStatus::Done->value,
-                BookingStatus::Cancelled->value,
-            ], true),
+            'can_confirm_payment' => (
+                ! in_array((string) $booking->status->value, [
+                    BookingStatus::Done->value,
+                    BookingStatus::Cancelled->value,
+                ], true)
+            ) && $remainingAmount > 0,
             'add_ons' => $addOns,
             'add_ons_count' => $addOns->count(),
             'add_ons_total' => (float) $addOns->sum('line_total'),
@@ -1135,6 +1142,26 @@ class AdminDashboardDataService
         }
 
         return 'DP';
+    }
+
+    protected function resolveBookingPaymentStatus(Booking $booking): string
+    {
+        if ($booking->transaction?->status?->value) {
+            return (string) $booking->transaction->status->value;
+        }
+
+        $total = (float) $booking->total_amount;
+        $paid = (float) $booking->paid_amount;
+
+        if ($paid <= 0) {
+            return TransactionStatus::Unpaid->value;
+        }
+
+        if ($total > 0 && $paid < $total) {
+            return TransactionStatus::Partial->value;
+        }
+
+        return TransactionStatus::Paid->value;
     }
 
     protected function buildRevenueSeries(int $days, string $labelFormat): array

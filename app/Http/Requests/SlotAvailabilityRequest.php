@@ -23,7 +23,7 @@ class SlotAvailabilityRequest extends FormRequest
                 Rule::exists('packages', 'id')->where(fn ($query) => $query->where('is_active', true)->whereNull('deleted_at')),
             ],
             'branch_id' => [
-                'required',
+                'nullable',
                 'integer',
                 Rule::exists('branches', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],

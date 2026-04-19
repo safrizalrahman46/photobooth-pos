@@ -20,6 +20,7 @@ const props = defineProps({
             payment_methods: [],
         }),
     },
+    defaultBranchId: { type: [Number, String, null], default: null },
     availabilityUrl: { type: String, default: '/booking/availability' },
     deletingBookingId: { type: [Number, String, null], default: null },
     processingBookingId: { type: [Number, String, null], default: null },
@@ -81,6 +82,30 @@ const packageOptions = computed(() => Array.isArray(props.bookingOptions?.packag
 const designOptions = computed(() => Array.isArray(props.bookingOptions?.designs) ? props.bookingOptions.designs : []);
 const paymentMethods = computed(() => Array.isArray(props.bookingOptions?.payment_methods) ? props.bookingOptions.payment_methods : []);
 const addOnOptions = computed(() => Array.isArray(props.bookingOptions?.add_ons) ? props.bookingOptions.add_ons : []);
+
+const resolvedDefaultBranchId = computed(() => {
+    const fromProps = Number(props.defaultBranchId || 0);
+
+    if (fromProps > 0) {
+        return fromProps;
+    }
+
+    const fromOptions = Number(branchOptions.value[0]?.id || 0);
+
+    return fromOptions > 0 ? fromOptions : null;
+});
+
+const selectedBranchName = computed(() => {
+    const selectedId = Number(bookingForm.branch_id || 0);
+
+    if (!selectedId) {
+        return '-';
+    }
+
+    const branch = branchOptions.value.find((item) => Number(item?.id || 0) === selectedId);
+
+    return String(branch?.name || '-');
+});
 
 const formatCurrency = (value) => `Rp ${Number(value || 0).toLocaleString('id-ID')}`;
 
@@ -266,7 +291,7 @@ const resetBookingForm = () => {
     const now = new Date();
     const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    bookingForm.branch_id = '';
+    bookingForm.branch_id = resolvedDefaultBranchId.value ? String(resolvedDefaultBranchId.value) : '';
     bookingForm.package_id = '';
     bookingForm.design_catalog_id = '';
     bookingForm.add_ons = [];
@@ -293,7 +318,9 @@ const openEditBookingModal = (row) => {
     bookingModalMode.value = 'edit';
     editingBookingId.value = Number(row.record_id || 0);
 
-    bookingForm.branch_id = row.branch_id ? String(row.branch_id) : '';
+    bookingForm.branch_id = row.branch_id
+        ? String(row.branch_id)
+        : (resolvedDefaultBranchId.value ? String(resolvedDefaultBranchId.value) : '');
     bookingForm.package_id = row.package_id ? String(row.package_id) : '';
     bookingForm.design_catalog_id = row.design_catalog_id ? String(row.design_catalog_id) : '';
     bookingForm.add_ons = Array.isArray(row.add_ons)
@@ -338,7 +365,7 @@ const closeBookingDetailModal = () => {
 
 const validateBookingForm = () => {
     if (!bookingForm.branch_id) {
-        localError.value = 'Branch is required.';
+        localError.value = 'Default branch is not configured in settings.';
         return false;
     }
 
@@ -532,6 +559,22 @@ watch(
 
         fetchAvailableSlots();
     },
+);
+
+watch(
+    resolvedDefaultBranchId,
+    (nextBranchId) => {
+        if (!bookingModalOpen.value) {
+            return;
+        }
+
+        if (bookingModalMode.value === 'edit' && bookingForm.branch_id) {
+            return;
+        }
+
+        bookingForm.branch_id = nextBranchId ? String(nextBranchId) : '';
+    },
+    { immediate: true },
 );
 </script>
 
@@ -753,13 +796,13 @@ watch(
                 </p>
 
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <label class="text-sm text-[#475569]">
+                    <div class="text-sm text-[#475569]">
                         Branch
-                        <select v-model="bookingForm.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
-                            <option value="">Select branch</option>
-                            <option v-for="branch in branchOptions" :key="`branch-option-${branch.id}`" :value="String(branch.id)">{{ branch.name }}</option>
-                        </select>
-                    </label>
+                        <div class="mt-1 rounded-lg border px-3 py-2" style="border-color: #E2E8F0; background: #F8FAFC;">
+                            <p class="text-sm text-[#0F172A]">{{ selectedBranchName }}</p>
+                            <p class="text-xs text-[#64748B]">Managed from Settings page.</p>
+                        </div>
+                    </div>
 
                     <label class="text-sm text-[#475569]">
                         Package
@@ -852,7 +895,7 @@ watch(
                         <p v-if="slotLoading" class="mt-1 text-xs text-[#64748B]">Loading available slots...</p>
                         <p v-else-if="slotLookupError" class="mt-1 text-xs text-[#B91C1C]">{{ slotLookupError }}</p>
                         <p v-else-if="bookingForm.branch_id && bookingForm.package_id && bookingForm.booking_date && !normalizedSlotOptions.some((slot) => slot.is_available)" class="mt-1 text-xs text-[#D97706]">
-                            No available slot for selected branch/date/package. Check opening-hour settings or choose another date.
+                            No available slot for selected date/package. Check opening-hour settings or choose another date.
                         </p>
                     </label>
                 </div>

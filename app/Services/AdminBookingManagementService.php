@@ -243,7 +243,7 @@ class AdminBookingManagementService
 
         $items = $this->buildBookingTransactionItems($booking, $package, $selectedAddOns);
 
-        return $this->transactionService->create([
+        $createdTransaction = $this->transactionService->create([
             'branch_id' => (int) $booking->branch_id,
             'booking_id' => (int) $booking->id,
             'discount_amount' => 0,
@@ -251,6 +251,28 @@ class AdminBookingManagementService
             'notes' => 'Auto-generated from booking payment confirmation.',
             'items' => $items,
         ], $cashierId);
+
+        $initialPaid = min(
+            max((float) $booking->paid_amount, 0),
+            max((float) $createdTransaction->total_amount, 0)
+        );
+
+        if ($initialPaid <= 0) {
+            return $createdTransaction;
+        }
+
+        $initialStatus = $initialPaid < (float) $createdTransaction->total_amount
+            ? TransactionStatus::Partial
+            : TransactionStatus::Paid;
+
+        $createdTransaction->update([
+            'paid_amount' => $initialPaid,
+            'change_amount' => max($initialPaid - (float) $createdTransaction->total_amount, 0),
+            'status' => $initialStatus,
+            'paid_at' => $booking->created_at ?? now(),
+        ]);
+
+        return $createdTransaction->refresh();
     }
 
     private function resolveSelectedAddOns(array $payload, Package $package): array

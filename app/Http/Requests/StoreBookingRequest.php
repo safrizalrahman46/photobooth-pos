@@ -16,7 +16,7 @@ class StoreBookingRequest extends FormRequest
     {
         return [
             'branch_id' => [
-                'required',
+                'nullable',
                 'integer',
                 Rule::exists('branches', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
@@ -37,6 +37,7 @@ class StoreBookingRequest extends FormRequest
             'booking_time' => ['required', 'date_format:H:i'],
             'source' => ['nullable', Rule::in(['web', 'walk_in', 'admin'])],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'payment_type' => ['nullable', Rule::in(['full', 'dp50'])],
             'add_ons' => ['sometimes', 'array'],
             'add_ons.*.add_on_id' => [
                 'required',

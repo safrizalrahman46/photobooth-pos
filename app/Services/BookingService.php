@@ -26,6 +26,8 @@ class BookingService
             $package = Package::query()->findOrFail($payload['package_id']);
             $selectedAddOns = $this->resolveSelectedAddOns($payload, $package);
             $addOnTotal = (float) collect($selectedAddOns)->sum('line_total');
+            $totalAmount = (float) $package->base_price + $addOnTotal;
+            [$depositAmount, $paidAmount] = $this->resolveInitialPaymentAmounts($payload, $totalAmount);
             $startAt = Carbon::parse($payload['booking_date'].' '.$payload['booking_time']);
             $endAt = $startAt->copy()->addMinutes((int) $package->duration_minutes);
 
@@ -48,7 +50,9 @@ class BookingService
                 'end_at' => $endAt,
                 'status' => BookingStatus::Pending,
                 'source' => $payload['source'] ?? BookingSource::Web,
-                'total_amount' => (float) $package->base_price + $addOnTotal,
+                'total_amount' => $totalAmount,
+                'deposit_amount' => $depositAmount,
+                'paid_amount' => $paidAmount,
                 'notes' => $payload['notes'] ?? null,
             ]);
 
@@ -65,6 +69,34 @@ class BookingService
 
             return $booking;
         });
+    }
+
+    private function resolveInitialPaymentAmounts(array $payload, float $totalAmount): array
+    {
+        $source = $payload['source'] ?? BookingSource::Web;
+        $sourceValue = $source instanceof BookingSource ? $source->value : (string) $source;
+
+        if ($sourceValue !== BookingSource::Web->value) {
+            return [0.0, 0.0];
+        }
+
+        $depositAmount = round($totalAmount * 0.5, 2);
+
+        if (! array_key_exists('payment_type', $payload)) {
+            return [$depositAmount, 0.0];
+        }
+
+        $paymentType = strtolower(trim((string) ($payload['payment_type'] ?? 'dp50')));
+
+        if ($paymentType === 'full') {
+            return [$depositAmount, $totalAmount];
+        }
+
+        if ($paymentType === 'dp50') {
+            return [$depositAmount, $depositAmount];
+        }
+
+        return [$depositAmount, 0.0];
     }
 
     private function resolveSelectedAddOns(array $payload, Package $package): array
