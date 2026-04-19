@@ -3,8 +3,11 @@
 namespace App\Services;
 
 use App\Enums\BookingStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\QueueStatus;
 use App\Enums\TransactionStatus;
+use App\Models\Branch;
+use App\Models\AddOn;
 use App\Models\ActivityLog;
 use App\Models\Booking;
 use App\Models\DesignCatalog;
@@ -15,9 +18,14 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
+use Spatie\Permission\Models\Role;
 
 class AdminDashboardDataService
 {
+    public function __construct(
+        private readonly AdminQueuePageService $adminQueuePageService,
+    ) {}
+
     public function bootstrapPayload(string $search = '', string $status = 'all', int $perPage = 15): array
     {
         return array_merge(
@@ -35,10 +43,333 @@ class AdminDashboardDataService
             'ownerHighlights' => $this->ownerHighlights(),
             'ownerModules' => $this->ownerModules(),
             'queueLive' => $this->queueLive(),
+            'queueBookingOptions' => $this->queueBookingOptions(),
             'recentTransactions' => $this->recentTransactions(),
             'recentActivities' => $this->recentActivities(),
             'queueSnapshot' => $this->queueSnapshot(),
+            'initialPackages' => $this->packageManagementRows(),
+            'initialAddOns' => $this->addOnManagementRows(),
+            'initialDesigns' => $this->designManagementRows(),
+            'initialUsers' => $this->userManagementRows(),
+            'initialUserRoles' => $this->userRoleOptions(),
+            'initialBookingOptions' => $this->bookingFormOptions(),
         ];
+    }
+
+    public function bookingFormOptions(): array
+    {
+        return [
+            'branches' => Branch::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (Branch $branch): array => [
+                    'id' => (int) $branch->id,
+                    'name' => (string) $branch->name,
+                ])
+                ->values()
+                ->all(),
+            'packages' => Package::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'branch_id', 'name', 'duration_minutes', 'base_price'])
+                ->map(function (Package $package): array {
+                    $price = (float) $package->base_price;
+
+                    return [
+                        'id' => (int) $package->id,
+                        'branch_id' => $package->branch_id ? (int) $package->branch_id : null,
+                        'name' => (string) $package->name,
+                        'duration_minutes' => (int) $package->duration_minutes,
+                        'base_price' => $price,
+                        'base_price_text' => $this->formatRupiah($price),
+                    ];
+                })
+                ->values()
+                ->all(),
+            'designs' => DesignCatalog::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'package_id', 'name'])
+                ->map(fn (DesignCatalog $design): array => [
+                    'id' => (int) $design->id,
+                    'package_id' => $design->package_id ? (int) $design->package_id : null,
+                    'name' => (string) $design->name,
+                ])
+                ->values()
+                ->all(),
+            'payment_methods' => collect(PaymentMethod::cases())
+                ->map(fn (PaymentMethod $method): array => [
+                    'value' => $method->value,
+                    'label' => strtoupper($method->value),
+                ])
+                ->values()
+                ->all(),
+            'add_ons' => AddOn::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'package_id', 'code', 'name', 'price', 'max_qty'])
+                ->map(function (AddOn $addOn): array {
+                    $price = (float) $addOn->price;
+
+                    return [
+                        'id' => (int) $addOn->id,
+                        'package_id' => $addOn->package_id ? (int) $addOn->package_id : null,
+                        'code' => (string) $addOn->code,
+                        'name' => (string) $addOn->name,
+                        'price' => $price,
+                        'max_qty' => max(1, (int) $addOn->max_qty),
+                        'price_text' => $this->formatRupiah($price),
+                    ];
+                })
+                ->values()
+                ->all(),
+        ];
+    }
+
+    public function packageManagementRows(): array
+    {
+        $startOfMonth = now()->startOfMonth()->toDateString();
+        $endOfMonth = now()->toDateString();
+
+        return Package::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->with([
+                'addOns:id,package_id,code,name,description,price,max_qty,is_active,sort_order',
+            ])
+            ->withCount([
+                'bookings as total_bookings',
+                'bookings as this_month_bookings' => function (Builder $query) use ($startOfMonth, $endOfMonth): void {
+                    $query->whereBetween('booking_date', [$startOfMonth, $endOfMonth]);
+                },
+                'bookings as pending_bookings' => function (Builder $query): void {
+                    $query->whereIn('status', [
+                        BookingStatus::Pending->value,
+                        BookingStatus::Confirmed->value,
+                        BookingStatus::Paid->value,
+                        BookingStatus::CheckedIn->value,
+                        BookingStatus::InQueue->value,
+                        BookingStatus::InSession->value,
+                    ]);
+                },
+                'bookings as completed_bookings' => function (Builder $query): void {
+                    $query->where('status', BookingStatus::Done->value);
+                },
+                'addOns as add_ons_count',
+            ])
+            ->withSum([
+                'bookings as this_month_revenue' => function (Builder $query) use ($startOfMonth, $endOfMonth): void {
+                    $query->whereBetween('booking_date', [$startOfMonth, $endOfMonth]);
+                },
+            ], 'paid_amount')
+            ->get([
+                'id',
+                'branch_id',
+                'code',
+                'name',
+                'description',
+                'duration_minutes',
+                'base_price',
+                'is_active',
+                'sort_order',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function (Package $package): array {
+                $addOns = $package->addOns
+                    ->sortBy([['sort_order', 'asc'], ['name', 'asc']])
+                    ->values()
+                    ->map(function (AddOn $addOn): array {
+                        $price = (float) $addOn->price;
+
+                        return [
+                            'id' => (int) $addOn->id,
+                            'code' => (string) $addOn->code,
+                            'name' => (string) $addOn->name,
+                            'description' => (string) ($addOn->description ?? ''),
+                            'price' => $price,
+                            'price_text' => $this->formatRupiah($price),
+                            'max_qty' => max(1, (int) $addOn->max_qty),
+                            'is_active' => (bool) $addOn->is_active,
+                            'sort_order' => (int) $addOn->sort_order,
+                        ];
+                    })
+                    ->all();
+
+                return [
+                    'id' => (int) $package->id,
+                    'branch_id' => $package->branch_id ? (int) $package->branch_id : null,
+                    'code' => (string) $package->code,
+                    'name' => (string) $package->name,
+                    'description' => (string) ($package->description ?? ''),
+                    'duration_minutes' => (int) $package->duration_minutes,
+                    'base_price' => (float) $package->base_price,
+                    'base_price_text' => $this->formatRupiah((float) $package->base_price),
+                    'is_active' => (bool) $package->is_active,
+                    'sort_order' => (int) $package->sort_order,
+                    'total_bookings' => (int) ($package->total_bookings ?? 0),
+                    'this_month_bookings' => (int) ($package->this_month_bookings ?? 0),
+                    'pending_bookings' => (int) ($package->pending_bookings ?? 0),
+                    'completed_bookings' => (int) ($package->completed_bookings ?? 0),
+                    'add_ons_count' => (int) ($package->add_ons_count ?? count($addOns)),
+                    'add_ons' => $addOns,
+                    'this_month_revenue' => (float) ($package->this_month_revenue ?? 0),
+                    'this_month_revenue_text' => $this->formatRupiah((float) ($package->this_month_revenue ?? 0)),
+                    'created_at' => $package->created_at?->toIso8601String(),
+                    'updated_at' => $package->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function designManagementRows(): array
+    {
+        $startOfMonth = now()->startOfMonth()->toDateString();
+        $endOfMonth = now()->toDateString();
+
+        return DesignCatalog::query()
+            ->with(['package:id,name'])
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->withCount([
+                'bookings as total_bookings',
+                'bookings as this_month_bookings' => function (Builder $query) use ($startOfMonth, $endOfMonth): void {
+                    $query->whereBetween('booking_date', [$startOfMonth, $endOfMonth]);
+                },
+            ])
+            ->get([
+                'id',
+                'package_id',
+                'code',
+                'name',
+                'theme',
+                'preview_url',
+                'is_active',
+                'sort_order',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function (DesignCatalog $design): array {
+                return [
+                    'id' => (int) $design->id,
+                    'package_id' => $design->package_id ? (int) $design->package_id : null,
+                    'package_name' => (string) ($design->package?->name ?? '-'),
+                    'code' => (string) $design->code,
+                    'name' => (string) $design->name,
+                    'theme' => (string) ($design->theme ?? ''),
+                    'preview_url' => (string) ($design->preview_url ?? ''),
+                    'is_active' => (bool) $design->is_active,
+                    'sort_order' => (int) $design->sort_order,
+                    'total_bookings' => (int) ($design->total_bookings ?? 0),
+                    'this_month_bookings' => (int) ($design->this_month_bookings ?? 0),
+                    'created_at' => $design->created_at?->toIso8601String(),
+                    'updated_at' => $design->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function addOnManagementRows(): array
+    {
+        return AddOn::query()
+            ->with(['package:id,name'])
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get([
+                'id',
+                'package_id',
+                'code',
+                'name',
+                'description',
+                'price',
+                'max_qty',
+                'is_active',
+                'sort_order',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function (AddOn $addOn): array {
+                $price = (float) $addOn->price;
+
+                return [
+                    'id' => (int) $addOn->id,
+                    'package_id' => $addOn->package_id ? (int) $addOn->package_id : null,
+                    'package_name' => (string) ($addOn->package?->name ?? 'Global'),
+                    'code' => (string) $addOn->code,
+                    'name' => (string) $addOn->name,
+                    'description' => (string) ($addOn->description ?? ''),
+                    'price' => $price,
+                    'price_text' => $this->formatRupiah($price),
+                    'max_qty' => max(1, (int) $addOn->max_qty),
+                    'is_active' => (bool) $addOn->is_active,
+                    'sort_order' => (int) $addOn->sort_order,
+                    'created_at' => $addOn->created_at?->toIso8601String(),
+                    'updated_at' => $addOn->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function userManagementRows(): array
+    {
+        return User::query()
+            ->with(['roles:id,name'])
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'email',
+                'phone',
+                'is_active',
+                'last_login_at',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function (User $user): array {
+                $roleName = (string) ($user->roles->first()?->name ?? 'staff');
+
+                return [
+                    'id' => (int) $user->id,
+                    'name' => (string) $user->name,
+                    'email' => (string) $user->email,
+                    'phone' => (string) ($user->phone ?? ''),
+                    'role' => ucfirst($roleName),
+                    'role_key' => strtolower($roleName),
+                    'status' => $user->is_active ? 'active' : 'inactive',
+                    'is_active' => (bool) $user->is_active,
+                    'source' => 'database',
+                    'last_login_at' => $user->last_login_at?->toIso8601String(),
+                    'created_at' => $user->created_at?->toIso8601String(),
+                    'updated_at' => $user->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function userRoleOptions(): array
+    {
+        return Role::query()
+            ->where('guard_name', 'web')
+            ->orderBy('name')
+            ->get(['name'])
+            ->map(function (Role $role): array {
+                $name = (string) $role->name;
+
+                return [
+                    'value' => $name,
+                    'label' => ucfirst($name),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     public function rowsPayload(string $search = '', string $status = 'all', int $perPage = 15): array
@@ -183,132 +514,12 @@ class AdminDashboardDataService
 
     public function queueLive(): array
     {
-        $today = now()->toDateString();
+        return $this->adminQueuePageService->live();
+    }
 
-        $currentTicket = QueueTicket::query()
-            ->with(['booking.package:id,name,duration_minutes'])
-            ->whereDate('queue_date', $today)
-            ->where('status', QueueStatus::InSession->value)
-            ->latest('started_at')
-            ->first([
-                'id',
-                'booking_id',
-                'queue_code',
-                'queue_number',
-                'customer_name',
-                'status',
-                'called_at',
-                'checked_in_at',
-                'started_at',
-            ]);
-
-        if (! $currentTicket) {
-            $currentTicket = QueueTicket::query()
-                ->with(['booking.package:id,name,duration_minutes'])
-                ->whereDate('queue_date', $today)
-                ->whereIn('status', [QueueStatus::Called->value, QueueStatus::CheckedIn->value])
-                ->orderBy('queue_number')
-                ->first([
-                    'id',
-                    'booking_id',
-                    'queue_code',
-                    'queue_number',
-                    'customer_name',
-                    'status',
-                    'called_at',
-                    'checked_in_at',
-                    'started_at',
-                ]);
-        }
-
-        $sessionDurationSeconds = max(
-            60,
-            ((int) ($currentTicket?->booking?->package?->duration_minutes ?? 20)) * 60,
-        );
-
-        $startedAt = $currentTicket?->started_at
-            ?? $currentTicket?->checked_in_at
-            ?? $currentTicket?->called_at;
-
-        $elapsedSeconds = $startedAt ? (int) $startedAt->diffInSeconds(now()) : 0;
-        $remainingSeconds = max($sessionDurationSeconds - $elapsedSeconds, 0);
-        $progressPercentage = $sessionDurationSeconds > 0
-            ? min(100, round(($elapsedSeconds / $sessionDurationSeconds) * 100, 2))
-            : 0;
-
-        $waitingTickets = QueueTicket::query()
-            ->with(['booking.package:id,name'])
-            ->whereDate('queue_date', $today)
-            ->whereIn('status', [
-                QueueStatus::Waiting->value,
-                QueueStatus::Called->value,
-                QueueStatus::CheckedIn->value,
-            ])
-            ->orderBy('queue_number')
-            ->limit(8)
-            ->get([
-                'id',
-                'booking_id',
-                'queue_code',
-                'queue_number',
-                'customer_name',
-                'status',
-                'created_at',
-            ])
-            ->map(function (QueueTicket $ticket): array {
-                return [
-                    'queue_code' => (string) $ticket->queue_code,
-                    'queue_number' => (int) $ticket->queue_number,
-                    'customer_name' => (string) $ticket->customer_name,
-                    'package_name' => (string) ($ticket->booking?->package?->name ?? '-'),
-                    'status' => (string) $ticket->status->value,
-                    'status_label' => $this->statusLabel((string) $ticket->status->value),
-                    'added_at' => $ticket->created_at?->format('H:i') ?? '-',
-                ];
-            })
-            ->values()
-            ->all();
-
-        $queueStats = [
-            'in_queue' => QueueTicket::query()
-                ->whereDate('queue_date', $today)
-                ->whereIn('status', [
-                    QueueStatus::Waiting->value,
-                    QueueStatus::Called->value,
-                    QueueStatus::CheckedIn->value,
-                    QueueStatus::InSession->value,
-                ])
-                ->count(),
-            'in_session' => QueueTicket::query()
-                ->whereDate('queue_date', $today)
-                ->where('status', QueueStatus::InSession->value)
-                ->count(),
-            'waiting' => QueueTicket::query()
-                ->whereDate('queue_date', $today)
-                ->where('status', QueueStatus::Waiting->value)
-                ->count(),
-            'completed_today' => QueueTicket::query()
-                ->whereDate('queue_date', $today)
-                ->where('status', QueueStatus::Finished->value)
-                ->count(),
-        ];
-
-        return [
-            'stats' => $queueStats,
-            'current' => $currentTicket ? [
-                'queue_code' => (string) $currentTicket->queue_code,
-                'queue_number' => (int) $currentTicket->queue_number,
-                'customer_name' => (string) $currentTicket->customer_name,
-                'status' => (string) $currentTicket->status->value,
-                'status_label' => $this->statusLabel((string) $currentTicket->status->value),
-                'package_name' => (string) ($currentTicket->booking?->package?->name ?? '-'),
-                'session_duration_seconds' => (int) $sessionDurationSeconds,
-                'elapsed_seconds' => (int) $elapsedSeconds,
-                'remaining_seconds' => (int) $remainingSeconds,
-                'progress_percentage' => (float) $progressPercentage,
-            ] : null,
-            'waiting' => $waitingTickets,
-        ];
+    public function queueBookingOptions(?string $queueDate = null): array
+    {
+        return $this->adminQueuePageService->bookingOptions($queueDate);
     }
 
     public function stats(): array
@@ -350,7 +561,12 @@ class AdminDashboardDataService
         $query = Booking::query()
             ->with([
                 'package:id,name',
-                'transaction.items:id,transaction_id,item_type,item_name,qty,unit_price,line_total',
+                'designCatalog:id,package_id,name',
+                'branch:id,name',
+                'addOns:id,code,name,price',
+                'transaction:id,booking_id,total_amount,paid_amount,status',
+                'transaction.payments:id,transaction_id,method',
+                'transaction.items:id,transaction_id,item_type,item_ref_id,item_name,qty,unit_price,line_total',
             ])
             ->latest('booking_date')
             ->latest('start_at');
@@ -630,7 +846,7 @@ class AdminDashboardDataService
             [
                 'label' => 'Kelola Booking',
                 'description' => 'Monitoring booking, ubah status, dan cek detail pelanggan.',
-                'url' => url('/panel/bookings'),
+                'url' => url('/admin/bookings'),
                 'badge' => number_format(Booking::query()->count()),
                 'tone' => 'blue',
                 'icon' => 'calendar',
@@ -638,7 +854,7 @@ class AdminDashboardDataService
             [
                 'label' => 'Transaksi',
                 'description' => 'Pantau pembayaran dan performa transaksi harian.',
-                'url' => url('/panel/transactions'),
+                'url' => url('/admin/transactions'),
                 'badge' => number_format(Transaction::query()->count()),
                 'tone' => 'emerald',
                 'icon' => 'receipt',
@@ -646,7 +862,7 @@ class AdminDashboardDataService
             [
                 'label' => 'Antrian Studio',
                 'description' => 'Pantau antrean pelanggan aktif secara real-time.',
-                'url' => url('/panel/queue-tickets'),
+                'url' => url('/admin/queue'),
                 'badge' => number_format(QueueTicket::query()->count()),
                 'tone' => 'violet',
                 'icon' => 'queue',
@@ -654,7 +870,7 @@ class AdminDashboardDataService
             [
                 'label' => 'Paket',
                 'description' => 'Atur paket foto, harga, durasi, dan status aktif.',
-                'url' => url('/panel/packages'),
+                'url' => url('/admin/packages'),
                 'badge' => number_format(Package::query()->count()),
                 'tone' => 'amber',
                 'icon' => 'box',
@@ -662,7 +878,7 @@ class AdminDashboardDataService
             [
                 'label' => 'Design Catalog',
                 'description' => 'Kelola tema template dan materi desain photobooth.',
-                'url' => url('/panel/design-catalogs'),
+                'url' => url('/admin/design-catalogs'),
                 'badge' => number_format(DesignCatalog::query()->count()),
                 'tone' => 'pink',
                 'icon' => 'image',
@@ -670,7 +886,7 @@ class AdminDashboardDataService
             [
                 'label' => 'User Admin/Cashier',
                 'description' => 'Manajemen akun owner dan cashier.',
-                'url' => url('/panel/users'),
+                'url' => url('/admin/users'),
                 'badge' => number_format(User::query()->count()),
                 'tone' => 'slate',
                 'icon' => 'users',
@@ -732,28 +948,56 @@ class AdminDashboardDataService
 
     public function queueSnapshot(): array
     {
-        $today = now()->toDateString();
+        $live = $this->adminQueuePageService->live();
+        $rows = [];
+        $seenTicketIds = [];
 
-        return QueueTicket::query()
-            ->whereDate('queue_date', $today)
-            ->whereIn('status', [
-                QueueStatus::Waiting->value,
-                QueueStatus::Called->value,
+        $current = $live['current'] ?? null;
+        if (is_array($current)) {
+            $currentStatus = (string) ($current['status'] ?? '');
+
+            if (in_array($currentStatus, [
                 QueueStatus::InSession->value,
-            ])
-            ->orderBy('queue_number')
-            ->limit(6)
-            ->get(['id', 'queue_code', 'queue_number', 'customer_name', 'status'])
-            ->map(function (QueueTicket $ticket): array {
-                return [
-                    'queue_code' => (string) $ticket->queue_code,
-                    'queue_number' => (int) $ticket->queue_number,
-                    'customer_name' => (string) $ticket->customer_name,
-                    'status' => (string) $ticket->status->value,
+                QueueStatus::Called->value,
+                QueueStatus::CheckedIn->value,
+            ], true)) {
+                $currentTicketId = (int) ($current['ticket_id'] ?? 0);
+                if ($currentTicketId > 0) {
+                    $seenTicketIds[$currentTicketId] = true;
+                }
+
+                $rows[] = [
+                    'queue_code' => (string) ($current['queue_code'] ?? '-'),
+                    'queue_number' => (int) ($current['queue_number'] ?? 0),
+                    'customer_name' => (string) ($current['customer_name'] ?? '-'),
+                    'status' => $currentStatus,
                 ];
-            })
-            ->values()
-            ->all();
+            }
+        }
+
+        foreach (($live['waiting'] ?? []) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $ticketId = (int) ($item['ticket_id'] ?? 0);
+            if ($ticketId > 0 && isset($seenTicketIds[$ticketId])) {
+                continue;
+            }
+
+            $rows[] = [
+                'queue_code' => (string) ($item['queue_code'] ?? '-'),
+                'queue_number' => (int) ($item['queue_number'] ?? 0),
+                'customer_name' => (string) ($item['customer_name'] ?? '-'),
+                'status' => (string) ($item['status'] ?? QueueStatus::Waiting->value),
+            ];
+
+            if ($ticketId > 0) {
+                $seenTicketIds[$ticketId] = true;
+            }
+        }
+
+        return array_slice($rows, 0, 6);
     }
 
     protected function applyStatusFilter(Builder $query, string $status): void
@@ -792,12 +1036,13 @@ class AdminDashboardDataService
     {
         $status = $this->mapUiStatus((string) $booking->status->value);
 
-        $addOns = collect($booking->transaction?->items ?? [])
+        $transactionAddOns = collect($booking->transaction?->items ?? [])
             ->filter(function ($item): bool {
-                return ! in_array(strtolower((string) $item->item_type), ['package', 'main', 'booking'], true);
+                return strtolower((string) $item->item_type) === 'add_on';
             })
             ->map(function ($item): array {
                 return [
+                    'add_on_id' => $item->item_ref_id ? (int) $item->item_ref_id : null,
                     'label' => (string) $item->item_name,
                     'qty' => (int) $item->qty,
                     'line_total' => (float) $item->line_total,
@@ -805,21 +1050,68 @@ class AdminDashboardDataService
             })
             ->values();
 
+        $bookingAddOns = collect($booking->addOns ?? [])
+            ->map(function ($addOn): array {
+                $qty = (int) ($addOn->pivot?->qty ?? 0);
+                $lineTotal = (float) ($addOn->pivot?->line_total ?? ($qty * (float) $addOn->price));
+
+                return [
+                    'add_on_id' => (int) $addOn->id,
+                    'label' => (string) $addOn->name,
+                    'qty' => $qty,
+                    'line_total' => $lineTotal,
+                ];
+            })
+            ->filter(fn (array $item): bool => $item['qty'] > 0)
+            ->values();
+
+        $addOns = $transactionAddOns->isNotEmpty() ? $transactionAddOns : $bookingAddOns;
+
         $amount = (float) $booking->total_amount;
         if ($amount <= 0) {
             $amount = (float) $booking->paid_amount;
         }
 
+        $totalAmount = (float) $booking->total_amount;
+        $paidAmount = (float) $booking->paid_amount;
+        $remainingAmount = max($totalAmount - $paidAmount, 0);
+        $paymentStatus = $this->resolveBookingPaymentStatus($booking);
+
         return [
+            'record_id' => (int) $booking->id,
             'id' => (string) $booking->booking_code,
+            'booking_code' => (string) $booking->booking_code,
+            'branch_id' => (int) $booking->branch_id,
+            'branch_name' => (string) ($booking->branch?->name ?? '-'),
+            'package_id' => (int) $booking->package_id,
+            'design_catalog_id' => $booking->design_catalog_id ? (int) $booking->design_catalog_id : null,
             'name' => (string) $booking->customer_name,
+            'customer_phone' => (string) ($booking->customer_phone ?? ''),
+            'customer_email' => (string) ($booking->customer_email ?? ''),
             'date' => $booking->booking_date?->format('j M Y') ?? '-',
             'time' => $booking->start_at?->format('H:i') ?? '-',
+            'booking_date_iso' => $booking->booking_date?->toDateString(),
+            'start_time' => $booking->start_at?->format('H:i') ?? '',
             'status' => $status,
+            'status_raw' => (string) $booking->status->value,
             'payment' => $this->paymentLabel($booking),
+            'payment_status' => $paymentStatus,
             'pkg' => (string) ($booking->package?->name ?? '-'),
+            'design_name' => (string) ($booking->designCatalog?->name ?? '-'),
             'amount' => $amount,
             'amount_text' => $amount > 0 ? $this->formatRupiah($amount) : '-',
+            'total_amount' => $totalAmount,
+            'paid_amount' => $paidAmount,
+            'remaining_amount' => $remainingAmount,
+            'notes' => (string) ($booking->notes ?? ''),
+            'transaction_id' => $booking->transaction?->id ? (int) $booking->transaction->id : null,
+            'can_confirm_booking' => (string) $booking->status->value === BookingStatus::Pending->value,
+            'can_confirm_payment' => (
+                ! in_array((string) $booking->status->value, [
+                    BookingStatus::Done->value,
+                    BookingStatus::Cancelled->value,
+                ], true)
+            ) && $remainingAmount > 0,
             'add_ons' => $addOns,
             'add_ons_count' => $addOns->count(),
             'add_ons_total' => (float) $addOns->sum('line_total'),
@@ -850,6 +1142,26 @@ class AdminDashboardDataService
         }
 
         return 'DP';
+    }
+
+    protected function resolveBookingPaymentStatus(Booking $booking): string
+    {
+        if ($booking->transaction?->status?->value) {
+            return (string) $booking->transaction->status->value;
+        }
+
+        $total = (float) $booking->total_amount;
+        $paid = (float) $booking->paid_amount;
+
+        if ($paid <= 0) {
+            return TransactionStatus::Unpaid->value;
+        }
+
+        if ($total > 0 && $paid < $total) {
+            return TransactionStatus::Partial->value;
+        }
+
+        return TransactionStatus::Paid->value;
     }
 
     protected function buildRevenueSeries(int $days, string $labelFormat): array

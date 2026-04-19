@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Services\AdminDashboardDataService;
+use App\Services\AdminQueuePageService;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Support\Htmlable;
 
@@ -39,6 +40,8 @@ class AdminDashboard extends Page
     {
         /** @var AdminDashboardDataService $service */
         $service = app(AdminDashboardDataService::class);
+        /** @var AdminQueuePageService $queuePageService */
+        $queuePageService = app(AdminQueuePageService::class);
         $paginator = $service->paginatedRows('', 'all', 15);
 
         return [
@@ -47,7 +50,8 @@ class AdminDashboard extends Page
             'revenueOverview' => $service->revenueOverview(),
             'ownerHighlights' => $service->ownerHighlights(),
             'ownerModules' => $service->ownerModules(),
-            'queueLive' => $service->queueLive(),
+            'queueLive' => $queuePageService->live(),
+            'queueBookingOptions' => $queuePageService->bookingOptions(),
             'recentTransactions' => $service->recentTransactions(),
             'recentActivities' => $service->recentActivities(),
             'queueSnapshot' => $service->queueSnapshot(),

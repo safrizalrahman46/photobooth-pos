@@ -4,45 +4,31 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BookingIndexRequest;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingStatusRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
+use App\Services\BookingReadService;
 use App\Services\BookingService;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use RuntimeException;
 
 class BookingController extends Controller
 {
     public function __construct(
+        private readonly BookingReadService $bookingReadService,
         private readonly BookingService $bookingService,
         private readonly ApiResponder $responder,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(BookingIndexRequest $request): JsonResponse
     {
-        $perPage = min((int) $request->integer('per_page', 15), 100);
+        $payload = $request->validated();
+        $perPage = (int) ($payload['per_page'] ?? 15);
 
-        $query = Booking::query()
-            ->with(['package', 'designCatalog'])
-            ->orderByDesc('booking_date')
-            ->orderByDesc('start_at');
-
-        if ($request->filled('branch_id')) {
-            $query->where('branch_id', $request->integer('branch_id'));
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->string('status')->toString());
-        }
-
-        if ($request->filled('date')) {
-            $query->whereDate('booking_date', $request->string('date')->toString());
-        }
-
-        $bookings = $query->paginate($perPage)->withQueryString();
+        $bookings = $this->bookingReadService->paginate($payload, $perPage);
 
         return $this->responder->paginated($bookings, BookingResource::collection($bookings), 'Daftar booking berhasil dimuat.');
     }

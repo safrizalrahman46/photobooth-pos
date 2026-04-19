@@ -3,27 +3,29 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import {
     Activity,
     BarChart3,
-    Bell,
     Calendar,
-    Camera,
-    ChevronLeft,
-    ChevronRight,
-    ChevronRight as BreadcrumbChevron,
     LayoutDashboard,
     ListOrdered,
-    LogOut,
-    Menu,
     Package,
     Palette,
-    Download,
-    Plus,
     Receipt,
-    Search,
     Settings,
-    Sparkles,
     Users,
-    X,
 } from 'lucide-vue-next';
+
+import AdminSidebar from './components/AdminSidebar.vue';
+import AdminTopBar from './components/AdminTopBar.vue';
+import ActivityLogsPage from './pages/ActivityLogsPage.vue';
+import BookingsPage from './pages/BookingsPage.vue';
+import DashboardPage from './pages/DashboardPage.vue';
+import AddOnsPage from './pages/AddOnsPage.vue';
+import DesignsPage from './pages/DesignsPage.vue';
+import PackagesPage from './pages/PackagesPage.vue';
+import QueuePage from './pages/QueuePage.vue';
+import ReportsPage from './pages/ReportsPage.vue';
+import SettingsPage from './pages/SettingsPage.vue';
+import TransactionsPage from './pages/TransactionsPage.vue';
+import UsersPage from './pages/UsersPage.vue';
 
 const props = defineProps({
     initialStats: {
@@ -41,6 +43,10 @@ const props = defineProps({
     queueLive: {
         type: Object,
         default: () => ({}),
+    },
+    queueBookingOptions: {
+        type: Array,
+        default: () => [],
     },
     ownerHighlights: {
         type: Array,
@@ -83,9 +89,142 @@ const props = defineProps({
         type: String,
         default: '',
     },
+    packagesDataUrl: {
+        type: String,
+        default: '',
+    },
+    packageStoreUrl: {
+        type: String,
+        default: '',
+    },
+    packageBaseUrl: {
+        type: String,
+        default: '/admin/packages',
+    },
+    addOnsDataUrl: {
+        type: String,
+        default: '',
+    },
+    addOnStoreUrl: {
+        type: String,
+        default: '',
+    },
+    addOnBaseUrl: {
+        type: String,
+        default: '/admin/add-ons',
+    },
+    designsDataUrl: {
+        type: String,
+        default: '',
+    },
+    designStoreUrl: {
+        type: String,
+        default: '',
+    },
+    designBaseUrl: {
+        type: String,
+        default: '/admin/designs',
+    },
+    usersDataUrl: {
+        type: String,
+        default: '',
+    },
+    userStoreUrl: {
+        type: String,
+        default: '',
+    },
+    queueDataUrl: {
+        type: String,
+        default: '',
+    },
+    queueCallNextUrl: {
+        type: String,
+        default: '',
+    },
+    queueCheckInUrl: {
+        type: String,
+        default: '',
+    },
+    queueWalkInUrl: {
+        type: String,
+        default: '',
+    },
+    queueBaseUrl: {
+        type: String,
+        default: '/admin/queue',
+    },
+    bookingStoreUrl: {
+        type: String,
+        default: '',
+    },
+    bookingBaseUrl: {
+        type: String,
+        default: '/admin/bookings',
+    },
+    bookingAvailabilityUrl: {
+        type: String,
+        default: '/booking/availability',
+    },
+    initialSettings: {
+        type: Object,
+        default: () => ({
+            default_branch_id: null,
+            branches: [],
+        }),
+    },
+    defaultBranchId: {
+        type: [Number, String, null],
+        default: null,
+    },
+    settingsDataUrl: {
+        type: String,
+        default: '',
+    },
+    settingsDefaultBranchUrl: {
+        type: String,
+        default: '',
+    },
+    settingsBranchStoreUrl: {
+        type: String,
+        default: '',
+    },
+    settingsBranchBaseUrl: {
+        type: String,
+        default: '/admin/settings/branches',
+    },
+    initialPackages: {
+        type: Array,
+        default: () => [],
+    },
+    initialAddOns: {
+        type: Array,
+        default: () => [],
+    },
+    initialDesigns: {
+        type: Array,
+        default: () => [],
+    },
+    initialUsers: {
+        type: Array,
+        default: () => [],
+    },
+    initialUserRoles: {
+        type: Array,
+        default: () => [],
+    },
+    initialBookingOptions: {
+        type: Object,
+        default: () => ({
+            branches: [],
+            packages: [],
+            designs: [],
+            payment_methods: [],
+            add_ons: [],
+        }),
+    },
     panelUrl: {
         type: String,
-        default: '/panel',
+        default: '/admin',
     },
 });
 
@@ -107,7 +246,9 @@ const pagination = ref({
 });
 
 let debounceTimer = null;
+let reportDebounceTimer = null;
 let activeRequestController = null;
+let queueRefreshInterval = null;
 
 const filterTabs = [
     { key: 'all', label: 'All' },
@@ -130,6 +271,8 @@ const queueStatusMap = {
     checked_in: { bg: '#F0F9FF', color: '#0284C7' },
     in_session: { bg: '#ECFDF5', color: '#059669' },
     finished: { bg: '#F8FAFC', color: '#64748B' },
+    skipped: { bg: '#FFF7ED', color: '#EA580C' },
+    cancelled: { bg: '#FEF2F2', color: '#DC2626' },
 };
 
 const transactionStatusMap = {
@@ -154,19 +297,7 @@ const defaultCardPalette = [
     { accent: '#7C3AED', light: '#F5F3FF', border: '#DDD6FE' },
 ];
 
-const BOOKING_SCALE = 150000;
-
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-
-const toNumberArray = (value) => {
-    if (!Array.isArray(value)) {
-        return [];
-    }
-
-    return value
-        .map((item) => Number(item || 0))
-        .filter((item) => Number.isFinite(item));
-};
 
 const formatRupiah = (amount) => {
     const numeric = Number(amount || 0);
@@ -180,6 +311,34 @@ const formatDuration = (seconds) => {
     const remainingSeconds = safeSeconds % 60;
 
     return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+};
+
+const formatRelativeDate = (value) => {
+    if (!value) {
+        return 'just now';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return 'just now';
+    }
+
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    if (diffMs < 60 * 60 * 1000) {
+        return 'today';
+    }
+
+    if (diffMs < dayMs) {
+        return 'today';
+    }
+
+    const days = Math.floor(diffMs / dayMs);
+
+    return days <= 1 ? '1 day ago' : `${days} days ago`;
 };
 
 const initialsFromName = (name) => {
@@ -198,167 +357,44 @@ const initialsFromName = (name) => {
     return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
 };
 
-const buildSparklineMeta = (values, width = 72, height = 28) => {
-    const points = Array.isArray(values) && values.length > 0 ? values : [0, 0];
-
-    const max = Math.max(...points);
-    const min = Math.min(...points);
-    const range = max - min || 1;
-
-    const normalized = points.map((value, index) => {
-        const x = points.length === 1 ? width : (index / (points.length - 1)) * width;
-        const y = height - ((value - min) / range) * (height - 4) - 2;
-
-        return { x, y };
-    });
-
-    return {
-        width,
-        height,
-        linePoints: normalized.map((point) => `${point.x},${point.y}`).join(' '),
-        fillPoints: [
-            `0,${height}`,
-            ...normalized.map((point) => `${point.x},${point.y}`),
-            `${width},${height}`,
-        ].join(' '),
-        lastX: normalized[normalized.length - 1]?.x || width,
-        lastY: normalized[normalized.length - 1]?.y || height / 2,
-    };
-};
-
-const buildRevenueChartMeta = (series) => {
-    const width = 760;
-    const height = 260;
-    const left = 50;
-    const right = 16;
-    const top = 12;
-    const bottom = 32;
-
-    const plotWidth = width - left - right;
-    const plotHeight = height - top - bottom;
-
-    if (!series.length) {
-        return {
-            width,
-            height,
-            left,
-            top,
-            plotHeight,
-            hasData: false,
-            points: [],
-            revenuePath: '',
-            bookingPath: '',
-            areaPath: '',
-            gridLines: [],
-            yTicks: [],
-        };
-    }
-
-    const maxRevenue = Math.max(...series.map((point) => Number(point.revenue || 0)), 1);
-    const yAxisMax = Math.max(1000000, Math.ceil(maxRevenue / 100000) * 100000);
-
-    const linePathFromPoints = (pointsList, ySelector) => {
-        if (!pointsList.length) {
-            return '';
-        }
-
-        if (pointsList.length === 1) {
-            return `M ${pointsList[0].x} ${ySelector(pointsList[0])}`;
-        }
-
-        let path = `M ${pointsList[0].x} ${ySelector(pointsList[0])}`;
-
-        for (let index = 0; index < pointsList.length - 1; index += 1) {
-            const prev = pointsList[index - 1] || pointsList[index];
-            const current = pointsList[index];
-            const next = pointsList[index + 1];
-            const nextNext = pointsList[index + 2] || next;
-
-            const cp1x = current.x + (next.x - prev.x) / 6;
-            const cp1y = ySelector(current) + (ySelector(next) - ySelector(prev)) / 6;
-            const cp2x = next.x - (nextNext.x - current.x) / 6;
-            const cp2y = ySelector(next) - (ySelector(nextNext) - ySelector(current)) / 6;
-
-            path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${next.x} ${ySelector(next)}`;
-        }
-
-        return path;
-    };
-
-    const points = series.map((point, index) => {
-        const x = series.length === 1 ? left : left + (index / (series.length - 1)) * plotWidth;
-        const revenueY = top + (1 - Number(point.revenue || 0) / yAxisMax) * plotHeight;
-        const bookingScaled = Number(point.bookings || 0) * BOOKING_SCALE;
-        const bookingY = top + (1 - bookingScaled / yAxisMax) * plotHeight;
-
-        return {
-            ...point,
-            x,
-            revenueY,
-            bookingY,
-            bookingScaled,
-        };
-    });
-
-    const revenuePath = linePathFromPoints(points, (point) => point.revenueY);
-    const bookingPath = linePathFromPoints(points, (point) => point.bookingY);
-
-    const areaPath = revenuePath
-        ? `${revenuePath} L ${points[points.length - 1].x} ${top + plotHeight} L ${points[0].x} ${top + plotHeight} Z`
-        : '';
-
-    const gridLines = [0, 0.25, 0.5, 0.75, 1].map((ratio) => top + ratio * plotHeight);
-    const yTicks = [1, 0.75, 0.5, 0.25, 0].map((ratio) => {
-        const value = yAxisMax * ratio;
-
-        return {
-            y: top + (1 - ratio) * plotHeight,
-            label: `${(value / 1000000).toFixed(1)}M`,
-        };
-    });
-
-    return {
-        width,
-        height,
-        left,
-        top,
-        plotHeight,
-        hasData: true,
-        points,
-        revenuePath,
-        bookingPath,
-        areaPath,
-        gridLines,
-        yTicks,
-    };
-};
-
 const panelBaseUrl = computed(() => {
-    const value = String(props.panelUrl || '/panel').trim();
+    const value = String(props.panelUrl || '/admin').trim();
 
     if (!value) {
-        return '/panel';
+        return '/admin';
     }
 
     return value.endsWith('/') ? value.slice(0, -1) : value;
 });
 
+const toPathname = (value, fallback = '/admin') => {
+    const text = String(value || '').trim();
+
+    if (!text) {
+        return fallback;
+    }
+
+    if (text.startsWith('/')) {
+        return text.endsWith('/') && text !== '/' ? text.slice(0, -1) : text;
+    }
+
+    try {
+        const url = new URL(text, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+        const pathname = String(url.pathname || fallback);
+
+        return pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
+    } catch {
+        return fallback;
+    }
+};
+
+const panelBasePath = computed(() => toPathname(panelBaseUrl.value, '/admin'));
+
 const panelBookingsUrl = computed(() => `${panelBaseUrl.value}/bookings`);
 const panelTransactionsUrl = computed(() => `${panelBaseUrl.value}/transactions`);
 const panelActivitiesUrl = computed(() => `${panelBaseUrl.value}/activity-logs`);
-
-const navItems = computed(() => ([
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/admin', group: 'overview' },
-    { id: 'packages', label: 'Packages', icon: Package, href: `${panelBaseUrl.value}/packages`, group: 'management' },
-    { id: 'designs', label: 'Designs', icon: Palette, href: `${panelBaseUrl.value}/design-catalogs`, group: 'management' },
-    { id: 'users', label: 'Users', icon: Users, href: `${panelBaseUrl.value}/users`, group: 'management' },
-    { id: 'bookings', label: 'Bookings', icon: Calendar, href: panelBookingsUrl.value, group: 'operations' },
-    { id: 'queue', label: 'Queue', icon: ListOrdered, href: `${panelBaseUrl.value}/queue-tickets`, group: 'operations' },
-    { id: 'transactions', label: 'Transactions', icon: Receipt, href: panelTransactionsUrl.value, group: 'operations' },
-    { id: 'reports', label: 'Reports', icon: BarChart3, href: panelTransactionsUrl.value, group: 'analytics' },
-    { id: 'activity-logs', label: 'Activity Logs', icon: Activity, href: panelActivitiesUrl.value, group: 'analytics' },
-    { id: 'settings', label: 'Settings', icon: Settings, href: panelBaseUrl.value, group: 'system' },
-]));
+const panelReportsUrl = computed(() => `${panelBaseUrl.value}/reports`);
+const panelSettingsUrl = computed(() => `${panelBaseUrl.value}/settings`);
 
 const navGroups = [
     { key: 'overview', label: 'Overview' },
@@ -368,51 +404,15 @@ const navGroups = [
     { key: 'system', label: 'System' },
 ];
 
-const currentPath = computed(() => {
-    if (typeof window === 'undefined') {
-        return '/admin';
-    }
+const queueStats = computed(() => {
+    const stats = queueLiveState.value?.stats || {};
 
-    return String(window.location.pathname || '/admin');
-});
-
-const isNavActive = (item) => {
-    const path = currentPath.value;
-
-    if (item.id === 'dashboard') {
-        return path === '/admin' || path === '/admin/';
-    }
-
-    return path === item.href || path.startsWith(`${item.href}/`);
-};
-
-const topbarMetaById = {
-    dashboard: { title: 'Dashboard', subtitle: 'Business overview and key metrics' },
-    packages: { title: 'Packages', subtitle: 'Manage your photobooth packages' },
-    designs: { title: 'Designs', subtitle: 'Photo design templates and themes' },
-    users: { title: 'Users', subtitle: 'Manage staff and customer accounts' },
-    bookings: { title: 'Bookings', subtitle: 'Track and manage all reservations' },
-    queue: { title: 'Queue', subtitle: 'Live session queue management' },
-    transactions: { title: 'Transactions', subtitle: 'Payment history and records' },
-    reports: { title: 'Reports', subtitle: 'Business analytics and insights' },
-    'activity-logs': { title: 'Activity Logs', subtitle: 'System activity and audit trail' },
-    settings: { title: 'Settings', subtitle: 'Configure your business preferences' },
-};
-
-const activeTopbarItem = computed(() => {
-    const active = navItems.value.find((item) => isNavActive(item));
-
-    if (active) {
-        return active;
-    }
-
-    return navItems.value.find((item) => item.id === 'dashboard') || null;
-});
-
-const topbarTitle = computed(() => {
-    const id = String(activeTopbarItem.value?.id || 'dashboard');
-
-    return topbarMetaById[id]?.title || 'Dashboard';
+    return {
+        in_queue: Number(stats.in_queue || 0),
+        in_session: Number(stats.in_session || 0),
+        waiting: Number(stats.waiting || 0),
+        completed_today: Number(stats.completed_today || 0),
+    };
 });
 
 const navBadgeMap = computed(() => ({
@@ -430,6 +430,91 @@ const navBadgeFor = (itemId) => {
     return value > 99 ? '99+' : String(value);
 };
 
+const navItems = computed(() => {
+    const items = [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/admin', group: 'overview' },
+        { id: 'packages', label: 'Packages', icon: Package, href: `${panelBaseUrl.value}/packages`, group: 'management' },
+        { id: 'add-ons', label: 'Add-ons', icon: Package, href: `${panelBaseUrl.value}/add-ons`, group: 'management' },
+        { id: 'designs', label: 'Designs', icon: Palette, href: `${panelBaseUrl.value}/design-catalogs`, group: 'management' },
+        { id: 'users', label: 'Users', icon: Users, href: `${panelBaseUrl.value}/users`, group: 'management' },
+        { id: 'bookings', label: 'Bookings', icon: Calendar, href: panelBookingsUrl.value, group: 'operations' },
+        { id: 'queue', label: 'Queue', icon: ListOrdered, href: `${panelBaseUrl.value}/queue-tickets`, group: 'operations' },
+        { id: 'transactions', label: 'Transactions', icon: Receipt, href: panelTransactionsUrl.value, group: 'operations' },
+        { id: 'reports', label: 'Reports', icon: BarChart3, href: panelReportsUrl.value, group: 'analytics' },
+        { id: 'activity-logs', label: 'Activity Logs', icon: Activity, href: panelActivitiesUrl.value, group: 'analytics' },
+        { id: 'settings', label: 'Settings', icon: Settings, href: panelSettingsUrl.value, group: 'system' },
+    ];
+
+    return items.map((item) => ({
+        ...item,
+        badge: navBadgeFor(item.id),
+    }));
+});
+
+const currentPath = computed(() => {
+    if (typeof window === 'undefined') {
+        return '/admin';
+    }
+
+    return String(window.location.pathname || '/admin');
+});
+
+const normalizedCurrentPath = computed(() => {
+    const path = String(currentPath.value || '/admin');
+
+    if (path === '/') {
+        return '/';
+    }
+
+    return path.endsWith('/') ? path.slice(0, -1) : path;
+});
+
+const activeModuleId = computed(() => {
+    const base = panelBasePath.value;
+    const path = normalizedCurrentPath.value;
+
+    if (path === base) {
+        return 'dashboard';
+    }
+
+    const map = [
+        { id: 'packages', path: `${base}/packages` },
+        { id: 'add-ons', path: `${base}/add-ons` },
+        { id: 'designs', path: `${base}/design-catalogs` },
+        { id: 'users', path: `${base}/users` },
+        { id: 'bookings', path: `${base}/bookings` },
+        { id: 'queue', path: `${base}/queue-tickets` },
+        { id: 'transactions', path: `${base}/transactions` },
+        { id: 'reports', path: `${base}/reports` },
+        { id: 'activity-logs', path: `${base}/activity-logs` },
+        { id: 'settings', path: `${base}/settings` },
+    ];
+
+    const matched = map.find((entry) => path === entry.path || path.startsWith(`${entry.path}/`));
+
+    return matched ? matched.id : 'dashboard';
+});
+
+const topbarMetaById = {
+    dashboard: { title: 'Dashboard', subtitle: 'Business overview and key metrics' },
+    packages: { title: 'Packages', subtitle: 'Manage your photobooth packages' },
+    'add-ons': { title: 'Add-ons', subtitle: 'Manage package add-ons and pricing' },
+    designs: { title: 'Designs', subtitle: 'Photo design templates and themes' },
+    users: { title: 'Users', subtitle: 'Manage staff and customer accounts' },
+    bookings: { title: 'Bookings', subtitle: 'Track and manage all reservations' },
+    queue: { title: 'Queue', subtitle: 'Live session queue management' },
+    transactions: { title: 'Transactions', subtitle: 'Payment history and records' },
+    reports: { title: 'Reports', subtitle: 'Business analytics and insights' },
+    'activity-logs': { title: 'Activity Logs', subtitle: 'System activity and audit trail' },
+    settings: { title: 'Settings', subtitle: 'Configure your business preferences' },
+};
+
+const topbarTitle = computed(() => {
+    const id = String(activeModuleId.value || 'dashboard');
+
+    return topbarMetaById[id]?.title || 'Dashboard';
+});
+
 const topbarDate = computed(() => {
     return new Intl.DateTimeFormat('id-ID', {
         weekday: 'long',
@@ -437,20 +522,6 @@ const topbarDate = computed(() => {
         month: 'long',
         year: 'numeric',
     }).format(new Date());
-});
-
-const greeting = computed(() => {
-    const hour = new Date().getHours();
-
-    if (hour < 12) {
-        return 'Good morning';
-    }
-
-    if (hour < 17) {
-        return 'Good afternoon';
-    }
-
-    return 'Good evening';
 });
 
 const fallbackSummaryCards = computed(() => {
@@ -461,11 +532,6 @@ const fallbackSummaryCards = computed(() => {
         value: String(item.value ?? '-'),
         change: '0',
         changeLabel: 'baseline',
-        trend: 'neutral',
-        accent: defaultCardPalette[index]?.accent || '#2563EB',
-        accentLight: defaultCardPalette[index]?.light || '#EFF6FF',
-        accentBorder: defaultCardPalette[index]?.border || '#DBEAFE',
-        sparkline: [0, 0, 0, 0, 0, 0, 0],
     }));
 });
 
@@ -474,23 +540,13 @@ const normalizedSummaryCards = computed(() => {
         ? props.summaryCards
         : fallbackSummaryCards.value;
 
-    return source.map((card, index) => {
-        const palette = defaultCardPalette[index % defaultCardPalette.length];
-        const sparkline = toNumberArray(card.sparkline);
-
-        return {
-            title: String(card.title || card.label || `Metric ${index + 1}`),
-            value: String(card.value ?? '-'),
-            change: String(card.change ?? '0'),
-            changeLabel: String(card.changeLabel || card.helper || 'baseline'),
-            trend: String(card.trend || 'neutral'),
-            accent: String(card.accent || palette.accent),
-            accentLight: String(card.accentLight || palette.light),
-            accentBorder: String(card.accentBorder || palette.border),
-            sparklineMeta: buildSparklineMeta(sparkline.length ? sparkline : [0, 0]),
-            gradientId: `summary-card-gradient-${index}`,
-        };
-    });
+    return source.map((card, index) => ({
+        title: String(card.title || card.label || `Metric ${index + 1}`),
+        value: String(card.value ?? '-'),
+        change: String(card.change ?? '0'),
+        changeLabel: String(card.changeLabel || card.helper || 'baseline'),
+        tone: defaultCardPalette[index % defaultCardPalette.length],
+    }));
 });
 
 const normalizedRevenueSeries = computed(() => {
@@ -515,8 +571,6 @@ const normalizedRevenueSeries = computed(() => {
     }));
 });
 
-const revenueChartMeta = computed(() => buildRevenueChartMeta(normalizedRevenueSeries.value));
-
 const revenueTotal = computed(() => {
     const total = normalizedRevenueSeries.value.reduce((sum, item) => sum + Number(item.revenue || 0), 0);
 
@@ -527,43 +581,94 @@ const bookingTotal = computed(() => {
     return normalizedRevenueSeries.value.reduce((sum, item) => sum + Number(item.bookings || 0), 0);
 });
 
-const queueStats = computed(() => {
-    const stats = props.queueLive?.stats || {};
+const queueLiveState = ref(props.queueLive && typeof props.queueLive === 'object' ? props.queueLive : {});
 
-    return {
-        in_queue: Number(stats.in_queue || 0),
-        in_session: Number(stats.in_session || 0),
-        waiting: Number(stats.waiting || 0),
-        completed_today: Number(stats.completed_today || 0),
-    };
-});
+const resolveNextQueueStatus = (status) => {
+    const current = String(status || '').toLowerCase();
+
+    if (current === 'waiting') {
+        return 'called';
+    }
+
+    if (current === 'called') {
+        return 'checked_in';
+    }
+
+    if (current === 'checked_in') {
+        return 'in_session';
+    }
+
+    if (current === 'in_session') {
+        return 'finished';
+    }
+
+    return null;
+};
+
+const resolvePreviousQueueStatus = (status) => {
+    const current = String(status || '').toLowerCase();
+
+    if (current === 'called') {
+        return 'waiting';
+    }
+
+    if (current === 'checked_in') {
+        return 'called';
+    }
+
+    if (current === 'in_session') {
+        return 'checked_in';
+    }
+
+    return null;
+};
 
 const currentQueue = computed(() => {
-    const value = props.queueLive?.current;
+    const value = queueLiveState.value?.current;
 
     if (!value || typeof value !== 'object') {
         return null;
     }
 
     return {
+        ticket_id: value.ticket_id ? Number(value.ticket_id) : null,
+        booking_id: value.booking_id ? Number(value.booking_id) : null,
+        branch_id: value.branch_id ? Number(value.branch_id) : null,
+        queue_date: String(value.queue_date || ''),
+        source_type: String(value.source_type || ''),
         queue_code: String(value.queue_code || '-'),
+        queue_number: Number(value.queue_number || 0),
         customer_name: String(value.customer_name || '-'),
         package_name: String(value.package_name || '-'),
         status: String(value.status || 'waiting'),
+        status_label: String(value.status_label || value.status || 'Waiting'),
         progress_percentage: Number(value.progress_percentage || 0),
         remaining_seconds: Number(value.remaining_seconds || 0),
         session_duration_seconds: Number(value.session_duration_seconds || 0),
+        can_complete: Boolean(value.can_complete),
+        can_skip: Boolean(value.can_skip),
     };
 });
 
 const waitingQueue = computed(() => {
-    const list = Array.isArray(props.queueLive?.waiting) ? props.queueLive.waiting : [];
+    const list = Array.isArray(queueLiveState.value?.waiting) ? queueLiveState.value.waiting : [];
 
     return list.slice(0, 5).map((item, index) => ({
+        ticket_id: item.ticket_id ? Number(item.ticket_id) : null,
+        booking_id: item.booking_id ? Number(item.booking_id) : null,
+        branch_id: item.branch_id ? Number(item.branch_id) : null,
+        queue_date: String(item.queue_date || ''),
+        source_type: String(item.source_type || ''),
         queue_code: String(item.queue_code || `Q${String(index + 1).padStart(3, '0')}`),
+        queue_number: Number(item.queue_number || index + 1),
         customer_name: String(item.customer_name || '-'),
         package_name: String(item.package_name || '-'),
         status: String(item.status || 'waiting'),
+        status_label: String(item.status_label || item.status || 'Waiting'),
+        next_status: String(item.next_status || resolveNextQueueStatus(item.status) || ''),
+        previous_status: String(item.previous_status || resolvePreviousQueueStatus(item.status) || ''),
+        can_cancel: item.can_cancel !== false,
+        added_at: String(item.added_at || '-'),
     }));
 });
 
@@ -588,20 +693,48 @@ const queueSessionDurationText = computed(() => {
 
 const normalizedRows = computed(() => {
     return (rows.value || []).map((row) => ({
+        record_id: Number(row.record_id || 0),
         id: String(row.id || '-'),
+        booking_code: String(row.booking_code || row.id || '-'),
+        branch_id: row.branch_id ? Number(row.branch_id) : null,
+        branch_name: String(row.branch_name || '-'),
+        package_id: row.package_id ? Number(row.package_id) : null,
+        design_catalog_id: row.design_catalog_id ? Number(row.design_catalog_id) : null,
         name: String(row.name || '-'),
+        customer_phone: String(row.customer_phone || ''),
+        customer_email: String(row.customer_email || ''),
         pkg: String(row.pkg || '-'),
+        design_name: String(row.design_name || '-'),
         date: String(row.date || '-'),
         time: String(row.time || '-'),
+        booking_date_iso: String(row.booking_date_iso || ''),
+        start_time: String(row.start_time || ''),
         status: String(row.status || 'pending'),
+        status_raw: String(row.status_raw || 'pending'),
         payment: String(row.payment || '-'),
+        payment_status: String(row.payment_status || 'unpaid'),
         amount: Number(row.amount || 0),
         amount_text: String(row.amount_text || formatRupiah(row.amount || 0)),
+        total_amount: Number(row.total_amount || row.amount || 0),
+        paid_amount: Number(row.paid_amount || 0),
+        remaining_amount: Number(row.remaining_amount || 0),
+        notes: String(row.notes || ''),
+        transaction_id: row.transaction_id ? Number(row.transaction_id) : null,
+        can_confirm_booking: Boolean(row.can_confirm_booking),
+        can_confirm_payment: Boolean(row.can_confirm_payment),
+        add_ons: Array.isArray(row.add_ons)
+            ? row.add_ons.map((item) => ({
+                add_on_id: item.add_on_id ? Number(item.add_on_id) : null,
+                label: String(item.label || '-'),
+                qty: Number(item.qty || 0),
+                line_total: Number(item.line_total || 0),
+            }))
+            : [],
         add_ons_count: Number(row.add_ons_count || 0),
+        add_ons_total: Number(row.add_ons_total || 0),
     }));
 });
 
-const hasPagination = computed(() => Number(pagination.value.last_page || 1) > 1);
 const canGoPrev = computed(() => Number(pagination.value.current_page || 1) > 1);
 const canGoNext = computed(() => Number(pagination.value.current_page || 1) < Number(pagination.value.last_page || 1));
 
@@ -638,7 +771,6 @@ const normalizedRecentTransactions = computed(() => {
             amountText: String(item.paid_text || item.total_text || formatRupiah(amount)),
             status: String(item.status || 'unpaid'),
             time: String(item.time_text || item.time || '-'),
-            initials: initialsFromName(customer),
         };
     });
 });
@@ -661,12 +793,1587 @@ const normalizedRecentActivities = computed(() => {
     }));
 });
 
+const packageCards = computed(() => {
+    return (packages.value || []).map((item) => {
+        const revenue = Number(item.this_month_revenue || 0);
+        const addOns = Array.isArray(item.add_ons)
+            ? item.add_ons.map((addOn) => ({
+                id: Number(addOn?.id || 0),
+                code: String(addOn?.code || ''),
+                name: String(addOn?.name || ''),
+                description: String(addOn?.description || ''),
+                price: Number(addOn?.price || 0),
+                max_qty: Math.max(1, Number(addOn?.max_qty || 1)),
+                is_active: Boolean(addOn?.is_active),
+                sort_order: Number(addOn?.sort_order || 0),
+            }))
+            : [];
+
+        return {
+            id: Number(item.id || 0),
+            code: String(item.code || ''),
+            name: String(item.name || '-'),
+            description: String(item.description || ''),
+            duration_minutes: Number(item.duration_minutes || 0),
+            base_price: Number(item.base_price || 0),
+            is_active: Boolean(item.is_active),
+            sort_order: Number(item.sort_order || 0),
+            bookings: Number(item.this_month_bookings || 0),
+            total_bookings: Number(item.total_bookings || 0),
+            pending: Number(item.pending_bookings || 0),
+            completed: Number(item.completed_bookings || 0),
+            add_ons_count: Number(item.add_ons_count || addOns.length || 0),
+            add_ons: addOns,
+            revenue,
+            revenueText: formatRupiah(revenue),
+        };
+    });
+});
+
+const packageOptions = computed(() => {
+    return packageCards.value.map((item) => ({
+        id: Number(item.id || 0),
+        name: String(item.name || '-'),
+    }));
+});
+
+const designCards = computed(() => {
+    return (designs.value || []).map((item, index) => ({
+        id: Number(item.id || 0),
+        package_id: item.package_id ? Number(item.package_id) : null,
+        package_name: String(item.package_name || '-'),
+        code: String(item.code || ''),
+        name: String(item.name || '-'),
+        theme: String(item.theme || ''),
+        preview_url: String(item.preview_url || ''),
+        is_active: Boolean(item.is_active),
+        sort_order: Number(item.sort_order || 0),
+        bookings: Number(item.this_month_bookings || item.total_bookings || 0),
+        total_bookings: Number(item.total_bookings || 0),
+        status: Boolean(item.is_active) ? 'active' : 'inactive',
+        updated: formatRelativeDate(item.updated_at),
+        tone: defaultCardPalette[index % defaultCardPalette.length],
+    }));
+});
+
+const userRows = computed(() => {
+    return (users.value || []).map((item) => ({
+        id: Number(item.id || 0),
+        name: String(item.name || '-'),
+        email: String(item.email || ''),
+        phone: String(item.phone || ''),
+        role: String(item.role || 'Staff'),
+        role_key: String(item.role_key || '').toLowerCase(),
+        status: String(item.status || 'inactive'),
+        is_active: Boolean(item.is_active),
+        source: String(item.source || 'database'),
+    }));
+});
+
+const activitySearch = ref('');
+const activityModuleFilter = ref('all');
+
+const activityModuleOptions = computed(() => {
+    const modules = normalizedRecentActivities.value.map((item) => String(item.module || '').toLowerCase());
+    const uniques = Array.from(new Set(modules.filter(Boolean))).sort();
+
+    return ['all', ...uniques];
+});
+
+const filteredActivityRows = computed(() => {
+    const term = String(activitySearch.value || '').toLowerCase().trim();
+
+    return normalizedRecentActivities.value.filter((activity) => {
+        const moduleName = String(activity.module || '').toLowerCase();
+        const passesModule = activityModuleFilter.value === 'all' || moduleName === activityModuleFilter.value;
+
+        if (!passesModule) {
+            return false;
+        }
+
+        if (!term) {
+            return true;
+        }
+
+        return (
+            String(activity.actor || '').toLowerCase().includes(term)
+            || String(activity.action || '').toLowerCase().includes(term)
+            || moduleName.includes(term)
+        );
+    });
+});
+
+const settingsTab = ref('branch');
+const settingsTabs = [
+    { id: 'branch', label: 'Branch Setting' },
+    { id: 'hours', label: 'Operating Hours' },
+    { id: 'security', label: 'Security' },
+];
+
+const normalizeSettings = (source) => {
+    const settingsSource = source && typeof source === 'object' ? source : {};
+    const branchesSource = Array.isArray(settingsSource.branches) ? settingsSource.branches : [];
+
+    const branches = branchesSource
+        .map((branch) => ({
+            id: Number(branch?.id || 0),
+            code: String(branch?.code || ''),
+            name: String(branch?.name || '-'),
+            timezone: String(branch?.timezone || 'Asia/Jakarta'),
+            phone: String(branch?.phone || ''),
+            address: String(branch?.address || ''),
+        }))
+        .filter((branch) => branch.id > 0);
+
+    const defaultBranch = Number(settingsSource.default_branch_id || 0);
+
+    return {
+        default_branch_id: defaultBranch > 0 ? defaultBranch : null,
+        branches,
+    };
+};
+
+const reportFilters = ref({
+    from: '',
+    to: '',
+    package_id: '',
+    cashier_id: '',
+});
+const reportLoading = ref(false);
+const reportError = ref('');
+const reportData = ref(null);
+const packages = ref(Array.isArray(props.initialPackages) ? props.initialPackages : []);
+const addOns = ref(Array.isArray(props.initialAddOns) ? props.initialAddOns : []);
+const designs = ref(Array.isArray(props.initialDesigns) ? props.initialDesigns : []);
+const users = ref(Array.isArray(props.initialUsers) ? props.initialUsers : []);
+const userRoles = ref(Array.isArray(props.initialUserRoles) ? props.initialUserRoles : []);
+const bookingOptions = ref(props.initialBookingOptions && typeof props.initialBookingOptions === 'object'
+    ? props.initialBookingOptions
+    : {
+        branches: [],
+        packages: [],
+        designs: [],
+        payment_methods: [],
+    });
+const settings = ref(normalizeSettings(props.initialSettings));
+const settingsLoading = ref(false);
+const settingsSaving = ref(false);
+const settingsError = ref('');
+const settingsSuccess = ref('');
+const packageLoading = ref(false);
+const packageSaving = ref(false);
+const packageError = ref('');
+const deletingPackageId = ref(null);
+const addOnLoading = ref(false);
+const addOnSaving = ref(false);
+const addOnError = ref('');
+const deletingAddOnId = ref(null);
+const designLoading = ref(false);
+const designSaving = ref(false);
+const designError = ref('');
+const deletingDesignId = ref(null);
+const userLoading = ref(false);
+const userSaving = ref(false);
+const userError = ref('');
+const bookingSaving = ref(false);
+const bookingError = ref('');
+const deletingBookingId = ref(null);
+const processingBookingId = ref(null);
+const queueLoading = ref(false);
+const queueActionLoading = ref(false);
+const queueError = ref('');
+const queueProcessingTicketId = ref(null);
+const queueBookingOptions = ref(Array.isArray(props.queueBookingOptions) ? props.queueBookingOptions : []);
+
+const queueBranchOptions = computed(() => {
+    const branches = bookingOptions.value?.branches;
+
+    return Array.isArray(branches) ? branches : [];
+});
+
+const settingsBranchOptions = computed(() => {
+    if (settings.value.branches.length) {
+        return settings.value.branches;
+    }
+
+    return queueBranchOptions.value
+        .map((branch) => ({
+            id: Number(branch?.id || 0),
+            name: String(branch?.name || '-'),
+        }))
+        .filter((branch) => branch.id > 0);
+});
+
+const resolvedDefaultBranchId = computed(() => {
+    const fromSettings = Number(settings.value.default_branch_id || 0);
+
+    if (fromSettings > 0) {
+        return fromSettings;
+    }
+
+    const fromProps = Number(props.defaultBranchId || 0);
+
+    if (fromProps > 0) {
+        return fromProps;
+    }
+
+    const fromOptions = Number(settingsBranchOptions.value[0]?.id || 0);
+
+    return fromOptions > 0 ? fromOptions : null;
+});
+
+const defaultQueueBranchId = computed(() => {
+    const fromCurrent = currentQueue.value?.branch_id;
+    const fromWaiting = waitingQueue.value[0]?.branch_id;
+    const fromOptions = queueBranchOptions.value[0]?.id;
+
+    return Number(fromCurrent || fromWaiting || fromOptions || 0) || null;
+});
+
+const setDefaultReportRange = () => {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const start = new Date(end);
+    start.setDate(end.getDate() - 6);
+
+    const toIso = (value) => {
+        const year = value.getFullYear();
+        const month = String(value.getMonth() + 1).padStart(2, '0');
+        const day = String(value.getDate()).padStart(2, '0');
+
+        return `${year}-${month}-${day}`;
+    };
+
+    reportFilters.value.from = toIso(start);
+    reportFilters.value.to = toIso(end);
+};
+
+const fetchReportSummary = async () => {
+    if (!props.reportUrl) {
+        return;
+    }
+
+    reportLoading.value = true;
+    reportError.value = '';
+
+    try {
+        const params = new URLSearchParams();
+
+        if (reportFilters.value.from) {
+            params.set('from', reportFilters.value.from);
+        }
+
+        if (reportFilters.value.to) {
+            params.set('to', reportFilters.value.to);
+        }
+
+        if (reportFilters.value.package_id) {
+            params.set('package_id', String(reportFilters.value.package_id));
+        }
+
+        if (reportFilters.value.cashier_id) {
+            params.set('cashier_id', String(reportFilters.value.cashier_id));
+        }
+
+        const response = await fetch(`${props.reportUrl}?${params.toString()}`, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const payload = await response.json();
+        reportData.value = payload?.data?.report || null;
+    } catch (error) {
+        reportError.value = 'Failed to load report data.';
+        if (error?.name !== 'AbortError') {
+            console.error('Failed to fetch dashboard report:', error);
+        }
+    } finally {
+        reportLoading.value = false;
+    }
+};
+
+const scheduleReportFetch = () => {
+    if (reportDebounceTimer) {
+        clearTimeout(reportDebounceTimer);
+    }
+
+    reportDebounceTimer = setTimeout(() => {
+        fetchReportSummary();
+    }, 250);
+};
+
+const reportSummaryCards = computed(() => {
+    const revenue = reportData.value?.revenue_summary || {};
+    const booking = reportData.value?.booking_summary || {};
+
+    return [
+        {
+            label: 'Total Revenue',
+            value: String(revenue.total_revenue_text || formatRupiah(0)),
+            helper: `${Number(revenue.transaction_count || 0)} transactions`,
+            tone: defaultCardPalette[1],
+        },
+        {
+            label: 'Average Ticket',
+            value: String(revenue.average_transaction_text || formatRupiah(0)),
+            helper: 'Per successful transaction',
+            tone: defaultCardPalette[0],
+        },
+        {
+            label: 'Total Bookings',
+            value: String(booking.total_bookings || 0),
+            helper: `${Number(booking.converted_bookings || 0)} converted`,
+            tone: defaultCardPalette[2],
+        },
+        {
+            label: 'Conversion Rate',
+            value: String(booking.conversion_rate_text || '0%'),
+            helper: 'Paid + Done bookings',
+            tone: defaultCardPalette[3],
+        },
+    ];
+});
+
+const reportDailyRows = computed(() => {
+    return Array.isArray(reportData.value?.daily_summary) ? reportData.value.daily_summary : [];
+});
+
+const reportDailyMaxRevenue = computed(() => {
+    const max = reportDailyRows.value.reduce((highest, row) => Math.max(highest, Number(row.revenue || 0)), 0);
+
+    return max > 0 ? max : 1;
+});
+
+const reportPackageRows = computed(() => {
+    return Array.isArray(reportData.value?.package_popularity) ? reportData.value.package_popularity : [];
+});
+
+const reportCashierRows = computed(() => {
+    return Array.isArray(reportData.value?.cashier_performance) ? reportData.value.cashier_performance : [];
+});
+
+const reportStatusRows = computed(() => {
+    const rowsValue = reportData.value?.booking_summary?.statuses;
+
+    return Array.isArray(rowsValue) ? rowsValue : [];
+});
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'reports') {
+        return;
+    }
+
+    if (!reportFilters.value.from || !reportFilters.value.to) {
+        setDefaultReportRange();
+    }
+
+    fetchReportSummary();
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'packages' && nextValue !== 'designs' && nextValue !== 'add-ons') {
+        return;
+    }
+
+    if (!packages.value.length && !packageLoading.value) {
+        fetchPackagesData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'add-ons') {
+        return;
+    }
+
+    if (!addOnLoading.value) {
+        fetchAddOnsData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'designs') {
+        return;
+    }
+
+    if (!designs.value.length && !designLoading.value) {
+        fetchDesignsData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'users') {
+        return;
+    }
+
+    if (!users.value.length && !userLoading.value) {
+        fetchUsersData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'settings') {
+        return;
+    }
+
+    if (!settingsLoading.value) {
+        fetchSettingsData();
+    }
+}, { immediate: true });
+
+watch(
+    () => [
+        reportFilters.value.from,
+        reportFilters.value.to,
+        reportFilters.value.package_id,
+        reportFilters.value.cashier_id,
+    ],
+    () => {
+        if (activeModuleId.value !== 'reports') {
+            return;
+        }
+
+        scheduleReportFetch();
+    },
+);
+
 const resolveBookingStatus = (status) => {
     return bookingStatusMap[status] || {
         label: status || 'Unknown',
         bg: '#F8FAFC',
         color: '#64748B',
     };
+};
+
+const getCsrfToken = () => {
+    if (typeof document === 'undefined') {
+        return '';
+    }
+
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+};
+
+const parseRequestError = async (response) => {
+    try {
+        const json = await response.json();
+        const firstValidationMessage = Object.values(json?.errors || {})?.[0]?.[0];
+
+        return String(firstValidationMessage || json?.message || `HTTP ${response.status}`);
+    } catch {
+        return `HTTP ${response.status}`;
+    }
+};
+
+const applyPackagesPayload = (payload) => {
+    const nextPackages = payload?.data?.packages;
+
+    if (Array.isArray(nextPackages)) {
+        packages.value = nextPackages;
+    }
+};
+
+const applyAddOnsPayload = (payload) => {
+    const nextAddOns = payload?.data?.add_ons;
+
+    if (Array.isArray(nextAddOns)) {
+        addOns.value = nextAddOns;
+    }
+};
+
+const applyDesignsPayload = (payload) => {
+    const nextDesigns = payload?.data?.designs;
+
+    if (Array.isArray(nextDesigns)) {
+        designs.value = nextDesigns;
+    }
+};
+
+const applyUsersPayload = (payload) => {
+    const nextUsers = payload?.data?.users;
+    const nextRoles = payload?.data?.roles;
+
+    if (Array.isArray(nextUsers)) {
+        users.value = nextUsers;
+    }
+
+    if (Array.isArray(nextRoles)) {
+        userRoles.value = nextRoles;
+    }
+};
+
+const applyQueuePayload = (payload) => {
+    const nextQueueLive = payload?.data?.queue_live;
+    const nextQueueBookingOptions = payload?.data?.queue_booking_options;
+
+    if (nextQueueLive && typeof nextQueueLive === 'object') {
+        queueLiveState.value = nextQueueLive;
+    }
+
+    if (Array.isArray(nextQueueBookingOptions)) {
+        queueBookingOptions.value = nextQueueBookingOptions;
+    }
+};
+
+const applySettingsPayload = (payload) => {
+    const nextSettings = payload?.data?.settings;
+
+    if (!nextSettings || typeof nextSettings !== 'object') {
+        return;
+    }
+
+    settings.value = normalizeSettings(nextSettings);
+
+    bookingOptions.value = {
+        ...bookingOptions.value,
+        branches: settings.value.branches.map((branch) => ({
+            id: Number(branch.id || 0),
+            name: String(branch.name || '-'),
+        })),
+    };
+};
+
+const fetchSettingsData = async ({ silent = false } = {}) => {
+    if (!props.settingsDataUrl) {
+        return;
+    }
+
+    if (!silent) {
+        settingsLoading.value = true;
+    }
+
+    settingsError.value = '';
+
+    try {
+        const response = await fetch(props.settingsDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applySettingsPayload(payload);
+    } catch (error) {
+        if (!silent) {
+            settingsError.value = error instanceof Error ? error.message : 'Failed to load settings.';
+        }
+    } finally {
+        if (!silent) {
+            settingsLoading.value = false;
+        }
+    }
+};
+
+const saveDefaultBranch = async (branchId) => {
+    const id = Number(branchId || 0);
+
+    if (!props.settingsDefaultBranchUrl || id <= 0) {
+        settingsError.value = 'Please select a valid default branch.';
+        return;
+    }
+
+    settingsSaving.value = true;
+    settingsError.value = '';
+    settingsSuccess.value = '';
+
+    try {
+        const response = await fetch(props.settingsDefaultBranchUrl, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ branch_id: id }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applySettingsPayload(payload);
+        settingsSuccess.value = 'Default branch updated.';
+    } catch (error) {
+        settingsError.value = error instanceof Error ? error.message : 'Failed to save settings.';
+        throw error;
+    } finally {
+        settingsSaving.value = false;
+    }
+};
+
+const createBranchSetting = async (payload) => {
+    if (!props.settingsBranchStoreUrl) {
+        return;
+    }
+
+    settingsSaving.value = true;
+    settingsError.value = '';
+    settingsSuccess.value = '';
+
+    try {
+        const response = await fetch(props.settingsBranchStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applySettingsPayload(result);
+        settingsSuccess.value = 'Branch created.';
+    } catch (error) {
+        settingsError.value = error instanceof Error ? error.message : 'Failed to create branch.';
+        throw error;
+    } finally {
+        settingsSaving.value = false;
+    }
+};
+
+const updateBranchSetting = async ({ id, payload }) => {
+    const branchId = Number(id || 0);
+
+    if (!branchId || !props.settingsBranchBaseUrl) {
+        return;
+    }
+
+    settingsSaving.value = true;
+    settingsError.value = '';
+    settingsSuccess.value = '';
+
+    try {
+        const response = await fetch(`${props.settingsBranchBaseUrl}/${branchId}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applySettingsPayload(result);
+        settingsSuccess.value = 'Branch updated.';
+    } catch (error) {
+        settingsError.value = error instanceof Error ? error.message : 'Failed to update branch.';
+        throw error;
+    } finally {
+        settingsSaving.value = false;
+    }
+};
+
+const removeBranchSetting = async (id) => {
+    const branchId = Number(id || 0);
+
+    if (!branchId || !props.settingsBranchBaseUrl) {
+        return;
+    }
+
+    settingsSaving.value = true;
+    settingsError.value = '';
+    settingsSuccess.value = '';
+
+    try {
+        const response = await fetch(`${props.settingsBranchBaseUrl}/${branchId}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applySettingsPayload(result);
+        settingsSuccess.value = 'Branch removed from available list.';
+    } catch (error) {
+        settingsError.value = error instanceof Error ? error.message : 'Failed to remove branch.';
+        throw error;
+    } finally {
+        settingsSaving.value = false;
+    }
+};
+
+const fetchQueueData = async ({ silent = false } = {}) => {
+    if (!props.queueDataUrl) {
+        return;
+    }
+
+    if (!silent) {
+        queueLoading.value = true;
+    }
+
+    queueError.value = '';
+
+    try {
+        const response = await fetch(props.queueDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyQueuePayload(payload);
+    } catch (error) {
+        if (!silent) {
+            queueError.value = error instanceof Error ? error.message : 'Failed to load queue data.';
+        }
+    } finally {
+        if (!silent) {
+            queueLoading.value = false;
+        }
+    }
+};
+
+const startQueueAutoRefresh = () => {
+    if (queueRefreshInterval) {
+        return;
+    }
+
+    queueRefreshInterval = setInterval(() => {
+        if (activeModuleId.value !== 'queue') {
+            return;
+        }
+
+        fetchQueueData({ silent: true });
+    }, 15000);
+};
+
+const stopQueueAutoRefresh = () => {
+    if (!queueRefreshInterval) {
+        return;
+    }
+
+    clearInterval(queueRefreshInterval);
+    queueRefreshInterval = null;
+};
+
+const fetchPackagesData = async () => {
+    if (!props.packagesDataUrl) {
+        return;
+    }
+
+    packageLoading.value = true;
+    packageError.value = '';
+
+    try {
+        const response = await fetch(props.packagesDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyPackagesPayload(payload);
+    } catch (error) {
+        packageError.value = error instanceof Error ? error.message : 'Failed to load packages.';
+    } finally {
+        packageLoading.value = false;
+    }
+};
+
+const createPackage = async (formPayload) => {
+    if (!props.packageStoreUrl) {
+        return;
+    }
+
+    packageSaving.value = true;
+    packageError.value = '';
+
+    try {
+        const response = await fetch(props.packageStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyPackagesPayload(payload);
+    } catch (error) {
+        packageError.value = error instanceof Error ? error.message : 'Failed to create package.';
+        throw error;
+    } finally {
+        packageSaving.value = false;
+    }
+};
+
+const updatePackage = async ({ id, payload }) => {
+    if (!id || !props.packageBaseUrl) {
+        return;
+    }
+
+    packageSaving.value = true;
+    packageError.value = '';
+
+    try {
+        const response = await fetch(`${props.packageBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyPackagesPayload(result);
+    } catch (error) {
+        packageError.value = error instanceof Error ? error.message : 'Failed to update package.';
+        throw error;
+    } finally {
+        packageSaving.value = false;
+    }
+};
+
+const deletePackage = async (id) => {
+    if (!id || !props.packageBaseUrl) {
+        return;
+    }
+
+    deletingPackageId.value = Number(id);
+    packageError.value = '';
+
+    try {
+        const response = await fetch(`${props.packageBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyPackagesPayload(payload);
+    } catch (error) {
+        packageError.value = error instanceof Error ? error.message : 'Failed to delete package.';
+        throw error;
+    } finally {
+        deletingPackageId.value = null;
+    }
+};
+
+const fetchAddOnsData = async () => {
+    if (!props.addOnsDataUrl) {
+        return;
+    }
+
+    addOnLoading.value = true;
+    addOnError.value = '';
+
+    try {
+        const response = await fetch(props.addOnsDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyAddOnsPayload(payload);
+    } catch (error) {
+        addOnError.value = error instanceof Error ? error.message : 'Failed to load add-ons.';
+    } finally {
+        addOnLoading.value = false;
+    }
+};
+
+const createAddOn = async (formPayload) => {
+    if (!props.addOnStoreUrl) {
+        return;
+    }
+
+    addOnSaving.value = true;
+    addOnError.value = '';
+
+    try {
+        const response = await fetch(props.addOnStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyAddOnsPayload(payload);
+    } catch (error) {
+        addOnError.value = error instanceof Error ? error.message : 'Failed to create add-on.';
+        throw error;
+    } finally {
+        addOnSaving.value = false;
+    }
+};
+
+const updateAddOn = async ({ id, payload }) => {
+    if (!id || !props.addOnBaseUrl) {
+        return;
+    }
+
+    addOnSaving.value = true;
+    addOnError.value = '';
+
+    try {
+        const response = await fetch(`${props.addOnBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyAddOnsPayload(result);
+    } catch (error) {
+        addOnError.value = error instanceof Error ? error.message : 'Failed to update add-on.';
+        throw error;
+    } finally {
+        addOnSaving.value = false;
+    }
+};
+
+const deleteAddOn = async (id) => {
+    if (!id || !props.addOnBaseUrl) {
+        return;
+    }
+
+    deletingAddOnId.value = Number(id);
+    addOnError.value = '';
+
+    try {
+        const response = await fetch(`${props.addOnBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyAddOnsPayload(payload);
+    } catch (error) {
+        addOnError.value = error instanceof Error ? error.message : 'Failed to delete add-on.';
+        throw error;
+    } finally {
+        deletingAddOnId.value = null;
+    }
+};
+
+const addOnRows = computed(() => {
+    return (addOns.value || []).map((item) => ({
+        id: Number(item.id || 0),
+        package_id: item.package_id ? Number(item.package_id) : null,
+        package_name: String(item.package_name || 'Global'),
+        code: String(item.code || ''),
+        name: String(item.name || ''),
+        description: String(item.description || ''),
+        price: Number(item.price || 0),
+        price_text: String(item.price_text || formatRupiah(Number(item.price || 0))),
+        max_qty: Math.max(1, Number(item.max_qty || 1)),
+        is_active: Boolean(item.is_active),
+        sort_order: Number(item.sort_order || 0),
+        updated_at: item.updated_at || null,
+    }));
+});
+
+const fetchDesignsData = async () => {
+    if (!props.designsDataUrl) {
+        return;
+    }
+
+    designLoading.value = true;
+    designError.value = '';
+
+    try {
+        const response = await fetch(props.designsDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyDesignsPayload(payload);
+    } catch (error) {
+        designError.value = error instanceof Error ? error.message : 'Failed to load designs.';
+    } finally {
+        designLoading.value = false;
+    }
+};
+
+const createDesign = async (formPayload) => {
+    if (!props.designStoreUrl) {
+        return;
+    }
+
+    designSaving.value = true;
+    designError.value = '';
+
+    try {
+        const response = await fetch(props.designStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyDesignsPayload(payload);
+    } catch (error) {
+        designError.value = error instanceof Error ? error.message : 'Failed to create design.';
+        throw error;
+    } finally {
+        designSaving.value = false;
+    }
+};
+
+const updateDesign = async ({ id, payload }) => {
+    if (!id || !props.designBaseUrl) {
+        return;
+    }
+
+    designSaving.value = true;
+    designError.value = '';
+
+    try {
+        const response = await fetch(`${props.designBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyDesignsPayload(result);
+    } catch (error) {
+        designError.value = error instanceof Error ? error.message : 'Failed to update design.';
+        throw error;
+    } finally {
+        designSaving.value = false;
+    }
+};
+
+const deleteDesign = async (id) => {
+    if (!id || !props.designBaseUrl) {
+        return;
+    }
+
+    deletingDesignId.value = Number(id);
+    designError.value = '';
+
+    try {
+        const response = await fetch(`${props.designBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyDesignsPayload(payload);
+    } catch (error) {
+        designError.value = error instanceof Error ? error.message : 'Failed to delete design.';
+        throw error;
+    } finally {
+        deletingDesignId.value = null;
+    }
+};
+
+const fetchUsersData = async () => {
+    if (!props.usersDataUrl) {
+        return;
+    }
+
+    userLoading.value = true;
+    userError.value = '';
+
+    try {
+        const response = await fetch(props.usersDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyUsersPayload(payload);
+    } catch (error) {
+        userError.value = error instanceof Error ? error.message : 'Failed to load users.';
+    } finally {
+        userLoading.value = false;
+    }
+};
+
+const createUser = async (formPayload) => {
+    if (!props.userStoreUrl) {
+        return;
+    }
+
+    userSaving.value = true;
+    userError.value = '';
+
+    try {
+        const response = await fetch(props.userStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyUsersPayload(payload);
+    } catch (error) {
+        userError.value = error instanceof Error ? error.message : 'Failed to create user.';
+        throw error;
+    } finally {
+        userSaving.value = false;
+    }
+};
+
+const refreshBookings = async (page = Number(pagination.value.current_page || 1)) => {
+    await fetchRows(page);
+};
+
+const createBooking = async (formPayload) => {
+    if (!props.bookingStoreUrl) {
+        return;
+    }
+
+    bookingSaving.value = true;
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(props.bookingStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(1);
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to create booking.';
+        throw error;
+    } finally {
+        bookingSaving.value = false;
+    }
+};
+
+const updateBooking = async ({ id, payload }) => {
+    if (!id || !props.bookingBaseUrl) {
+        return;
+    }
+
+    bookingSaving.value = true;
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(`${props.bookingBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(Number(pagination.value.current_page || 1));
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to update booking.';
+        throw error;
+    } finally {
+        bookingSaving.value = false;
+    }
+};
+
+const deleteBooking = async (id) => {
+    if (!id || !props.bookingBaseUrl) {
+        return;
+    }
+
+    deletingBookingId.value = Number(id);
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(`${props.bookingBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(Number(pagination.value.current_page || 1));
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to delete booking.';
+        throw error;
+    } finally {
+        deletingBookingId.value = null;
+    }
+};
+
+const confirmBooking = async ({ id, reason = '' }) => {
+    if (!id || !props.bookingBaseUrl) {
+        return;
+    }
+
+    processingBookingId.value = Number(id);
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(`${props.bookingBaseUrl}/${id}/confirm`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ reason }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(Number(pagination.value.current_page || 1));
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to confirm booking.';
+        throw error;
+    } finally {
+        processingBookingId.value = null;
+    }
+};
+
+const confirmBookingPayment = async ({ id, payload }) => {
+    if (!id || !props.bookingBaseUrl) {
+        return;
+    }
+
+    processingBookingId.value = Number(id);
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(`${props.bookingBaseUrl}/${id}/confirm-payment`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(Number(pagination.value.current_page || 1));
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to confirm payment.';
+        throw error;
+    } finally {
+        processingBookingId.value = null;
+    }
+};
+
+const callNextQueue = async ({ branch_id, queue_date } = {}) => {
+    const branchId = Number(branch_id || defaultQueueBranchId.value || 0);
+
+    if (!branchId || !props.queueCallNextUrl) {
+        return;
+    }
+
+    queueActionLoading.value = true;
+    queueError.value = '';
+    queueProcessingTicketId.value = null;
+
+    try {
+        const response = await fetch(props.queueCallNextUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({
+                branch_id: branchId,
+                queue_date: queue_date || new Date().toISOString().slice(0, 10),
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyQueuePayload(payload);
+    } catch (error) {
+        queueError.value = error instanceof Error ? error.message : 'Failed to call next queue.';
+        throw error;
+    } finally {
+        queueActionLoading.value = false;
+        queueProcessingTicketId.value = null;
+    }
+};
+
+const transitionQueueTicket = async ({ ticketId, status }) => {
+    const id = Number(ticketId || 0);
+    const nextStatus = String(status || '').trim();
+
+    if (!id || !nextStatus || !props.queueBaseUrl) {
+        return;
+    }
+
+    queueActionLoading.value = true;
+    queueError.value = '';
+    queueProcessingTicketId.value = id;
+
+    try {
+        const response = await fetch(`${props.queueBaseUrl}/${id}/status`, {
+            method: 'PATCH',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ status: nextStatus }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyQueuePayload(payload);
+    } catch (error) {
+        queueError.value = error instanceof Error ? error.message : 'Failed to update queue status.';
+        throw error;
+    } finally {
+        queueActionLoading.value = false;
+        queueProcessingTicketId.value = null;
+    }
+};
+
+const addQueueBooking = async (formPayload) => {
+    const bookingId = Number(formPayload?.booking_id || 0);
+
+    if (!props.queueCheckInUrl || !bookingId) {
+        return;
+    }
+
+    queueActionLoading.value = true;
+    queueError.value = '';
+    queueProcessingTicketId.value = null;
+
+    try {
+        const response = await fetch(props.queueCheckInUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ booking_id: bookingId }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyQueuePayload(payload);
+    } catch (error) {
+        queueError.value = error instanceof Error ? error.message : 'Failed to add booking into queue.';
+        throw error;
+    } finally {
+        queueActionLoading.value = false;
+        queueProcessingTicketId.value = null;
+    }
+};
+
+const addQueueWalkIn = async (formPayload) => {
+    if (!props.queueWalkInUrl) {
+        return;
+    }
+
+    queueActionLoading.value = true;
+    queueError.value = '';
+    queueProcessingTicketId.value = null;
+
+    try {
+        const response = await fetch(props.queueWalkInUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyQueuePayload(payload);
+    } catch (error) {
+        queueError.value = error instanceof Error ? error.message : 'Failed to add queue ticket.';
+        throw error;
+    } finally {
+        queueActionLoading.value = false;
+        queueProcessingTicketId.value = null;
+    }
 };
 
 const resolveQueueStatus = (status) => {
@@ -794,6 +2501,10 @@ const goToNextPage = () => {
 };
 
 watch(search, () => {
+    if (activeModuleId.value !== 'bookings') {
+        return;
+    }
+
     if (debounceTimer) {
         clearTimeout(debounceTimer);
     }
@@ -803,933 +2514,241 @@ watch(search, () => {
     }, 350);
 });
 
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'queue') {
+        stopQueueAutoRefresh();
+        return;
+    }
+
+    fetchQueueData();
+    startQueueAutoRefresh();
+}, { immediate: true });
+
 onBeforeUnmount(() => {
     if (debounceTimer) {
         clearTimeout(debounceTimer);
     }
 
+    if (reportDebounceTimer) {
+        clearTimeout(reportDebounceTimer);
+    }
+
     if (activeRequestController) {
         activeRequestController.abort();
     }
+
+    stopQueueAutoRefresh();
 });
 </script>
 
 <template>
     <div class="min-h-screen bg-[#F8FAFC]" style="font-family: Poppins, sans-serif;">
         <div class="flex h-screen overflow-hidden">
-            <div
-                v-if="mobileOpen"
-                class="fixed inset-0 z-20 lg:hidden"
-                style="background: rgba(15,23,42,0.4); backdrop-filter: blur(4px);"
-                @click="mobileOpen = false"
-            ></div>
-
-            <aside
-                class="fixed inset-y-0 left-0 z-30 flex w-[240px] flex-col border-r border-[#EEF2FF] bg-white shadow-[2px_0_16px_rgba(37,99,235,0.06)] transition-all duration-300 lg:relative"
-                :class="[
-                    mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-                    sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[240px]',
-                ]"
-            >
-                <div
-                    class="pointer-events-none absolute inset-0"
-                    style="background-image: radial-gradient(circle, #DBEAFE 1px, transparent 1px); background-size: 24px 24px; opacity: 0.4;"
-                ></div>
-                <div
-                    class="pointer-events-none absolute left-0 right-0 top-0 h-[3px]"
-                    style="background: linear-gradient(90deg, #2563EB 0%, #60A5FA 100%);"
-                ></div>
-
-                <div class="relative flex items-center px-4 py-5" style="min-height: 72px;">
-                    <div
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                        style="background: linear-gradient(135deg, #2563EB 0%, #60A5FA 100%); box-shadow: 0 4px 12px rgba(37,99,235,0.3);"
-                    >
-                        <Camera class="h-4 w-4 text-white" />
-                    </div>
-
-                    <div v-if="!sidebarCollapsed" class="ml-3 min-w-0 flex-1 overflow-hidden">
-                        <p class="whitespace-nowrap text-[0.875rem] font-bold tracking-[-0.01em]" style="font-family: Poppins, sans-serif; color: #1E3A8A;">
-                            Ready To Pict
-                        </p>
-                        <span class="whitespace-nowrap text-xs font-medium" style="color: #60A5FA;">Owner Dashboard</span>
-                    </div>
-
-                    <button
-                        type="button"
-                        class="hidden h-6 w-6 items-center justify-center rounded-lg transition-all duration-200 lg:flex"
-                        :style="{ background: '#EFF6FF', color: '#2563EB', marginLeft: sidebarCollapsed ? 'auto' : undefined }"
-                        @click="sidebarCollapsed = !sidebarCollapsed"
-                    >
-                        <ChevronRight v-if="sidebarCollapsed" class="h-3.5 w-3.5" />
-                        <ChevronLeft v-else class="h-3.5 w-3.5" />
-                    </button>
-
-                    <button
-                        type="button"
-                        class="ml-auto flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 lg:hidden"
-                        @click="mobileOpen = false"
-                    >
-                        <X class="h-4 w-4" />
-                    </button>
-                </div>
-
-                <div class="relative mx-4 h-px bg-[#EEF2FF]"></div>
-
-                <nav class="relative flex-1 overflow-y-auto px-3 py-4">
-                    <div v-for="group in navGroups" :key="`nav-group-${group.key}`" class="mb-1">
-                        <p
-                            v-if="!sidebarCollapsed"
-                            class="px-3 pb-1.5 pt-3 text-[0.62rem] font-semibold uppercase tracking-widest"
-                            style="color: #CBD5E1;"
-                        >
-                            {{ group.label }}
-                        </p>
-
-                        <div v-else-if="group.key !== 'overview'" class="mx-auto my-2 h-px w-6 bg-[#EEF2FF]"></div>
-
-                        <a
-                            v-for="item in navItems.filter((entry) => entry.group === group.key)"
-                            :key="`nav-item-${item.id}`"
-                            :href="item.href"
-                            :title="sidebarCollapsed ? item.label : undefined"
-                            class="relative mb-[2px] flex w-full items-center rounded-xl transition-all duration-200"
-                            :class="sidebarCollapsed ? 'h-10 justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'"
-                            :style="{
-                                background: isNavActive(item) ? '#EFF6FF' : 'transparent',
-                                color: isNavActive(item) ? '#2563EB' : '#64748B',
-                            }"
-                        >
-                            <span
-                                v-if="isNavActive(item)"
-                                class="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#2563EB]"
-                            ></span>
-
-                            <span
-                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                                :style="{ background: isNavActive(item) ? '#DBEAFE' : 'transparent' }"
-                            >
-                                <component
-                                    :is="item.icon"
-                                    class="h-4 w-4"
-                                    :style="{ color: isNavActive(item) ? '#2563EB' : 'inherit' }"
-                                />
-                            </span>
-
-                            <span
-                                v-if="!sidebarCollapsed"
-                                class="flex-1 whitespace-nowrap text-left text-[0.8125rem]"
-                                :style="{ fontFamily: 'Poppins, sans-serif', fontWeight: isNavActive(item) ? 600 : 400 }"
-                            >
-                                {{ item.label }}
-                            </span>
-
-                            <span
-                                v-if="!sidebarCollapsed && navBadgeFor(item.id)"
-                                class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[0.65rem] font-bold"
-                                :style="{
-                                    background: isNavActive(item) ? '#2563EB' : '#FEE2E2',
-                                    color: isNavActive(item) ? '#FFFFFF' : '#EF4444',
-                                }"
-                            >
-                                {{ navBadgeFor(item.id) }}
-                            </span>
-                        </a>
-                    </div>
-                </nav>
-
-                <div class="relative border-t border-[#EEF2FF] p-3">
-                    <div
-                        class="flex items-center"
-                        :class="sidebarCollapsed ? 'justify-center' : 'gap-2.5 rounded-xl border border-[#EEF2FF] bg-[#F8FAFC] p-2.5'"
-                    >
-                        <div
-                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[0.7rem] font-bold text-white"
-                            style="background: linear-gradient(135deg, #2563EB, #60A5FA); box-shadow: 0 2px 8px rgba(37,99,235,0.25);"
-                        >
-                            AO
-                        </div>
-
-                        <div v-if="!sidebarCollapsed" class="min-w-0 flex-1">
-                            <p class="truncate text-[0.8rem] font-semibold leading-tight" style="font-family: Poppins, sans-serif; color: #1F2937;">Ahmad Owner</p>
-                            <p class="truncate text-[0.7rem]" style="color: #94A3B8;">Owner · Super Admin</p>
-                        </div>
-
-                        <button
-                            v-if="!sidebarCollapsed"
-                            type="button"
-                            class="rounded-lg p-1.5 transition-colors duration-200"
-                            style="color: #64748B;"
-                            @mouseenter="$event.currentTarget.style.background = '#FEF2F2'; $event.currentTarget.style.color = '#EF4444'"
-                            @mouseleave="$event.currentTarget.style.background = 'transparent'; $event.currentTarget.style.color = '#64748B'"
-                            aria-label="Logout"
-                        >
-                            <LogOut class="h-3.5 w-3.5" />
-                        </button>
-                    </div>
-                </div>
-            </aside>
+            <AdminSidebar
+                :nav-items="navItems"
+                :nav-groups="navGroups"
+                :active-module-id="activeModuleId"
+                :mobile-open="mobileOpen"
+                :sidebar-collapsed="sidebarCollapsed"
+                @toggle-mobile="mobileOpen = !mobileOpen"
+                @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
+            />
 
             <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
-                <header
-                    class="sticky top-0 z-10 flex items-center gap-3 px-5 py-0"
-                    style="background: #FFFFFF; border-bottom: 1px solid #EEF2FF; backdrop-filter: blur(12px); min-height: 64px; box-shadow: 0 1px 8px rgba(37,99,235,0.05);"
-                >
-                    <button
-                        type="button"
-                        class="rounded-xl bg-[#F1F5F9] p-2 text-slate-600 lg:hidden"
-                        @click="mobileOpen = true"
-                    >
-                        <Menu class="h-4 w-4" />
-                    </button>
-
-                    <div class="min-w-0 flex-1">
-                        <div class="mb-0.5 flex items-center gap-1.5">
-                            <span class="text-[0.7rem] text-[#94A3B8]">Ready To Pict</span>
-                            <BreadcrumbChevron class="h-3 w-3 text-[#CBD5E1]" />
-                            <span class="rounded-md bg-[#EFF6FF] px-1.5 py-0.5 text-[0.7rem] font-semibold text-[#2563EB]">{{ topbarTitle }}</span>
-                        </div>
-                        <h1 class="truncate text-base font-bold leading-tight text-[#0F172A]" style="font-family: Poppins, sans-serif;">{{ topbarTitle }}</h1>
-                    </div>
-
-                    <div class="hidden items-center rounded-xl border border-[#EEF2FF] bg-[#F8FAFC] px-3 py-1.5 lg:flex">
-                        <span class="text-[0.7rem] text-[#94A3B8]">{{ topbarDate }}</span>
-                    </div>
-
-                    <div class="relative">
-                        <div
-                            v-if="showTopSearch"
-                            class="flex items-center gap-2 rounded-xl border-[1.5px] border-[#2563EB] bg-[#F8FAFC] px-3 py-2"
-                            style="width: 200px;"
-                        >
-                            <Search class="h-3.5 w-3.5 shrink-0 text-[#2563EB]" />
-                            <input
-                                v-model="topSearchValue"
-                                type="text"
-                                autofocus
-                                placeholder="Search anything..."
-                                class="flex-1 bg-transparent text-[0.8rem] text-slate-800 outline-none placeholder:text-slate-400"
-                                @blur="showTopSearch = false; topSearchValue = ''"
-                            >
-                            <button
-                                v-if="topSearchValue"
-                                type="button"
-                                class="text-slate-400"
-                                @click="topSearchValue = ''"
-                            >
-                                <X class="h-3 w-3" />
-                            </button>
-                        </div>
-
-                        <button
-                            v-else
-                            type="button"
-                            class="flex items-center gap-2 rounded-xl border border-[#EEF2FF] bg-[#F8FAFC] px-3 py-2 text-[#64748B]"
-                            @click="showTopSearch = true"
-                        >
-                            <Search class="h-3.5 w-3.5" />
-                            <span class="hidden text-[0.75rem] sm:inline">Search</span>
-                        </button>
-                    </div>
-
-                    <button
-                        type="button"
-                        class="relative rounded-xl border border-[#EEF2FF] bg-[#F8FAFC] p-2.5 text-[#64748B]"
-                    >
-                        <Bell class="h-4 w-4" />
-                        <span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#EF4444]" style="box-shadow: 0 0 0 2px white;"></span>
-                    </button>
-
-                    <button
-                        type="button"
-                        class="hidden rounded-xl border border-[#EEF2FF] bg-[#F8FAFC] p-2.5 text-[#64748B] md:flex"
-                    >
-                        <Settings class="h-4 w-4" />
-                    </button>
-
-                    <div class="hidden h-6 w-px bg-[#E2E8F0] md:block"></div>
-
-                    <div class="flex cursor-pointer items-center gap-2.5">
-                        <div
-                            class="flex h-8 w-8 items-center justify-center rounded-xl text-[0.7rem] font-bold text-white"
-                            style="background: linear-gradient(135deg, #2563EB, #60A5FA); box-shadow: 0 2px 8px rgba(37,99,235,0.25);"
-                        >
-                            AO
-                        </div>
-                        <div class="hidden md:block">
-                            <p class="text-[0.8rem] font-semibold leading-tight text-[#0F172A]" style="font-family: Poppins, sans-serif;">Ahmad Owner</p>
-                            <p class="text-[0.7rem] text-[#94A3B8]">Owner · Super Admin</p>
-                        </div>
-                    </div>
-                </header>
+                <AdminTopBar
+                    :title="topbarTitle"
+                    :date-label="topbarDate"
+                    :show-top-search="showTopSearch"
+                    :top-search-value="topSearchValue"
+                    @open-mobile="mobileOpen = true"
+                    @toggle-top-search="showTopSearch = $event"
+                    @update:top-search-value="topSearchValue = $event"
+                />
 
                 <main class="flex-1 overflow-y-auto">
                     <div class="mx-auto w-full max-w-[1600px] p-5 lg:p-7">
-                        <div class="mb-6">
-                <div
-                    class="relative overflow-hidden rounded-2xl px-6 py-5"
-                    style="background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%); box-shadow: 0 4px 20px rgba(37,99,235,0.2);"
-                >
-                    <div class="pointer-events-none absolute inset-0 overflow-hidden">
-                        <div class="absolute -right-6 -top-6 h-36 w-36 rounded-full" style="background: rgba(96,165,250,0.15);"></div>
-                        <div class="absolute right-28 top-4 h-12 w-12 rounded-full" style="background: rgba(147,197,253,0.12);"></div>
-                        <div
-                            class="absolute bottom-0 right-0 h-full w-56 opacity-[0.06]"
-                            style="background-image: repeating-linear-gradient(-45deg, #FFFFFF 0px, #FFFFFF 1px, transparent 1px, transparent 10px);"
-                        ></div>
-                        <div
-                            class="absolute inset-0 opacity-[0.07]"
-                            style="background-image: radial-gradient(circle, #FFFFFF 1px, transparent 1px); background-size: 20px 20px;"
-                        ></div>
-                    </div>
+                        <DashboardPage
+                            v-if="activeModuleId === 'dashboard'"
+                            :summary-cards="normalizedSummaryCards"
+                            :revenue-series="normalizedRevenueSeries"
+                            :active-revenue-period="activeRevenuePeriod"
+                            :revenue-total="revenueTotal"
+                            :booking-total="bookingTotal"
+                            :queue-stats="queueStats"
+                            :current-queue="currentQueue"
+                            :waiting-queue="waitingQueue"
+                            :recent-transactions="normalizedRecentTransactions"
+                            :recent-activities="normalizedRecentActivities"
+                            :panel-bookings-url="panelBookingsUrl"
+                            :panel-transactions-url="panelTransactionsUrl"
+                            :format-rupiah="formatRupiah"
+                            @set-revenue-period="activeRevenuePeriod = $event"
+                        />
 
-                    <div class="relative flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <div class="mb-1 flex items-center gap-2">
-                                <Sparkles class="h-3.5 w-3.5" style="color: #93C5FD;" />
-                                <span style="color: #93C5FD; font-size: 0.75rem; font-weight: 500;">{{ greeting }}, Ahmad!</span>
-                            </div>
-                            <h1 class="mb-1 text-white" style="font-family: Poppins, sans-serif; font-size: 1.4rem; font-weight: 700; line-height: 1.3;">Business Overview</h1>
-                            <p style="color: rgba(255,255,255,0.65); font-size: 0.8rem;">Here's what's happening with Ready To Pict today.</p>
-                        </div>
+                        <PackagesPage
+                            v-else-if="activeModuleId === 'packages'"
+                            :package-cards="packageCards"
+                            :panel-base-url="panelBaseUrl"
+                            :format-rupiah="formatRupiah"
+                            :loading="packageLoading"
+                            :saving="packageSaving"
+                            :deleting-package-id="deletingPackageId"
+                            :error-message="packageError"
+                            @refresh-packages="fetchPackagesData"
+                            @create-package="createPackage"
+                            @update-package="updatePackage"
+                            @delete-package="deletePackage"
+                        />
 
-                        <div class="flex flex-wrap gap-2.5">
-                            <a
-                                :href="panelTransactionsUrl"
-                                class="flex items-center gap-1.5 rounded-xl px-4 py-2 text-[0.8rem] transition-all duration-200"
-                                style="background: rgba(255,255,255,0.12); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.2); font-weight: 500; backdrop-filter: blur(4px);"
-                            >
-                                <Download class="h-3.5 w-3.5" />
-                                Export
-                            </a>
-                            <a
-                                :href="`${panelBookingsUrl}/create`"
-                                class="flex items-center gap-1.5 rounded-xl px-4 py-2 text-[0.8rem] transition-all duration-200"
-                                style="background: #FFFFFF; color: #2563EB; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.12);"
-                            >
-                                <Plus class="h-3.5 w-3.5" />
-                                New Booking
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                        <AddOnsPage
+                            v-else-if="activeModuleId === 'add-ons'"
+                            :add-on-rows="addOnRows"
+                            :package-options="packageOptions"
+                            :format-rupiah="formatRupiah"
+                            :loading="addOnLoading"
+                            :saving="addOnSaving"
+                            :deleting-add-on-id="deletingAddOnId"
+                            :error-message="addOnError"
+                            @refresh-add-ons="fetchAddOnsData"
+                            @create-add-on="createAddOn"
+                            @update-add-on="updateAddOn"
+                            @delete-add-on="deleteAddOn"
+                        />
 
-            <div class="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div
-                    v-for="(card, index) in normalizedSummaryCards"
-                    :key="`summary-card-${index}-${card.title}`"
-                    class="relative cursor-pointer overflow-hidden rounded-2xl p-5 transition-all duration-200"
-                    :style="{ background: '#FFFFFF', border: `1px solid ${card.accentBorder}`, boxShadow: '0 1px 4px rgba(37,99,235,0.04), 0 4px 16px rgba(37,99,235,0.04)' }"
-                >
-                    <div class="mb-4 flex items-start justify-between">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-xl" :style="{ background: card.accentLight }">
-                            <svg
-                                v-if="index % 4 === 0"
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4.5 w-4.5"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                :stroke="card.accent"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="M8 2v4" />
-                                <path d="M16 2v4" />
-                                <rect x="3" y="4" width="18" height="18" rx="2" />
-                                <path d="M3 10h18" />
-                            </svg>
+                        <DesignsPage
+                            v-else-if="activeModuleId === 'designs'"
+                            :design-cards="designCards"
+                            :panel-base-url="panelBaseUrl"
+                            :package-options="packageOptions"
+                            :loading="designLoading"
+                            :saving="designSaving"
+                            :deleting-design-id="deletingDesignId"
+                            :error-message="designError"
+                            @refresh-designs="fetchDesignsData"
+                            @create-design="createDesign"
+                            @update-design="updateDesign"
+                            @delete-design="deleteDesign"
+                        />
 
-                            <svg
-                                v-else-if="index % 4 === 1"
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4.5 w-4.5"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                :stroke="card.accent"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="M12 1v22" />
-                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14.5a3.5 3.5 0 0 1 0 7H6" />
-                            </svg>
+                        <UsersPage
+                            v-else-if="activeModuleId === 'users'"
+                            :user-rows="userRows"
+                            :initials-from-name="initialsFromName"
+                            :panel-base-url="panelBaseUrl"
+                            :role-options="userRoles"
+                            :loading="userLoading"
+                            :saving="userSaving"
+                            :error-message="userError"
+                            @refresh-users="fetchUsersData"
+                            @create-user="createUser"
+                        />
 
-                            <svg
-                                v-else-if="index % 4 === 2"
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4.5 w-4.5"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                :stroke="card.accent"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                <circle cx="8.5" cy="7" r="4" />
-                                <path d="M20 8v6" />
-                                <path d="M23 11h-6" />
-                            </svg>
+                        <BookingsPage
+                            v-else-if="activeModuleId === 'bookings'"
+                            :search="search"
+                            :filter-status="filterStatus"
+                            :filter-tabs="filterTabs"
+                            :panel-bookings-url="panelBookingsUrl"
+                            :normalized-rows="normalizedRows"
+                            :loading="loading"
+                            :saving="bookingSaving"
+                            :booking-error="bookingError"
+                            :booking-options="bookingOptions"
+                            :default-branch-id="resolvedDefaultBranchId"
+                            :availability-url="bookingAvailabilityUrl"
+                            :deleting-booking-id="deletingBookingId"
+                            :processing-booking-id="processingBookingId"
+                            :booking-result-caption="bookingResultCaption"
+                            :can-go-prev="canGoPrev"
+                            :can-go-next="canGoNext"
+                            :pagination="pagination"
+                            :resolve-booking-status="resolveBookingStatus"
+                            @update:search="search = $event"
+                            @set-filter-status="setFilterStatus"
+                            @refresh-bookings="refreshBookings()"
+                            @create-booking="createBooking"
+                            @update-booking="updateBooking"
+                            @delete-booking="deleteBooking"
+                            @confirm-booking="confirmBooking"
+                            @confirm-booking-payment="confirmBookingPayment"
+                            @go-prev-page="goToPrevPage"
+                            @go-next-page="goToNextPage"
+                        />
 
-                            <svg
-                                v-else
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4.5 w-4.5"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                :stroke="card.accent"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="M3 17l6-6 4 4 7-7" />
-                                <path d="M14 8h6v6" />
-                            </svg>
-                        </div>
+                        <QueuePage
+                            v-else-if="activeModuleId === 'queue'"
+                            :queue-stats="queueStats"
+                            :current-queue="currentQueue"
+                            :waiting-queue="waitingQueue"
+                            :queue-progress-style="queueProgressStyle"
+                            :queue-remaining-text="queueRemainingText"
+                            :queue-session-duration-text="queueSessionDurationText"
+                            :resolve-queue-status="resolveQueueStatus"
+                            :queue-loading="queueLoading"
+                            :queue-action-loading="queueActionLoading"
+                            :queue-processing-ticket-id="queueProcessingTicketId"
+                            :queue-error="queueError"
+                            :branch-options="queueBranchOptions"
+                            :booking-options="queueBookingOptions"
+                            :default-branch-id="defaultQueueBranchId"
+                            @refresh-queue="fetchQueueData()"
+                            @call-next="callNextQueue"
+                            @transition-ticket="transitionQueueTicket"
+                            @add-booking="addQueueBooking"
+                            @add-walk-in="addQueueWalkIn"
+                        />
 
-                        <div
-                            class="flex items-center gap-1 rounded-full px-2 py-0.5"
-                            :style="{
-                                background: card.trend === 'up' ? '#F0FDF4' : (card.trend === 'down' ? '#FEF2F2' : card.accentLight),
-                                color: card.trend === 'up' ? '#16A34A' : (card.trend === 'down' ? '#EF4444' : card.accent),
-                            }"
-                        >
-                            <svg
-                                v-if="card.trend === 'up'"
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-3 w-3"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="m7 17 10-10" />
-                                <path d="M7 7h10v10" />
-                            </svg>
-                            <svg
-                                v-else-if="card.trend === 'down'"
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-3 w-3"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="m17 7-10 10" />
-                                <path d="M7 7h10v10" />
-                            </svg>
-                            <span style="font-size: 0.7rem; font-weight: 600;">{{ card.change }}</span>
-                        </div>
-                    </div>
+                        <TransactionsPage
+                            v-else-if="activeModuleId === 'transactions'"
+                            :panel-transactions-url="panelTransactionsUrl"
+                            :normalized-recent-transactions="normalizedRecentTransactions"
+                            :transaction-today-total="transactionTodayTotal"
+                            :resolve-method-style="resolveMethodStyle"
+                            :resolve-transaction-status="resolveTransactionStatus"
+                        />
 
-                    <p class="mb-0.5 text-xs" style="color: #94A3B8; font-weight: 500;">{{ card.title }}</p>
-                    <p class="mb-0.5" style="color: #0F172A; font-size: 1.5rem; font-weight: 700; line-height: 1.2; font-family: Poppins, sans-serif;">{{ card.value }}</p>
-                    <p class="mb-4 text-xs" style="color: #CBD5E1;">{{ card.changeLabel }}</p>
+                        <ReportsPage
+                            v-else-if="activeModuleId === 'reports'"
+                            :report-filters="reportFilters"
+                            :report-error="reportError"
+                            :report-loading="reportLoading"
+                            :report-summary-cards="reportSummaryCards"
+                            :report-daily-rows="reportDailyRows"
+                            :report-daily-max-revenue="reportDailyMaxRevenue"
+                            :report-status-rows="reportStatusRows"
+                            :report-package-rows="reportPackageRows"
+                            :report-cashier-rows="reportCashierRows"
+                        />
 
-                    <svg :viewBox="`0 0 ${card.sparklineMeta.width} ${card.sparklineMeta.height}`" class="h-[28px] w-[72px] overflow-visible">
-                        <defs>
-                            <linearGradient :id="card.gradientId" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" :stop-color="card.accent" stop-opacity="0.18"></stop>
-                                <stop offset="100%" :stop-color="card.accent" stop-opacity="0"></stop>
-                            </linearGradient>
-                        </defs>
-                        <polygon :points="card.sparklineMeta.fillPoints" :fill="`url(#${card.gradientId})`"></polygon>
-                        <polyline :points="card.sparklineMeta.linePoints" fill="none" :stroke="card.accent" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                        <circle :cx="card.sparklineMeta.lastX" :cy="card.sparklineMeta.lastY" r="3" :fill="card.accent" stroke="#FFFFFF" stroke-width="1.5"></circle>
-                    </svg>
+                        <ActivityLogsPage
+                            v-else-if="activeModuleId === 'activity-logs'"
+                            :activity-search="activitySearch"
+                            :activity-module-filter="activityModuleFilter"
+                            :activity-module-options="activityModuleOptions"
+                            :filtered-activity-rows="filteredActivityRows"
+                            :resolve-activity-tone="resolveActivityTone"
+                            @update:activity-search="activitySearch = $event"
+                            @update:activity-module-filter="activityModuleFilter = $event"
+                        />
 
-                    <div class="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-2xl" :style="{ background: `linear-gradient(90deg, ${card.accent}, transparent)`, opacity: 0.4 }"></div>
-                </div>
-            </div>
-
-            <div class="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
-                <div
-                    class="rounded-2xl p-6 lg:col-span-2"
-                    style="background: #FFFFFF; box-shadow: 0 1px 3px rgba(37,99,235,0.05), 0 4px 16px rgba(37,99,235,0.05); border: 1px solid #EEF2FF;"
-                >
-                    <div class="mb-6 flex items-start justify-between">
-                        <div>
-                            <h2 class="mb-1 text-gray-900" style="font-family: Poppins, sans-serif;">Revenue Overview</h2>
-                            <p class="text-sm" style="color: #94A3B8;">Revenue and bookings trend</p>
-                        </div>
-                        <div class="flex items-center gap-1 rounded-lg p-1" style="background: #F8FAFC; border: 1px solid #EEF2FF;">
-                            <button
-                                type="button"
-                                class="rounded-md px-3 py-1.5 text-xs transition-all duration-200"
-                                :style="{ background: activeRevenuePeriod === '7d' ? '#2563EB' : 'transparent', color: activeRevenuePeriod === '7d' ? '#FFFFFF' : '#94A3B8', boxShadow: activeRevenuePeriod === '7d' ? '0 1px 4px rgba(37,99,235,0.3)' : 'none' }"
-                                @click="activeRevenuePeriod = '7d'"
-                            >
-                                Last 7 days
-                            </button>
-                            <button
-                                type="button"
-                                class="rounded-md px-3 py-1.5 text-xs transition-all duration-200"
-                                :style="{ background: activeRevenuePeriod === '30d' ? '#2563EB' : 'transparent', color: activeRevenuePeriod === '30d' ? '#FFFFFF' : '#94A3B8', boxShadow: activeRevenuePeriod === '30d' ? '0 1px 4px rgba(37,99,235,0.3)' : 'none' }"
-                                @click="activeRevenuePeriod = '30d'"
-                            >
-                                Last 30 days
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="mb-6 flex gap-6">
-                        <div>
-                            <p class="mb-1 text-xs" style="color: #94A3B8;">Total Revenue</p>
-                            <p style="color: #1F2937; font-size: 1.25rem; font-weight: 700;">{{ revenueTotal }}</p>
-                        </div>
-                        <div class="w-px" style="background: #F1F5F9;"></div>
-                        <div>
-                            <p class="mb-1 text-xs" style="color: #94A3B8;">Total Bookings</p>
-                            <p style="color: #1F2937; font-size: 1.25rem; font-weight: 700;">{{ bookingTotal }}</p>
-                        </div>
-                    </div>
-
-                    <div v-if="revenueChartMeta.hasData" class="overflow-x-auto">
-                        <svg :viewBox="`0 0 ${revenueChartMeta.width} ${revenueChartMeta.height}`" class="h-[260px] min-w-[680px] w-full">
-                            <defs>
-                                <linearGradient id="revenue-chart-gradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stop-color="#2563EB" stop-opacity="0.22"></stop>
-                                    <stop offset="95%" stop-color="#2563EB" stop-opacity="0"></stop>
-                                </linearGradient>
-                            </defs>
-
-                            <line
-                                v-for="(lineY, lineIndex) in revenueChartMeta.gridLines"
-                                :key="`grid-line-${lineIndex}`"
-                                :x1="revenueChartMeta.left"
-                                :x2="revenueChartMeta.width - 16"
-                                :y1="lineY"
-                                :y2="lineY"
-                                stroke="#F1F5F9"
-                                stroke-dasharray="3 3"
-                            ></line>
-
-                            <text
-                                v-for="(tick, tickIndex) in revenueChartMeta.yTicks"
-                                :key="`tick-${tickIndex}`"
-                                x="6"
-                                :y="tick.y + 3"
-                                fill="#94A3B8"
-                                font-size="11"
-                            >
-                                {{ tick.label }}
-                            </text>
-
-                            <path :d="revenueChartMeta.areaPath" fill="url(#revenue-chart-gradient)"></path>
-                            <path :d="revenueChartMeta.revenuePath" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                            <path :d="revenueChartMeta.bookingPath" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-
-                            <text
-                                v-for="point in revenueChartMeta.points"
-                                :key="`label-${point.key}`"
-                                :x="point.x"
-                                :y="revenueChartMeta.top + revenueChartMeta.plotHeight + 20"
-                                text-anchor="middle"
-                                fill="#94A3B8"
-                                font-size="11"
-                            >
-                                {{ point.label }}
-                            </text>
-                        </svg>
-                    </div>
-                    <div v-else class="flex h-[260px] items-center justify-center text-sm" style="color: #94A3B8;">No revenue data available.</div>
-
-                    <div class="mt-4 flex items-center gap-6">
-                        <div class="flex items-center gap-2">
-                            <div class="h-3 w-3 rounded-full" style="background: #2563EB;"></div>
-                            <span class="text-xs" style="color: #94A3B8;">Revenue</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="h-3 w-3 rounded-full" style="background: #22C55E;"></div>
-                            <span class="text-xs" style="color: #94A3B8;">Bookings</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div
-                    class="h-full rounded-2xl p-6"
-                    style="background: #FFFFFF; box-shadow: 0 1px 3px rgba(37,99,235,0.05), 0 4px 16px rgba(37,99,235,0.05); border: 1px solid #EEF2FF;"
-                >
-                    <div class="mb-5 flex items-center justify-between">
-                        <div>
-                            <h2 class="text-gray-900" style="font-family: Poppins, sans-serif;">Queue Monitor</h2>
-                            <p class="mt-0.5 text-xs" style="color: #94A3B8;">Live session status</p>
-                        </div>
-                        <span class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs" style="background: #ECFDF5; color: #059669;">
-                            <span class="inline-block h-1.5 w-1.5 rounded-full bg-green-500"></span>
-                            Live
-                        </span>
-                    </div>
-
-                    <div class="mb-4 grid grid-cols-2 gap-2">
-                        <div class="rounded-xl p-3" style="background: #F8FAFC; border: 1px solid #EEF2FF;">
-                            <p class="text-[0.7rem]" style="color: #94A3B8;">In Queue</p>
-                            <p style="color: #1F2937; font-size: 1.1rem; font-weight: 700;">{{ queueStats.in_queue }}</p>
-                        </div>
-                        <div class="rounded-xl p-3" style="background: #F8FAFC; border: 1px solid #EEF2FF;">
-                            <p class="text-[0.7rem]" style="color: #94A3B8;">Now Serving</p>
-                            <p style="color: #1F2937; font-size: 1.1rem; font-weight: 700;">{{ queueStats.in_session }}</p>
-                        </div>
-                        <div class="rounded-xl p-3" style="background: #F8FAFC; border: 1px solid #EEF2FF;">
-                            <p class="text-[0.7rem]" style="color: #94A3B8;">Waiting</p>
-                            <p style="color: #1F2937; font-size: 1.1rem; font-weight: 700;">{{ queueStats.waiting }}</p>
-                        </div>
-                        <div class="rounded-xl p-3" style="background: #F8FAFC; border: 1px solid #EEF2FF;">
-                            <p class="text-[0.7rem]" style="color: #94A3B8;">Completed</p>
-                            <p style="color: #1F2937; font-size: 1.1rem; font-weight: 700;">{{ queueStats.completed_today }}</p>
-                        </div>
-                    </div>
-
-                    <div class="mb-4 rounded-xl p-4" style="background: #EFF6FF; border: 1px solid #DBEAFE;">
-                        <div class="mb-3 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 6v6l4 2" />
-                            </svg>
-                            <span class="text-xs" style="color: #2563EB; font-weight: 600;">Currently Serving</span>
-                        </div>
-
-                        <template v-if="currentQueue">
-                            <div class="mb-3 flex items-center justify-between">
-                                <div>
-                                    <p style="color: #1D4ED8; font-size: 2rem; font-weight: 800; line-height: 1;">{{ currentQueue.queue_code }}</p>
-                                    <p class="mt-1 text-sm" style="color: #1F2937;">{{ currentQueue.customer_name }}</p>
-                                    <span
-                                        class="mt-1 inline-block rounded-full px-2 py-0.5 text-xs"
-                                        :style="{ background: resolveQueueStatus(currentQueue.status).bg, color: resolveQueueStatus(currentQueue.status).color, fontWeight: 600 }"
-                                    >
-                                        {{ currentQueue.package_name }}
-                                    </span>
-                                </div>
-                                <div class="text-right">
-                                    <p class="mb-1 text-xs" style="color: #64748B;">Time Left</p>
-                                    <p style="color: #1F2937; font-size: 1.25rem; font-weight: 700;">{{ queueRemainingText }}</p>
-                                </div>
-                            </div>
-
-                            <div class="h-1.5 overflow-hidden rounded-full" style="background: #BFDBFE;">
-                                <div class="h-full rounded-full transition-all duration-1000" :style="queueProgressStyle"></div>
-                            </div>
-                            <div class="mt-1 flex justify-between">
-                                <span class="text-xs" style="color: #94A3B8;">00:00</span>
-                                <span class="text-xs" style="color: #94A3B8;">{{ queueSessionDurationText }}</span>
-                            </div>
-                        </template>
-                        <p v-else class="text-sm" style="color: #64748B;">No active queue session right now.</p>
-                    </div>
-
-                    <div class="mb-4 flex gap-2">
-                        <button type="button" class="flex-1 rounded-lg py-2 text-sm" style="background: #2563EB; color: #FFFFFF; box-shadow: 0 2px 8px rgba(37,99,235,0.25);">Call Next</button>
-                        <button type="button" class="flex-1 rounded-lg border py-2 text-sm" style="background: #ECFDF5; color: #059669; border-color: #A7F3D0;">Complete</button>
-                    </div>
-
-                    <div>
-                        <div class="mb-3 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                <circle cx="8.5" cy="7" r="4" />
-                                <path d="M20 8v6" />
-                                <path d="M23 11h-6" />
-                            </svg>
-                            <span class="text-sm" style="color: #374151;">Waiting ({{ waitingQueue.length }})</span>
-                        </div>
-
-                        <div class="space-y-2">
-                            <div
-                                v-for="(ticket, index) in waitingQueue"
-                                :key="`waiting-ticket-${ticket.queue_code}-${index}`"
-                                class="flex items-center justify-between rounded-xl border p-3"
-                                style="background: #F8FAFC; border-color: #EEF2FF;"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <div class="flex h-7 w-7 items-center justify-center rounded-lg text-xs" style="background: #EFF6FF; color: #2563EB;">{{ index + 1 }}</div>
-                                    <div>
-                                        <p class="text-sm" style="color: #1F2937;">{{ ticket.queue_code }}</p>
-                                        <p class="text-xs" style="color: #94A3B8;">{{ ticket.customer_name }}</p>
-                                    </div>
-                                </div>
-                                <span
-                                    class="rounded-full px-2 py-0.5 text-xs"
-                                    :style="{ background: resolveQueueStatus(ticket.status).bg, color: resolveQueueStatus(ticket.status).color }"
-                                >
-                                    {{ ticket.package_name }}
-                                </span>
-                            </div>
-
-                            <p v-if="!waitingQueue.length" class="text-sm" style="color: #94A3B8;">Queue waiting list is currently empty.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                class="mb-5 overflow-hidden rounded-2xl"
-                style="background: #FFFFFF; box-shadow: 0 1px 3px rgba(37,99,235,0.05), 0 4px 16px rgba(37,99,235,0.05); border: 1px solid #EEF2FF;"
-            >
-                <div class="border-b p-6" style="border-color: #F1F5F9;">
-                    <div class="mb-4 flex items-center justify-between">
-                        <div>
-                            <h2 class="text-gray-900" style="font-family: Poppins, sans-serif;">Booking Monitoring</h2>
-                            <p class="mt-0.5 text-sm" style="color: #94A3B8;">Manage and track all reservations</p>
-                        </div>
-                        <a
-                            :href="`${panelBookingsUrl}/create`"
-                            class="rounded-xl px-4 py-2 text-sm transition-all duration-200"
-                            style="background: #2563EB; color: #FFFFFF; box-shadow: 0 2px 8px rgba(37,99,235,0.25);"
-                        >
-                            New Booking
-                        </a>
-                    </div>
-
-                    <div class="flex flex-col gap-3 sm:flex-row">
-                        <div class="relative flex-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="m21 21-4.3-4.3" />
-                            </svg>
-                            <input
-                                v-model="search"
-                                type="text"
-                                placeholder="Search by customer name or booking ID..."
-                                class="w-full rounded-lg py-2 pl-9 pr-4 text-sm outline-none transition-all"
-                                style="background: #F8FAFC; border: 1px solid #EEF2FF; color: #374151;"
-                            >
-                        </div>
-                    </div>
-
-                    <div class="mt-3 flex gap-1.5 overflow-x-auto pb-1">
-                        <button
-                            v-for="tab in filterTabs"
-                            :key="`filter-tab-${tab.key}`"
-                            type="button"
-                            class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs transition-all duration-200"
-                            :style="{
-                                background: filterStatus === tab.key ? '#2563EB' : '#F8FAFC',
-                                color: filterStatus === tab.key ? '#FFFFFF' : '#64748B',
-                                border: `1px solid ${filterStatus === tab.key ? '#2563EB' : '#EEF2FF'}`,
-                                boxShadow: filterStatus === tab.key ? '0 2px 6px rgba(37,99,235,0.2)' : 'none',
-                            }"
-                            @click="setFilterStatus(tab.key)"
-                        >
-                            {{ tab.label }}
-                        </button>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr style="border-bottom: 1px solid #F1F5F9;">
-                                <th class="px-5 py-3 text-left text-xs uppercase tracking-wider" style="color: #94A3B8;">Booking ID</th>
-                                <th class="px-5 py-3 text-left text-xs uppercase tracking-wider" style="color: #94A3B8;">Customer</th>
-                                <th class="px-5 py-3 text-left text-xs uppercase tracking-wider" style="color: #94A3B8;">Package</th>
-                                <th class="px-5 py-3 text-left text-xs uppercase tracking-wider" style="color: #94A3B8;">Date and Time</th>
-                                <th class="px-5 py-3 text-left text-xs uppercase tracking-wider" style="color: #94A3B8;">Amount</th>
-                                <th class="px-5 py-3 text-left text-xs uppercase tracking-wider" style="color: #94A3B8;">Payment</th>
-                                <th class="px-5 py-3 text-left text-xs uppercase tracking-wider" style="color: #94A3B8;">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="row in normalizedRows"
-                                :key="`booking-row-${row.id}`"
-                                style="border-bottom: 1px solid #F8FAFC;"
-                            >
-                                <td class="px-5 py-3.5">
-                                    <span class="text-sm" style="color: #2563EB; font-weight: 600;">{{ row.id }}</span>
-                                </td>
-                                <td class="px-5 py-3.5">
-                                    <div class="flex items-center gap-2">
-                                        <div class="flex h-7 w-7 items-center justify-center rounded-lg text-xs text-white" style="background: linear-gradient(135deg, #2563EB, #60A5FA);">
-                                            {{ initialsFromName(row.name).charAt(0) }}
-                                        </div>
-                                        <span class="text-sm" style="color: #1F2937;">{{ row.name }}</span>
-                                    </div>
-                                </td>
-                                <td class="px-5 py-3.5 text-sm" style="color: #374151;">{{ row.pkg }}</td>
-                                <td class="px-5 py-3.5">
-                                    <p class="text-sm" style="color: #1F2937;">{{ row.date }}</p>
-                                    <p class="text-xs" style="color: #94A3B8;">{{ row.time }}</p>
-                                </td>
-                                <td class="px-5 py-3.5">
-                                    <span class="text-sm" style="color: #1F2937; font-weight: 600;">{{ row.amount_text }}</span>
-                                </td>
-                                <td class="px-5 py-3.5 text-xs" style="color: #64748B;">{{ row.payment }}</td>
-                                <td class="px-5 py-3.5">
-                                    <span
-                                        class="rounded-full px-2.5 py-1 text-xs"
-                                        :style="{
-                                            background: resolveBookingStatus(row.status).bg,
-                                            color: resolveBookingStatus(row.status).color,
-                                            fontWeight: 600,
-                                        }"
-                                    >
-                                        {{ resolveBookingStatus(row.status).label }}
-                                    </span>
-                                </td>
-                            </tr>
-
-                            <tr v-if="loading">
-                                <td colspan="7" class="px-4 py-10 text-center text-sm" style="color: #94A3B8;">Loading bookings...</td>
-                            </tr>
-
-                            <tr v-else-if="!normalizedRows.length">
-                                <td colspan="7" class="px-4 py-10 text-center text-sm" style="color: #94A3B8;">No bookings found.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="flex flex-wrap items-center justify-between gap-3 p-4" style="border-top: 1px solid #F1F5F9;">
-                    <p class="text-xs" style="color: #94A3B8;">{{ bookingResultCaption }}</p>
-                    <div class="flex items-center gap-2">
-                        <button
-                            type="button"
-                            class="rounded-lg border px-3 py-1.5 text-xs text-gray-600 transition-colors"
-                            :class="canGoPrev ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-50'"
-                            :disabled="!canGoPrev || loading"
-                            @click="goToPrevPage"
-                        >
-                            Previous
-                        </button>
-
-                        <span class="text-xs" style="color: #94A3B8;">Page {{ pagination.current_page }} / {{ Math.max(pagination.last_page, 1) }}</span>
-
-                        <button
-                            type="button"
-                            class="rounded-lg border px-3 py-1.5 text-xs text-gray-600 transition-colors"
-                            :class="canGoNext ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-50'"
-                            :disabled="!canGoNext || loading"
-                            @click="goToNextPage"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                <div
-                    class="overflow-hidden rounded-2xl"
-                    style="background: #FFFFFF; box-shadow: 0 1px 3px rgba(37,99,235,0.05), 0 4px 16px rgba(37,99,235,0.05); border: 1px solid #EEF2FF;"
-                >
-                    <div class="border-b p-5" style="border-color: #F1F5F9;">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <h2 class="text-gray-900" style="font-family: Poppins, sans-serif;">Recent Transactions</h2>
-                                <p class="mt-0.5 text-xs" style="color: #94A3B8;">Latest payment activities</p>
-                            </div>
-                        </div>
-
-                        <div class="mt-3 flex items-center justify-between rounded-xl p-3" style="background: #EFF6FF;">
-                            <span class="text-xs" style="color: #2563EB;">Today's Revenue</span>
-                            <span style="color: #2563EB; font-weight: 700;">{{ transactionTodayTotal }}</span>
-                        </div>
-                    </div>
-
-                    <div class="divide-y" style="border-color: #F8FAFC;">
-                        <div
-                            v-for="(transaction, index) in normalizedRecentTransactions"
-                            :key="`recent-transaction-${transaction.id}-${index}`"
-                            class="flex items-center gap-3 px-5 py-3.5"
-                        >
-                            <div class="flex h-9 w-9 items-center justify-center rounded-xl text-xs text-white" style="background: linear-gradient(135deg, #2563EB, #60A5FA);">
-                                {{ transaction.initials }}
-                            </div>
-
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-2">
-                                    <p class="truncate text-sm" style="color: #1F2937;">{{ transaction.customer }}</p>
-                                    <span
-                                        class="shrink-0 rounded px-1.5 py-0.5 text-xs"
-                                        :style="{ background: resolveMethodStyle(transaction.method).bg, color: resolveMethodStyle(transaction.method).color }"
-                                    >
-                                        {{ transaction.method }}
-                                    </span>
-                                </div>
-                                <p class="text-xs" style="color: #94A3B8;">{{ transaction.id }} - {{ transaction.cashier }} - {{ transaction.time }}</p>
-                            </div>
-
-                            <div class="shrink-0 text-right">
-                                <p class="text-sm" style="color: #1F2937; font-weight: 600;">{{ transaction.amountText }}</p>
-                                <span
-                                    class="rounded-full px-2 py-0.5 text-xs"
-                                    :style="{ background: resolveTransactionStatus(transaction.status).bg, color: resolveTransactionStatus(transaction.status).color }"
-                                >
-                                    {{ resolveTransactionStatus(transaction.status).label }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <p v-if="!normalizedRecentTransactions.length" class="px-5 py-10 text-center text-sm" style="color: #94A3B8;">No recent transactions.</p>
-                    </div>
-
-                    <div class="p-4" style="border-top: 1px solid #F1F5F9;">
-                        <a :href="panelTransactionsUrl" class="flex w-full items-center justify-center gap-1 rounded-xl py-2 text-sm" style="color: #2563EB;">View All Transactions</a>
-                    </div>
-                </div>
-
-                <div
-                    class="overflow-hidden rounded-2xl"
-                    style="background: #FFFFFF; box-shadow: 0 1px 3px rgba(37,99,235,0.05), 0 4px 16px rgba(37,99,235,0.05); border: 1px solid #EEF2FF;"
-                >
-                    <div class="border-b p-5" style="border-color: #F1F5F9;">
-                        <h2 class="text-gray-900" style="font-family: Poppins, sans-serif;">Activity Log</h2>
-                        <p class="mt-0.5 text-xs" style="color: #94A3B8;">Recent system activities</p>
-                    </div>
-
-                    <div class="p-5">
-                        <div class="space-y-4">
-                            <div
-                                v-for="(activity, index) in normalizedRecentActivities"
-                                :key="`activity-${activity.id}-${index}`"
-                                class="flex gap-3"
-                            >
-                                <div class="relative shrink-0">
-                                    <div
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl text-xs"
-                                        :style="{ background: resolveActivityTone(activity.module).bg, color: resolveActivityTone(activity.module).color, fontWeight: 700 }"
-                                    >
-                                        {{ String(activity.module || 'A').charAt(0).toUpperCase() }}
-                                    </div>
-                                    <div
-                                        v-if="index < normalizedRecentActivities.length - 1"
-                                        class="absolute left-4 top-9 w-px"
-                                        style="height: 28px; background: #F1F5F9;"
-                                    ></div>
-                                </div>
-
-                                <div class="min-w-0 flex-1 pb-1">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <p class="text-sm" style="color: #1F2937;">{{ activity.action }}</p>
-                                        <span class="shrink-0 text-xs" style="color: #CBD5E1;">{{ activity.time }}</span>
-                                    </div>
-                                    <p class="mt-0.5 text-xs" style="color: #94A3B8;">{{ activity.actor }} - {{ activity.module }}</p>
-                                </div>
-                            </div>
-
-                            <p v-if="!normalizedRecentActivities.length" class="py-8 text-center text-sm" style="color: #94A3B8;">No recent activities.</p>
-                        </div>
-                    </div>
-
-                    <div class="p-4" style="border-top: 1px solid #F1F5F9;">
-                        <a :href="panelActivitiesUrl" class="flex w-full items-center justify-center gap-1 rounded-xl py-2 text-sm" style="color: #2563EB;">View All Activities</a>
-                    </div>
-                </div>
-            </div>
-
+                        <SettingsPage
+                            v-else-if="activeModuleId === 'settings'"
+                            :settings-tab="settingsTab"
+                            :settings-tabs="settingsTabs"
+                            :settings="settings"
+                            :branch-options="settingsBranchOptions"
+                            :default-branch-id="resolvedDefaultBranchId"
+                            :loading="settingsLoading"
+                            :saving="settingsSaving"
+                            :error-message="settingsError"
+                            :success-message="settingsSuccess"
+                            @update:settings-tab="settingsTab = $event"
+                            @refresh-settings="fetchSettingsData()"
+                            @save-default-branch="saveDefaultBranch"
+                            @create-branch="createBranchSetting"
+                            @update-branch="updateBranchSetting"
+                            @remove-branch="removeBranchSetting"
+                        />
                     </div>
                 </main>
             </div>
