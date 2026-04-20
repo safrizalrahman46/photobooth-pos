@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'midtrans' => [
+        'enabled' => env('MIDTRANS_ENABLED', false),
+        'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY'),
+        'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
+        'base_url' => env('MIDTRANS_IS_PRODUCTION', false)
+            ? 'https://app.midtrans.com'
+            : 'https://app.sandbox.midtrans.com',
+        'expiry_minutes' => env('MIDTRANS_EXPIRY_MINUTES', 15),
+    ],
+
 ];

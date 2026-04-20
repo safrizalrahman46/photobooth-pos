@@ -11,6 +11,7 @@ use App\Models\Branch;
 use App\Models\DesignCatalog;
 use App\Models\Package;
 use App\Services\BookingService;
+use App\Services\BookingPaymentService;
 use App\Services\SlotService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +23,7 @@ class BookingController extends Controller
 {
     public function __construct(
         private readonly BookingService $bookingService,
+        private readonly BookingPaymentService $bookingPaymentService,
         private readonly SlotService $slotService,
     ) {}
 
@@ -162,12 +164,38 @@ class BookingController extends Controller
         try {
             $booking = $this->bookingService->create($payload);
 
+            if (($payload['payment_type'] ?? 'onsite') === 'full') {
+                try {
+                    $booking = $this->bookingPaymentService->startOnlinePayment($booking);
+
+                    $request->session()->forget('booking.payment_payload');
+
+                    return redirect()->away($booking->payment_url);
+                } catch (RuntimeException $exception) {
+                    $booking->forceFill([
+                        'payment_type' => 'onsite',
+                        'payment_gateway' => null,
+                        'payment_reference' => null,
+                        'payment_token' => null,
+                        'payment_url' => null,
+                        'payment_payload' => null,
+                        'payment_expires_at' => null,
+                    ])->save();
+
+                    session()->flash('booking_payment_notice', 'Pembayaran online belum tersedia. Booking diproses dengan metode bayar di studio.');
+                }
+            }
+
             $request->session()->forget('booking.payment_payload');
 
             return redirect()
                 ->route('booking.success', $booking->booking_code)
                 ->with('booking_created', true);
         } catch (RuntimeException $exception) {
+            if (isset($booking) && $booking instanceof Booking) {
+                $booking->delete();
+            }
+
             return back()
                 ->withErrors(['booking_time' => $exception->getMessage()])
                 ->withInput();

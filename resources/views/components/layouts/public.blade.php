@@ -4,7 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? config('app.name', 'READY TO PICT') }}</title>
+    @php
+        $general = $siteSettings['general'] ?? [];
+        $brandName = $general['brand_name'] ?? config('app.name', 'Ready To Pict');
+    @endphp
+    <title>{{ $title ?? $brandName }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=fraunces:500,700|sora:400,500,600,700" rel="stylesheet" />
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))

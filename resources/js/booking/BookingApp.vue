@@ -28,6 +28,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    site: {
+        type: Object,
+        default: () => ({}),
+    },
     csrfToken: {
         type: String,
         required: true,
@@ -216,6 +220,17 @@ const selectedBranch = computed(() => {
 const activeAddons = computed(() => {
     return addOnCatalog.filter((item) => Number(addonQty.value[item.id] || 0) > 0);
 });
+
+const selectedAddonsPayload = computed(() => {
+    return activeAddons.value.map((addon) => ({
+        id: addon.id,
+        label: addon.label,
+        qty: Number(addonQty.value[addon.id] || 0),
+        price: Number(addon.price || 0),
+    }));
+});
+
+const addonsPayloadJson = computed(() => JSON.stringify(selectedAddonsPayload.value));
 
 const addOnTotal = computed(() => {
     return activeAddons.value.reduce((total, item) => {
@@ -563,7 +578,7 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
-        <PublicBookingNavbar :routes="props.routes" />
+        <PublicBookingNavbar :routes="props.routes" :site="props.site" />
 
         <div class="pointer-events-none absolute inset-0 overflow-hidden">
             <div class="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-[#2563EB]/5" />
@@ -589,6 +604,7 @@ onBeforeUnmount(() => {
                 <input type="hidden" name="customer_phone" :value="customerPhone">
                 <input type="hidden" name="customer_email" :value="customerEmail">
                 <input type="hidden" name="notes" :value="notes">
+                <input type="hidden" name="addons_payload" :value="addonsPayloadJson">
 
                 <div
                     v-if="props.errors.length || submitError"

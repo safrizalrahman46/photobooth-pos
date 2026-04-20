@@ -1,4 +1,5 @@
 @php
+    $general = $siteSettings['general'] ?? [];
     $prefillPackage = old('package_id') ?: (request()->integer('package') ?: null);
 
     $oldValues = [
@@ -24,12 +25,18 @@
             'availability' => route('booking.availability'),
             'payment' => route('booking.payment.prepare'),
             'store' => route('booking.store'),
+            'queueBoard' => route('queue.board'),
+        ],
+        'site' => [
+            'brand_name' => $general['brand_name'] ?? config('app.name', 'Ready To Pict'),
+            'short_name' => $general['short_name'] ?? 'Studio',
+            'logo_url' => $general['logo_url'] ?? '/favicon.ico',
         ],
         'csrfToken' => csrf_token(),
     ];
 @endphp
 
-<x-layouts.public :title="'Booking Online - READY TO PICT'">
+<x-layouts.public :title="'Booking Online - '.($general['brand_name'] ?? config('app.name', 'Ready To Pict'))">
     <div id="booking-app"></div>
     <script id="booking-app-props" type="application/json">@json($bootstrap)</script>
 </x-layouts.public>

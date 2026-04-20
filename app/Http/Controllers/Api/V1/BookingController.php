@@ -23,6 +23,8 @@ class BookingController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        abort_unless($request->user()?->can('booking.view'), 403);
+
         $perPage = min((int) $request->integer('per_page', 15), 100);
 
         $query = Booking::query()
@@ -42,6 +44,11 @@ class BookingController extends Controller
             $query->whereDate('booking_date', $request->string('date')->toString());
         }
 
+        if ($request->filled('booking_code')) {
+            $bookingCode = mb_strtoupper(trim($request->string('booking_code')->toString()));
+            $query->where('booking_code', 'like', "%{$bookingCode}%");
+        }
+
         $bookings = $query->paginate($perPage)->withQueryString();
 
         return $this->responder->paginated($bookings, BookingResource::collection($bookings), 'Daftar booking berhasil dimuat.');
@@ -58,13 +65,17 @@ class BookingController extends Controller
         }
     }
 
-    public function show(Booking $booking): JsonResponse
+    public function show(Request $request, Booking $booking): JsonResponse
     {
+        abort_unless($request->user()?->can('booking.view'), 403);
+
         return $this->responder->success(new BookingResource($booking->load('package', 'designCatalog')));
     }
 
     public function updateStatus(UpdateBookingStatusRequest $request, Booking $booking): JsonResponse
     {
+        abort_unless($request->user()?->can('booking.manage'), 403);
+
         $payload = $request->validated();
         $actorId = $request->user()?->id;
         $status = BookingStatus::from($payload['status']);

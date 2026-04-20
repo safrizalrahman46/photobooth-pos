@@ -23,6 +23,10 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    paymentSettings: {
+        type: Object,
+        default: () => ({}),
+    },
     errors: {
         type: Array,
         default: () => [],
@@ -30,6 +34,10 @@ const props = defineProps({
     routes: {
         type: Object,
         required: true,
+    },
+    site: {
+        type: Object,
+        default: () => ({}),
     },
     csrfToken: {
         type: String,
@@ -39,7 +47,17 @@ const props = defineProps({
 
 const asString = (value) => (value === null || value === undefined ? '' : String(value));
 
-const paymentType = ref(asString(props.oldValues.payment_type || 'full'));
+const onlinePaymentEnabled = computed(() => props.paymentSettings.midtrans_enabled === true || props.paymentSettings.midtrans_enabled === 1);
+const onsitePaymentEnabled = computed(() => props.paymentSettings.onsite_enabled !== false && props.paymentSettings.onsite_enabled !== 0);
+const defaultPaymentType = computed(() => {
+    if (onlinePaymentEnabled.value) {
+        return 'full';
+    }
+
+    return 'onsite';
+});
+
+const paymentType = ref(asString(props.oldValues.payment_type || defaultPaymentType.value));
 const processing = ref(false);
 const countdown = ref(600);
 
@@ -47,7 +65,11 @@ let countdownTimer = null;
 
 const packageAccentTokens = ['#2563eb', '#ec4899', '#22c55e', '#f59e0b', '#0ea5e9', '#8b5cf6'];
 
-const totalPrice = computed(() => Number(props.package?.base_price || 0));
+const addonTotal = computed(() => {
+    return selectedAddons.value.reduce((total, addon) => total + (addon.price * addon.qty), 0);
+});
+
+const totalPrice = computed(() => Number(props.package?.base_price || 0) + addonTotal.value);
 
 const selectedAddons = computed(() => {
     if (!Array.isArray(props.bookingPayload?.addons)) {
@@ -63,6 +85,8 @@ const selectedAddons = computed(() => {
             price: Number(item.price || 0),
         }));
 });
+
+const addonsPayloadJson = computed(() => JSON.stringify(selectedAddons.value));
 
 const packageColor = computed(() => {
     if (props.package?.color) {
@@ -120,13 +144,30 @@ const submitLabel = computed(() => {
     return paymentType.value === 'onsite' ? 'Konfirmasi Booking' : 'Konfirmasi Pembayaran';
 });
 
+const canSubmit = computed(() => {
+    return paymentType.value === 'full' ? onlinePaymentEnabled.value : onsitePaymentEnabled.value;
+});
+
+if (!onlinePaymentEnabled.value && paymentType.value === 'full') {
+    paymentType.value = 'onsite';
+}
+
+if (!onsitePaymentEnabled.value && paymentType.value === 'onsite') {
+    paymentType.value = 'full';
+}
+
 const countdownLabel = computed(() => {
     const min = String(mins.value).padStart(2, '0');
     const sec = String(secs.value).padStart(2, '0');
     return `${min}:${sec} tersisa`;
 });
 
-const handleSubmit = () => {
+const handleSubmit = (event) => {
+    if (!canSubmit.value) {
+        event?.preventDefault?.();
+        return;
+    }
+
     processing.value = true;
 };
 
@@ -152,7 +193,7 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="min-h-screen bg-[#F8FAFC]">
-        <PublicBookingNavbar :routes="props.routes" />
+        <PublicBookingNavbar :routes="props.routes" :site="props.site" />
 
         <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
             <div class="pointer-events-none absolute inset-0 overflow-hidden">
@@ -277,8 +318,9 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div class="mb-6 grid grid-cols-2 gap-3">
+                <div v-if="onlinePaymentEnabled || onsitePaymentEnabled" class="mb-6 grid gap-3" :class="onlinePaymentEnabled && onsitePaymentEnabled ? 'grid-cols-2' : 'grid-cols-1'">
                     <button
+                        v-if="onlinePaymentEnabled"
                         type="button"
                         class="rounded-xl border-2 p-4 text-left transition-all duration-200"
                         :class="paymentType === 'full'
@@ -286,11 +328,12 @@ onBeforeUnmount(() => {
                             : 'border-slate-300 bg-white hover:border-slate-400'"
                         @click="paymentType = 'full'"
                     >
-                        <p class="text-sm" :class="paymentType === 'full' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">Bayar Penuh</p>
-                        <p class="mt-0.5 text-xs text-gray-500">{{ formatRupiah(totalPrice) }}</p>
+                        <p class="text-sm" :class="paymentType === 'full' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">Bayar Online</p>
+                        <p class="mt-0.5 text-xs text-gray-500">Midtrans • {{ formatRupiah(totalPrice) }}</p>
                     </button>
 
                     <button
+                        v-if="onsitePaymentEnabled"
                         type="button"
                         class="rounded-xl border-2 p-4 text-left transition-all duration-200"
                         :class="paymentType === 'onsite'
@@ -301,6 +344,10 @@ onBeforeUnmount(() => {
                         <p class="text-sm" :class="paymentType === 'onsite' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">Bayar di Tempat</p>
                         <p class="mt-0.5 text-xs text-gray-500">Bayar saat datang</p>
                     </button>
+                </div>
+
+                <div v-else class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    Metode pembayaran belum tersedia saat ini. Silakan hubungi admin studio.
                 </div>
 
                 <div v-if="paymentType !== 'onsite'" class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
@@ -319,7 +366,7 @@ onBeforeUnmount(() => {
                                 <path d="M7 14h4" />
                                 <path d="M10 18h1" />
                             </svg>
-                            Scan QRIS untuk Bayar
+                            Bayar Online via Midtrans
                         </h3>
                     </div>
 
@@ -342,7 +389,7 @@ onBeforeUnmount(() => {
                                 <path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V6l8-4 8 4z" />
                                 <path d="M9 12l2 2 4-4" />
                             </svg>
-                            Pembayaran aman via QRIS
+                            Kamu akan diarahkan ke halaman pembayaran Midtrans
                         </div>
                     </div>
                 </div>
@@ -381,12 +428,13 @@ onBeforeUnmount(() => {
                     <input type="hidden" name="customer_email" :value="props.bookingPayload.customer_email || ''">
                     <input type="hidden" name="notes" :value="props.bookingPayload.notes || ''">
                     <input type="hidden" name="payment_type" :value="paymentType">
+                    <input type="hidden" name="addons_payload" :value="addonsPayloadJson">
 
                     <button
                         type="submit"
                         class="h-12 w-full rounded-xl bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/20 transition hover:bg-[#2563EB]/90"
-                        :disabled="processing"
-                        :class="processing ? 'cursor-not-allowed opacity-80' : ''"
+                        :disabled="processing || !canSubmit"
+                        :class="processing || !canSubmit ? 'cursor-not-allowed opacity-80' : ''"
                     >
                         <span v-if="processing" class="inline-flex items-center gap-2">
                             <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

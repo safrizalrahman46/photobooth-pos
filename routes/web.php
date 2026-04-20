@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Web\BookingController;
 use App\Http\Controllers\Web\LandingController;
+use App\Http\Controllers\Web\QueueBoardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
+Route::get('/queue-board', [QueueBoardController::class, 'index'])->name('queue.board');
 
 Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/', [BookingController::class, 'create'])->name('create');

@@ -9,7 +9,7 @@ class QueueWalkInRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('queue.manage') ?? false;
     }
 
     public function rules(): array

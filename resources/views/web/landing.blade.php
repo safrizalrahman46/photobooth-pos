@@ -1,13 +1,20 @@
-<x-layouts.public :title="'READY TO PICT - Booking Photobooth'">
+@php
+    $general = $siteSettings['general'] ?? [];
+    $brandName = $general['brand_name'] ?? config('app.name', 'Ready To Pict');
+    $tagline = $general['tagline'] ?? 'Photo booth cepat, estetik, dan anti ribet.';
+@endphp
+
+<x-layouts.public :title="$brandName.' - Booking Photobooth'">
     <main class="mx-auto w-full max-w-6xl px-4 pb-16 pt-8 sm:px-6 lg:px-10">
         <header class="mb-10 flex flex-col gap-4 rounded-3xl card-soft p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
             <div>
-                <p class="badge inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">READY TO PICT</p>
-                <h1 class="display-font mt-4 text-3xl leading-tight sm:text-4xl lg:text-5xl">Photo booth cepat, estetik, dan anti ribet.</h1>
+                <p class="badge inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">{{ $brandName }}</p>
+                <h1 class="display-font mt-4 text-3xl leading-tight sm:text-4xl lg:text-5xl">{{ $tagline }}</h1>
                 <p class="mt-3 max-w-2xl text-sm text-[var(--rtp-muted)] sm:text-base">Pilih paket, cek slot yang tersedia, dan booking online dalam beberapa menit. Datang sesuai jam, langsung foto.</p>
             </div>
             <div class="flex shrink-0 flex-col gap-3">
                 <a href="{{ route('booking.create') }}" class="inline-flex items-center justify-center rounded-2xl bg-[var(--rtp-primary)] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:brightness-105">Booking Sekarang</a>
+                <a href="{{ route('queue.board') }}" class="inline-flex items-center justify-center rounded-2xl border border-[var(--rtp-outline)] bg-white px-5 py-3 text-sm font-semibold">Lihat Queue Board</a>
                 <p class="text-xs text-[var(--rtp-muted)]">Open daily • Fast queue • Bisa walk-in</p>
             </div>
         </header>
@@ -37,7 +44,7 @@
                 <div class="mt-4 grid gap-3 sm:grid-cols-3">
                     <div class="rounded-xl border border-[var(--rtp-outline)] bg-white/70 p-4">
                         <p class="text-xs font-bold uppercase tracking-[0.16em] text-[var(--rtp-accent)]">Step 1</p>
-                        <p class="mt-1 text-sm">Pilih cabang, paket, dan tema desain.</p>
+                        <p class="mt-1 text-sm">Pilih cabang dan paket foto yang tersedia.</p>
                     </div>
                     <div class="rounded-xl border border-[var(--rtp-outline)] bg-white/70 p-4">
                         <p class="text-xs font-bold uppercase tracking-[0.16em] text-[var(--rtp-accent)]">Step 2</p>

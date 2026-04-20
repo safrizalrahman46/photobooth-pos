@@ -6,6 +6,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    site: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 
 const mobileOpen = ref(false);
@@ -23,14 +27,16 @@ const links = computed(() => {
             label: 'Admin',
         },
         {
-            key: 'checkin',
-            href: props.routes.checkin || '/checkin',
-            label: 'Check-in',
+            key: 'queue',
+            href: props.routes.queueBoard || '/queue-board',
+            label: 'Queue',
         },
     ];
 });
 
-const logoSrc = computed(() => props.routes.logo || '/favicon.ico');
+const logoSrc = computed(() => props.site.logo_url || props.routes.logo || '/favicon.ico');
+const brandName = computed(() => props.site.brand_name || 'Ready to Pict');
+const shortName = computed(() => props.site.short_name || 'Studio');
 
 const currentPath = computed(() => window.location.pathname);
 
@@ -55,9 +61,9 @@ const isActive = (href) => {
                 <img :src="logoSrc" alt="Ready to Pict" class="h-12 w-12 rounded-full object-cover ring-2 ring-[#2563EB]/30 ring-offset-1">
                 <div class="flex flex-col leading-tight">
                     <span class="text-[#1F2937]" style="font-size: 1rem; font-weight: 700;">
-                        Ready to <span class="text-[#2563EB]">Pict</span>
+                        {{ brandName }}
                     </span>
-                    <span class="text-[0.6rem] uppercase tracking-widest text-gray-400">Studio</span>
+                    <span class="text-[0.6rem] uppercase tracking-widest text-gray-400">{{ shortName }}</span>
                 </div>
             </a>
 

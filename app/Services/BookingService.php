@@ -23,6 +23,8 @@ class BookingService
     {
         return DB::transaction(function () use ($payload): Booking {
             $package = Package::query()->findOrFail($payload['package_id']);
+            $addons = $this->normalizeAddons($payload['addons'] ?? []);
+            $addonTotal = collect($addons)->sum(fn (array $addon) => $addon['price'] * $addon['qty']);
             $startAt = Carbon::parse($payload['booking_date'].' '.$payload['booking_time']);
             $endAt = $startAt->copy()->addMinutes((int) $package->duration_minutes);
 
@@ -45,7 +47,10 @@ class BookingService
                 'end_at' => $endAt,
                 'status' => BookingStatus::Pending,
                 'source' => $payload['source'] ?? BookingSource::Web,
-                'total_amount' => $package->base_price,
+                'payment_type' => $payload['payment_type'] ?? 'onsite',
+                'addons' => $addons,
+                'addon_total' => $addonTotal,
+                'total_amount' => (float) $package->base_price + (float) $addonTotal,
                 'notes' => $payload['notes'] ?? null,
             ]);
 
@@ -60,6 +65,23 @@ class BookingService
 
             return $booking;
         });
+    }
+
+    private function normalizeAddons(array $addons): array
+    {
+        return collect($addons)
+            ->filter(fn ($item) => is_array($item))
+            ->map(function (array $item): array {
+                return [
+                    'id' => (string) ($item['id'] ?? ''),
+                    'label' => (string) ($item['label'] ?? ''),
+                    'qty' => max(1, (int) ($item['qty'] ?? 1)),
+                    'price' => max(0, round((float) ($item['price'] ?? 0), 2)),
+                ];
+            })
+            ->filter(fn (array $item) => $item['id'] !== '' && $item['label'] !== '' && $item['qty'] > 0)
+            ->values()
+            ->all();
     }
 
     public function updateStatus(Booking $booking, BookingStatus $toStatus, ?int $actorId = null, ?string $reason = null): Booking

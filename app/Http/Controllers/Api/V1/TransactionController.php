@@ -20,6 +20,8 @@ class TransactionController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        abort_unless($request->user()?->can('transaction.view'), 403);
+
         $perPage = min((int) $request->integer('per_page', 15), 100);
 
         $query = Transaction::query()
@@ -41,6 +43,8 @@ class TransactionController extends Controller
 
     public function store(StoreTransactionRequest $request): JsonResponse
     {
+        abort_unless($request->user()?->can('transaction.manage'), 403);
+
         $transaction = $this->transactionService->create(
             $request->validated(),
             (int) $request->user()->id
@@ -53,8 +57,10 @@ class TransactionController extends Controller
         );
     }
 
-    public function show(Transaction $transaction): JsonResponse
+    public function show(Request $request, Transaction $transaction): JsonResponse
     {
+        abort_unless($request->user()?->can('transaction.view'), 403);
+
         return $this->responder->success(new TransactionResource($transaction->load('items', 'payments')));
     }
 }

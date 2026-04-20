@@ -14,6 +14,7 @@ use App\Services\QueueService;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use RuntimeException;
 
 class QueueController extends Controller
 {
@@ -24,6 +25,8 @@ class QueueController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        abort_unless($request->user()?->can('queue.view'), 403);
+
         $perPage = min((int) $request->integer('per_page', 15), 100);
 
         $query = QueueTicket::query()
@@ -50,6 +53,8 @@ class QueueController extends Controller
 
     public function checkIn(QueueCheckInRequest $request): JsonResponse
     {
+        abort_unless($request->user()?->can('queue.manage'), 403);
+
         $booking = Booking::query()
             ->whereKey($request->integer('booking_id'))
             ->with('queueTicket')
@@ -59,35 +64,59 @@ class QueueController extends Controller
             return $this->responder->error('Booking ini sudah memiliki tiket antrean.', 422);
         }
 
-        $ticket = $this->queueService->checkInBooking($booking);
+        try {
+            $ticket = $this->queueService->checkInBooking($booking);
+        } catch (RuntimeException $exception) {
+            return $this->responder->error($exception->getMessage(), 422);
+        }
 
         return $this->responder->success(new QueueTicketResource($ticket->load('booking')), 'Check-in booking berhasil.', 201);
     }
 
     public function walkIn(QueueWalkInRequest $request): JsonResponse
     {
-        $ticket = $this->queueService->createWalkIn($request->validated());
+        abort_unless($request->user()?->can('queue.manage'), 403);
+
+        try {
+            $ticket = $this->queueService->createWalkIn($request->validated());
+        } catch (RuntimeException $exception) {
+            return $this->responder->error($exception->getMessage(), 422);
+        }
 
         return $this->responder->success(new QueueTicketResource($ticket), 'Antrean walk-in berhasil dibuat.', 201);
     }
 
     public function transition(QueueTransitionRequest $request, QueueTicket $queueTicket): JsonResponse
     {
+        abort_unless($request->user()?->can('queue.manage'), 403);
+
         $status = QueueStatus::from($request->validated('status'));
-        $ticket = $this->queueService->transition($queueTicket, $status);
+
+        try {
+            $ticket = $this->queueService->transition($queueTicket, $status);
+        } catch (RuntimeException $exception) {
+            return $this->responder->error($exception->getMessage(), 422);
+        }
 
         return $this->responder->success(new QueueTicketResource($ticket->load('booking')), 'Status antrean berhasil diperbarui.');
     }
 
     public function callNext(Request $request): JsonResponse
     {
+        abort_unless($request->user()?->can('queue.manage'), 403);
+
         $payload = $request->validate([
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'queue_date' => ['nullable', 'date_format:Y-m-d'],
         ]);
 
         $date = $payload['queue_date'] ?? now()->toDateString();
-        $ticket = $this->queueService->callNext((int) $payload['branch_id'], $date);
+
+        try {
+            $ticket = $this->queueService->callNext((int) $payload['branch_id'], $date);
+        } catch (RuntimeException $exception) {
+            return $this->responder->error($exception->getMessage(), 422);
+        }
 
         if (! $ticket) {
             return $this->responder->success(null, 'Tidak ada antrean menunggu saat ini.');

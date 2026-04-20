@@ -7,59 +7,53 @@ use App\Models\User;
 
 class QueueTicketPolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->can('queue.view');
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
     public function view(User $user, QueueTicket $queueTicket): bool
     {
-        return false;
+        return $user->can('queue.view');
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
     public function create(User $user): bool
     {
-        return false;
+        return $user->can('queue.manage');
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
     public function update(User $user, QueueTicket $queueTicket): bool
     {
-        return false;
+        return $user->can('queue.manage');
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
     public function delete(User $user, QueueTicket $queueTicket): bool
     {
-        return false;
+        return $user->can('queue.manage');
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     */
+    public function deleteAny(User $user): bool
+    {
+        return $user->can('queue.manage');
+    }
+
     public function restore(User $user, QueueTicket $queueTicket): bool
     {
-        return false;
+        return $user->can('queue.manage');
     }
 
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
+    public function restoreAny(User $user): bool
+    {
+        return $user->can('queue.manage');
+    }
+
     public function forceDelete(User $user, QueueTicket $queueTicket): bool
     {
-        return false;
+        return $user->can('queue.manage');
+    }
+
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->can('queue.manage');
     }
 }

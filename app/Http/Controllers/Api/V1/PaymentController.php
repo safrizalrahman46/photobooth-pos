@@ -20,6 +20,8 @@ class PaymentController extends Controller
 
     public function store(StorePaymentRequest $request, Transaction $transaction): JsonResponse
     {
+        abort_unless($request->user()?->can('payment.manage'), 403);
+
         $updatedTransaction = $this->transactionService->addPayment(
             $transaction,
             $request->validated(),
