@@ -3,38 +3,31 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+<<<<<<< HEAD
 use App\Http\Requests\StorePackageRequest;
 use App\Http\Requests\UpdatePackageRequest;
+=======
+use App\Http\Requests\PackageIndexRequest;
+>>>>>>> fc7ace865dfae888f032ba57ff5855d596c41b93
 use App\Http\Resources\PackageResource;
 use App\Models\Package;
+use App\Services\PackageReadService;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class PackageController extends Controller
 {
     public function __construct(
+        private readonly PackageReadService $packageReadService,
         private readonly ApiResponder $responder,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(PackageIndexRequest $request): JsonResponse
     {
-        $perPage = min((int) $request->integer('per_page', 15), 100);
+        $payload = $request->validated();
+        $perPage = (int) ($payload['per_page'] ?? 15);
 
-        $query = Package::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name');
-
-        if ($request->filled('branch_id')) {
-            $branchId = (int) $request->integer('branch_id');
-            $query->where(function ($builder) use ($branchId) {
-                $builder->where('branch_id', $branchId)
-                    ->orWhereNull('branch_id');
-            });
-        }
-
-        $packages = $query->paginate($perPage)->withQueryString();
+        $packages = $this->packageReadService->paginateActive($payload, $perPage);
 
         return $this->responder->paginated($packages, PackageResource::collection($packages), 'Daftar paket berhasil dimuat.');
     }

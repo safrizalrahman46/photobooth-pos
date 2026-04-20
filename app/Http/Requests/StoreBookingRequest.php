@@ -17,7 +17,7 @@ class StoreBookingRequest extends FormRequest
     {
         return [
             'branch_id' => [
-                'required',
+                'nullable',
                 'integer',
                 Rule::exists('branches', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
@@ -32,7 +32,7 @@ class StoreBookingRequest extends FormRequest
                 Rule::exists('design_catalogs', 'id')->where(fn ($query) => $query->where('is_active', true)->whereNull('deleted_at')),
             ],
             'customer_name' => ['required', 'string', 'max:120'],
-            'customer_phone' => ['required', 'string', 'max:30'],
+            'customer_phone' => ['required', 'string', 'max:30', 'regex:/^[0-9]+$/'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'booking_time' => ['required', 'date_format:H:i'],
@@ -44,6 +44,15 @@ class StoreBookingRequest extends FormRequest
             'addons.*.qty' => ['required_with:addons', 'integer', 'min:1', 'max:99'],
             'addons.*.price' => ['required_with:addons', 'numeric', 'min:0', 'max:9999999'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'payment_type' => ['nullable', Rule::in(['full', 'dp50'])],
+            'add_ons' => ['sometimes', 'array'],
+            'add_ons.*.add_on_id' => [
+                'required',
+                'integer',
+                'distinct',
+                Rule::exists('add_ons', 'id')->where(fn ($query) => $query->where('is_active', true)),
+            ],
+            'add_ons.*.qty' => ['required', 'integer', 'min:1', 'max:99'],
         ];
     }
 

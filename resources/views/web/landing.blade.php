@@ -13,8 +13,12 @@
                 <p class="mt-3 max-w-2xl text-sm text-[var(--rtp-muted)] sm:text-base">Pilih paket, cek slot yang tersedia, dan booking online dalam beberapa menit. Datang sesuai jam, langsung foto.</p>
             </div>
             <div class="flex shrink-0 flex-col gap-3">
+<<<<<<< HEAD
                 <a href="{{ route('booking.create') }}" class="inline-flex items-center justify-center rounded-2xl bg-[var(--rtp-primary)] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:brightness-105">Booking Sekarang</a>
                 <a href="{{ route('queue.board') }}" class="inline-flex items-center justify-center rounded-2xl border border-[var(--rtp-outline)] bg-white px-5 py-3 text-sm font-semibold">Lihat Queue Board</a>
+=======
+                <a href="{{ route('booking.customer') }}" class="inline-flex items-center justify-center rounded-2xl bg-[var(--rtp-primary)] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:brightness-105">Booking Sekarang</a>
+>>>>>>> fc7ace865dfae888f032ba57ff5855d596c41b93
                 <p class="text-xs text-[var(--rtp-muted)]">Open daily • Fast queue • Bisa walk-in</p>
             </div>
         </header>
@@ -27,7 +31,7 @@
                     <p class="mt-2 text-sm text-[var(--rtp-muted)]">{{ $package->description ?: 'Paket siap pakai untuk momen seru bareng teman, keluarga, atau event.' }}</p>
                     <div class="mt-4 flex items-center justify-between">
                         <p class="display-font text-2xl font-bold">Rp {{ number_format((float) $package->base_price, 0, ',', '.') }}</p>
-                        <a href="{{ route('booking.create', ['package' => $package->id]) }}" class="rounded-xl border border-[var(--rtp-outline)] px-3 py-2 text-xs font-semibold hover:bg-white">Pilih</a>
+                        <a href="{{ route('booking.customer') }}" class="rounded-xl border border-[var(--rtp-outline)] px-3 py-2 text-xs font-semibold hover:bg-white">Pilih</a>
                     </div>
                 </article>
             @empty

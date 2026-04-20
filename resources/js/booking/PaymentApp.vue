@@ -47,6 +47,7 @@ const props = defineProps({
 
 const asString = (value) => (value === null || value === undefined ? '' : String(value));
 
+<<<<<<< HEAD
 const onlinePaymentEnabled = computed(() => props.paymentSettings.midtrans_enabled === true || props.paymentSettings.midtrans_enabled === 1);
 const onsitePaymentEnabled = computed(() => props.paymentSettings.onsite_enabled !== false && props.paymentSettings.onsite_enabled !== 0);
 const defaultPaymentType = computed(() => {
@@ -58,6 +59,19 @@ const defaultPaymentType = computed(() => {
 });
 
 const paymentType = ref(asString(props.oldValues.payment_type || defaultPaymentType.value));
+=======
+const normalizePaymentType = (value) => {
+    const normalized = asString(value).toLowerCase();
+
+    if (normalized === 'full' || normalized === 'dp50') {
+        return normalized;
+    }
+
+    return 'dp50';
+};
+
+const paymentType = ref(normalizePaymentType(props.oldValues.payment_type || 'dp50'));
+>>>>>>> fc7ace865dfae888f032ba57ff5855d596c41b93
 const processing = ref(false);
 const countdown = ref(600);
 
@@ -65,11 +79,24 @@ let countdownTimer = null;
 
 const packageAccentTokens = ['#2563eb', '#ec4899', '#22c55e', '#f59e0b', '#0ea5e9', '#8b5cf6'];
 
+<<<<<<< HEAD
 const addonTotal = computed(() => {
     return selectedAddons.value.reduce((total, addon) => total + (addon.price * addon.qty), 0);
 });
 
 const totalPrice = computed(() => Number(props.package?.base_price || 0) + addonTotal.value);
+=======
+const selectedAddOnsForSubmit = computed(() => {
+    const source = Array.isArray(props.bookingPayload?.add_ons) ? props.bookingPayload.add_ons : [];
+
+    return source
+        .map((item) => ({
+            add_on_id: Number(item?.add_on_id || 0),
+            qty: Number(item?.qty || 0),
+        }))
+        .filter((item) => item.add_on_id > 0 && item.qty > 0);
+});
+>>>>>>> fc7ace865dfae888f032ba57ff5855d596c41b93
 
 const selectedAddons = computed(() => {
     if (!Array.isArray(props.bookingPayload?.addons)) {
@@ -86,7 +113,37 @@ const selectedAddons = computed(() => {
         }));
 });
 
+<<<<<<< HEAD
 const addonsPayloadJson = computed(() => JSON.stringify(selectedAddons.value));
+=======
+const addOnTotal = computed(() => {
+    return selectedAddons.value.reduce((sum, item) => sum + (item.price * item.qty), 0);
+});
+
+const totalPrice = computed(() => {
+    const payloadTotal = Number(props.bookingPayload?.total_amount || 0);
+
+    if (payloadTotal > 0) {
+        return payloadTotal;
+    }
+
+    return Number(props.package?.base_price || 0) + addOnTotal.value;
+});
+
+const dpAmount = computed(() => {
+    const total = Number(totalPrice.value || 0);
+
+    return Math.round((total * 0.5) * 100) / 100;
+});
+
+const amountToPay = computed(() => {
+    return paymentType.value === 'dp50' ? dpAmount.value : totalPrice.value;
+});
+
+const remainingAfterCurrentPayment = computed(() => {
+    return Math.max(Number(totalPrice.value || 0) - Number(amountToPay.value || 0), 0);
+});
+>>>>>>> fc7ace865dfae888f032ba57ff5855d596c41b93
 
 const packageColor = computed(() => {
     if (props.package?.color) {
@@ -140,9 +197,7 @@ const displayTime = computed(() => {
     return `${value} WIB`;
 });
 
-const submitLabel = computed(() => {
-    return paymentType.value === 'onsite' ? 'Konfirmasi Booking' : 'Konfirmasi Pembayaran';
-});
+const submitLabel = computed(() => 'Konfirmasi Pembayaran');
 
 const canSubmit = computed(() => {
     return paymentType.value === 'full' ? onlinePaymentEnabled.value : onsitePaymentEnabled.value;
@@ -308,11 +363,16 @@ onBeforeUnmount(() => {
 
                             <div class="flex justify-between border-t border-gray-100 pt-2">
                                 <span class="text-gray-600" style="font-weight: 500;">
-                                    {{ paymentType === 'onsite' ? 'Bayar di Tempat' : 'Total' }}
+                                    {{ paymentType === 'dp50' ? 'DP 50%' : 'Total' }}
                                 </span>
                                 <span class="text-[#1F2937]" style="font-size: 1.25rem; font-weight: 700;">
-                                    {{ formatRupiah(totalPrice) }}
+                                    {{ formatRupiah(amountToPay) }}
                                 </span>
+                            </div>
+
+                            <div v-if="paymentType === 'dp50'" class="flex justify-between text-xs text-gray-500">
+                                <span>Sisa Pelunasan di Studio</span>
+                                <span>{{ formatRupiah(remainingAfterCurrentPayment) }}</span>
                             </div>
                         </div>
                     </div>
@@ -336,21 +396,25 @@ onBeforeUnmount(() => {
                         v-if="onsitePaymentEnabled"
                         type="button"
                         class="rounded-xl border-2 p-4 text-left transition-all duration-200"
-                        :class="paymentType === 'onsite'
+                        :class="paymentType === 'dp50'
                             ? 'border-[#2563EB] bg-[#2563EB]/5 shadow-sm'
                             : 'border-slate-300 bg-white hover:border-slate-400'"
-                        @click="paymentType = 'onsite'"
+                        @click="paymentType = 'dp50'"
                     >
-                        <p class="text-sm" :class="paymentType === 'onsite' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">Bayar di Tempat</p>
-                        <p class="mt-0.5 text-xs text-gray-500">Bayar saat datang</p>
+                        <p class="text-sm" :class="paymentType === 'dp50' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">DP 50%</p>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ formatRupiah(dpAmount) }} dibayar sekarang</p>
                     </button>
                 </div>
 
+<<<<<<< HEAD
                 <div v-else class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     Metode pembayaran belum tersedia saat ini. Silakan hubungi admin studio.
                 </div>
 
                 <div v-if="paymentType !== 'onsite'" class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
+=======
+                <div class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
+>>>>>>> fc7ace865dfae888f032ba57ff5855d596c41b93
                     <div class="border-b border-slate-300 px-6 pb-6 pt-6">
                         <h3 class="flex items-center gap-2 text-[#1F2937]" style="font-weight: 600;">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#2563EB]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -383,35 +447,14 @@ onBeforeUnmount(() => {
                                 />
                             </div>
                         </div>
-                        <p class="mb-2 text-[#1F2937]" style="font-size: 1.125rem; font-weight: 700;">{{ formatRupiah(totalPrice) }}</p>
+                        <p class="mb-2 text-[#1F2937]" style="font-size: 1.125rem; font-weight: 700;">{{ formatRupiah(amountToPay) }}</p>
+                        <p v-if="paymentType === 'dp50'" class="mb-2 text-xs text-gray-500">Sisa pelunasan: {{ formatRupiah(remainingAfterCurrentPayment) }}</p>
                         <div class="flex items-center gap-1.5 text-xs text-gray-400">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V6l8-4 8 4z" />
                                 <path d="M9 12l2 2 4-4" />
                             </svg>
                             Kamu akan diarahkan ke halaman pembayaran Midtrans
-                        </div>
-                    </div>
-                </div>
-
-                <div v-else class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
-                    <div class="flex flex-col items-center p-6 text-center">
-                        <div class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#22C55E]/10">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-[#22C55E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" />
-                                <circle cx="12" cy="10" r="3" />
-                            </svg>
-                        </div>
-                        <p class="text-[#1F2937]" style="font-weight: 600;">Bayar di Tempat</p>
-                        <p class="mt-1 max-w-xs text-sm text-gray-500">
-                            Lakukan pembayaran langsung di studio saat kamu datang. Tunjukkan kode booking untuk konfirmasi.
-                        </p>
-                        <div class="mt-4 flex items-center gap-2 rounded-lg bg-[#F59E0B]/10 px-3 py-2 text-xs text-[#F59E0B]">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 6v6l4 2" />
-                            </svg>
-                            Harap datang 10 menit sebelum jadwal
                         </div>
                     </div>
                 </div>
@@ -427,6 +470,10 @@ onBeforeUnmount(() => {
                     <input type="hidden" name="customer_phone" :value="props.bookingPayload.customer_phone">
                     <input type="hidden" name="customer_email" :value="props.bookingPayload.customer_email || ''">
                     <input type="hidden" name="notes" :value="props.bookingPayload.notes || ''">
+                    <template v-for="(addon, index) in selectedAddOnsForSubmit" :key="`submit-payment-addon-${addon.add_on_id}`">
+                        <input type="hidden" :name="`add_ons[${index}][add_on_id]`" :value="addon.add_on_id">
+                        <input type="hidden" :name="`add_ons[${index}][qty]`" :value="addon.qty">
+                    </template>
                     <input type="hidden" name="payment_type" :value="paymentType">
                     <input type="hidden" name="addons_payload" :value="addonsPayloadJson">
 

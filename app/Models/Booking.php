@@ -7,6 +7,7 @@ use App\Enums\BookingStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -98,5 +99,12 @@ class Booking extends Model
     public function transaction(): HasOne
     {
         return $this->hasOne(Transaction::class);
+    }
+
+    public function addOns(): BelongsToMany
+    {
+        return $this->belongsToMany(AddOn::class, 'booking_add_ons')
+            ->withPivot(['qty', 'unit_price', 'line_total'])
+            ->withTimestamps();
     }
 }
