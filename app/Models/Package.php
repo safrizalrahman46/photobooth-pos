@@ -41,14 +41,4 @@ class Package extends Model
     {
         return $this->hasMany(DesignCatalog::class);
     }
-
-    public function addOns(): HasMany
-    {
-        return $this->hasMany(AddOn::class);
-    }
-
-    public function bookings(): HasMany
-    {
-        return $this->hasMany(Booking::class);
-    }
 }

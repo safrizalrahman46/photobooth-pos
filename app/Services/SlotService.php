@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 
 class SlotService
 {
-    public function getAvailability(string $date, int $packageId, int $branchId, ?int $exceptBookingId = null): Collection
+    public function getAvailability(string $date, int $packageId, int $branchId): Collection
     {
         $slotDate = Carbon::parse($date)->toDateString();
 
@@ -39,7 +39,6 @@ class SlotService
             ->where('branch_id', $branchId)
             ->whereDate('booking_date', $slotDate)
             ->whereIn('status', BookingStatus::activeStatuses())
-            ->when($exceptBookingId !== null, fn ($query) => $query->whereKeyNot($exceptBookingId))
             ->get(['start_at', 'end_at']);
 
         return $slots->map(function (TimeSlot $slot) use ($bookings, $package, $slotDate) {
