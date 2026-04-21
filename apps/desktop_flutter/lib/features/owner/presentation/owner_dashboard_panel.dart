@@ -63,11 +63,25 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   );
   final TextEditingController _slotFilterDateController =
       TextEditingController();
+  final TextEditingController _slotGenStartDateController =
+      TextEditingController();
+  final TextEditingController _slotGenEndDateController =
+      TextEditingController();
+  final TextEditingController _slotGenStartTimeController =
+      TextEditingController(text: '09:00');
+  final TextEditingController _slotGenEndTimeController = TextEditingController(
+    text: '21:00',
+  );
+  final TextEditingController _slotGenIntervalController =
+      TextEditingController(text: '30');
+  final TextEditingController _slotGenCapacityController =
+      TextEditingController(text: '1');
 
   List<BranchOption> _branches = <BranchOption>[];
   List<BranchManagementItem> _managedBranches = <BranchManagementItem>[];
   List<PackageManagementItem> _managedPackages = <PackageManagementItem>[];
   List<TimeSlotManagementItem> _managedSlots = <TimeSlotManagementItem>[];
+  final Set<int> _selectedSlotIds = <int>{};
   int? _branchId;
   int? _editBranchId;
   int? _editPackageId;
@@ -89,6 +103,9 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   bool _savingBranch = false;
   bool _savingPackage = false;
   bool _savingSlot = false;
+  bool _generatingSlots = false;
+  bool _bulkUpdatingSlots = false;
+  bool _deletingSlots = false;
   String? _error;
   String? _success;
 
@@ -97,6 +114,8 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
     super.initState();
     _slotDateController.text = _todayDate;
     _slotFilterDateController.text = _todayDate;
+    _slotGenStartDateController.text = _todayDate;
+    _slotGenEndDateController.text = _todayDate;
     _loadData();
   }
 
@@ -125,6 +144,12 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
     _slotEndController.dispose();
     _slotCapacityController.dispose();
     _slotFilterDateController.dispose();
+    _slotGenStartDateController.dispose();
+    _slotGenEndDateController.dispose();
+    _slotGenStartTimeController.dispose();
+    _slotGenEndTimeController.dispose();
+    _slotGenIntervalController.dispose();
+    _slotGenCapacityController.dispose();
     super.dispose();
   }
 
@@ -173,6 +198,9 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
         _managedBranches = managedBranches;
         _managedPackages = managedPackages;
         _managedSlots = managedSlots;
+        _selectedSlotIds.removeWhere(
+          (id) => !managedSlots.any((slot) => slot.id == id),
+        );
         if (_slotBranchId == null && managedBranches.isNotEmpty) {
           _slotBranchId = managedBranches.first.id;
         }
@@ -549,6 +577,9 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
 
       setState(() {
         _managedSlots = managedSlots;
+        _selectedSlotIds.removeWhere(
+          (id) => !managedSlots.any((slot) => slot.id == id),
+        );
       });
     } on ApiException catch (exception) {
       if (!mounted) {
@@ -666,6 +697,332 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
         });
       }
     }
+  }
+
+  Future<void> _generateSlots() async {
+    if (_generatingSlots) {
+      return;
+    }
+
+    final branchId = _slotBranchId;
+    final startDate = _slotGenStartDateController.text.trim();
+    final endDate = _slotGenEndDateController.text.trim();
+    final dayStartTime = _slotGenStartTimeController.text.trim();
+    final dayEndTime = _slotGenEndTimeController.text.trim();
+    final interval = int.tryParse(_slotGenIntervalController.text.trim()) ?? 0;
+    final capacity = int.tryParse(_slotGenCapacityController.text.trim()) ?? 0;
+
+    if (branchId == null ||
+        startDate.isEmpty ||
+        endDate.isEmpty ||
+        dayStartTime.isEmpty ||
+        dayEndTime.isEmpty ||
+        interval <= 0 ||
+        capacity <= 0) {
+      setState(() {
+        _error =
+            'Generator slot wajib diisi lengkap (cabang, range tanggal, jam operasional, interval, kapasitas).';
+      });
+      return;
+    }
+
+    final confirmed = await _confirmSlotAction(
+      title: 'Generate slot jam?',
+      message:
+          'Slot akan dibuat dari $startDate s/d $endDate, pukul ${_normalizeTimeInput(dayStartTime)} - ${_normalizeTimeInput(dayEndTime)}, interval $interval menit.',
+      confirmLabel: 'Generate',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setState(() {
+      _generatingSlots = true;
+      _error = null;
+      _success = null;
+    });
+
+    try {
+      final result = await _client.generateTimeSlots(
+        branchId: branchId,
+        startDate: startDate,
+        endDate: endDate,
+        dayStartTime: _normalizeTimeInput(dayStartTime),
+        dayEndTime: _normalizeTimeInput(dayEndTime),
+        intervalMinutes: interval,
+        capacity: capacity,
+        isBookable: _slotBookable,
+      );
+
+      await _reloadSlotData();
+
+      if (!mounted) {
+        return;
+      }
+
+      final created = (result['created_count'] as num?)?.toInt() ?? 0;
+      final skipped = (result['skipped_count'] as num?)?.toInt() ?? 0;
+
+      setState(() {
+        _success =
+            'Generate selesai: $created slot dibuat, $skipped slot dilewati (overlap).';
+      });
+    } on ApiException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = exception.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _generatingSlots = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _bulkUpdateSelectedSlotsBookable(bool isBookable) async {
+    if (_bulkUpdatingSlots) {
+      return;
+    }
+
+    if (_selectedSlotIds.isEmpty) {
+      setState(() {
+        _error = 'Pilih minimal satu slot dulu.';
+      });
+      return;
+    }
+
+    final confirmed = await _confirmSlotAction(
+      title: isBookable ? 'Aktifkan slot terpilih?' : 'Blokir slot terpilih?',
+      message: isBookable
+          ? '${_selectedSlotIds.length} slot akan dijadikan bookable.'
+          : '${_selectedSlotIds.length} slot akan diblokir dari booking.',
+      confirmLabel: isBookable ? 'Aktifkan' : 'Blokir',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setState(() {
+      _bulkUpdatingSlots = true;
+      _error = null;
+      _success = null;
+    });
+
+    try {
+      final result = await _client.bulkSetTimeSlotsBookable(
+        slotIds: _selectedSlotIds.toList(),
+        isBookable: isBookable,
+      );
+
+      await _reloadSlotData();
+
+      if (!mounted) {
+        return;
+      }
+
+      final updated = (result['updated_count'] as num?)?.toInt() ?? 0;
+
+      setState(() {
+        _success = isBookable
+            ? '$updated slot berhasil diaktifkan.'
+            : '$updated slot berhasil diblokir.';
+      });
+    } on ApiException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = exception.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _bulkUpdatingSlots = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteSelectedSlots() async {
+    if (_deletingSlots) {
+      return;
+    }
+
+    final ids = _selectedSlotIds.toList();
+
+    if (ids.isEmpty) {
+      setState(() {
+        _error = 'Pilih minimal satu slot untuk dihapus.';
+      });
+      return;
+    }
+
+    final confirmed = await _confirmSlotAction(
+      title: 'Hapus slot terpilih?',
+      message:
+          '${ids.length} slot akan dihapus permanen. Aksi ini tidak bisa dibatalkan.',
+      confirmLabel: 'Hapus',
+      destructive: true,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setState(() {
+      _deletingSlots = true;
+      _error = null;
+      _success = null;
+    });
+
+    var deleted = 0;
+    var failed = 0;
+
+    for (final id in ids) {
+      try {
+        await _client.deleteTimeSlot(slotId: id);
+        deleted++;
+      } on ApiException {
+        failed++;
+      }
+    }
+
+    await _reloadSlotData();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _selectedSlotIds.clear();
+      if (deleted > 0) {
+        _success = failed > 0
+            ? '$deleted slot dihapus, $failed gagal dihapus.'
+            : '$deleted slot berhasil dihapus.';
+      }
+      if (failed > 0 && deleted == 0) {
+        _error = 'Gagal menghapus slot terpilih.';
+      }
+      _deletingSlots = false;
+    });
+  }
+
+  Future<void> _deleteSingleSlot(TimeSlotManagementItem slot) async {
+    if (_deletingSlots) {
+      return;
+    }
+
+    final confirmed = await _confirmSlotAction(
+      title: 'Hapus slot ini?',
+      message:
+          'Slot ${slot.slotDate} ${slot.startTime}-${slot.endTime} akan dihapus permanen.',
+      confirmLabel: 'Hapus',
+      destructive: true,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setState(() {
+      _deletingSlots = true;
+      _error = null;
+      _success = null;
+    });
+
+    try {
+      await _client.deleteTimeSlot(slotId: slot.id);
+      await _reloadSlotData();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _selectedSlotIds.remove(slot.id);
+        if (_editSlotId == slot.id) {
+          _fillSlotForm(null);
+        }
+        _success =
+            'Slot ${slot.slotDate} ${slot.startTime}-${slot.endTime} dihapus.';
+      });
+    } on ApiException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = exception.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _deletingSlots = false;
+        });
+      }
+    }
+  }
+
+  void _toggleSlotSelection(int slotId, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedSlotIds.add(slotId);
+      } else {
+        _selectedSlotIds.remove(slotId);
+      }
+    });
+  }
+
+  void _toggleSelectAllSlots(bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedSlotIds
+          ..clear()
+          ..addAll(_managedSlots.map((slot) => slot.id));
+      } else {
+        _selectedSlotIds.clear();
+      }
+    });
+  }
+
+  Future<bool> _confirmSlotAction({
+    required String title,
+    required String message,
+    required String confirmLabel,
+    bool destructive = false,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              style: destructive
+                  ? FilledButton.styleFrom(backgroundColor: Colors.red)
+                  : null,
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(confirmLabel),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result == true;
   }
 
   String _normalizeTimeInput(String value) {
@@ -1086,110 +1443,197 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'Form Slot Jam',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<int?>(
-              key: ValueKey<int?>(_slotBranchId),
-              initialValue: _slotBranchId,
-              decoration: const InputDecoration(labelText: 'Cabang'),
-              items: _managedBranches
-                  .map(
-                    (branch) => DropdownMenuItem<int?>(
-                      value: branch.id,
-                      child: Text(branch.name),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  _slotBranchId = value;
-                });
-              },
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _slotDateController,
-              decoration: const InputDecoration(
-                labelText: 'Tanggal (YYYY-MM-DD)',
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Form Slot Jam',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: TextField(
-                    controller: _slotStartController,
-                    decoration: const InputDecoration(
-                      labelText: 'Mulai (HH:MM)',
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int?>(
+                key: ValueKey<int?>(_slotBranchId),
+                initialValue: _slotBranchId,
+                decoration: const InputDecoration(labelText: 'Cabang'),
+                items: _managedBranches
+                    .map(
+                      (branch) => DropdownMenuItem<int?>(
+                        value: branch.id,
+                        child: Text(branch.name),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _slotBranchId = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _slotDateController,
+                decoration: const InputDecoration(
+                  labelText: 'Tanggal (YYYY-MM-DD)',
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      controller: _slotStartController,
+                      decoration: const InputDecoration(
+                        labelText: 'Mulai (HH:MM)',
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: _slotEndController,
-                    decoration: const InputDecoration(
-                      labelText: 'Selesai (HH:MM)',
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _slotEndController,
+                      decoration: const InputDecoration(
+                        labelText: 'Selesai (HH:MM)',
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _slotCapacityController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Kapasitas'),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Bookable'),
-              value: _slotBookable,
-              onChanged: (value) {
-                setState(() {
-                  _slotBookable = value;
-                });
-              },
-            ),
-            Row(
-              children: <Widget>[
-                OutlinedButton(
-                  onPressed: () {
-                    setState(() {
-                      _fillSlotForm(null);
-                    });
-                  },
-                  child: const Text('Reset'),
-                ),
-                const SizedBox(width: 8),
-                FilledButton.icon(
-                  onPressed: _savingSlot ? null : _saveSlot,
-                  icon: const Icon(Icons.save_outlined),
-                  label: Text(
-                    _savingSlot
-                        ? 'Menyimpan...'
-                        : _editSlotId == null
-                        ? 'Tambah Slot'
-                        : 'Update Slot',
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _slotCapacityController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Kapasitas'),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Bookable'),
+                value: _slotBookable,
+                onChanged: (value) {
+                  setState(() {
+                    _slotBookable = value;
+                  });
+                },
+              ),
+              Row(
+                children: <Widget>[
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _fillSlotForm(null);
+                      });
+                    },
+                    child: const Text('Reset'),
                   ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: _savingSlot ? null : _saveSlot,
+                    icon: const Icon(Icons.save_outlined),
+                    label: Text(
+                      _savingSlot
+                          ? 'Menyimpan...'
+                          : _editSlotId == null
+                          ? 'Tambah Slot'
+                          : 'Update Slot',
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 26),
+              Text(
+                'Bulk Generator Slot',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      controller: _slotGenStartDateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Mulai tanggal',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _slotGenEndDateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Sampai tanggal',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      controller: _slotGenStartTimeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Jam mulai operasional',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _slotGenEndTimeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Jam selesai operasional',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      controller: _slotGenIntervalController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Interval (menit)',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _slotGenCapacityController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Kapasitas'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              FilledButton.icon(
+                onPressed: _generatingSlots ? null : _generateSlots,
+                icon: const Icon(Icons.auto_fix_high_outlined),
+                label: Text(
+                  _generatingSlots ? 'Generating...' : 'Generate Slot Range',
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildSlotListCard(BuildContext context) {
+    final allSelected =
+        _managedSlots.isNotEmpty &&
+        _selectedSlotIds.length == _managedSlots.length;
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -1204,6 +1648,45 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Checkbox(
+                      value: allSelected,
+                      onChanged: _managedSlots.isEmpty
+                          ? null
+                          : (value) => _toggleSelectAllSlots(value ?? false),
+                    ),
+                    const Text('Pilih semua'),
+                  ],
+                ),
+                FilledButton.tonal(
+                  onPressed: _bulkUpdatingSlots || _selectedSlotIds.isEmpty
+                      ? null
+                      : () => _bulkUpdateSelectedSlotsBookable(true),
+                  child: const Text('Aktifkan'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _bulkUpdatingSlots || _selectedSlotIds.isEmpty
+                      ? null
+                      : () => _bulkUpdateSelectedSlotsBookable(false),
+                  child: const Text('Blokir'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _deletingSlots || _selectedSlotIds.isEmpty
+                      ? null
+                      : _deleteSelectedSlots,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Hapus Pilihan'),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             Expanded(
               child: _managedSlots.isEmpty
@@ -1213,10 +1696,16 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
                   : ListView.separated(
                       itemBuilder: (context, index) {
                         final slot = _managedSlots[index];
+                        final selected = _selectedSlotIds.contains(slot.id);
 
                         return ListTile(
                           dense: true,
                           contentPadding: EdgeInsets.zero,
+                          leading: Checkbox(
+                            value: selected,
+                            onChanged: (value) =>
+                                _toggleSlotSelection(slot.id, value ?? false),
+                          ),
                           title: Text(
                             '${slot.branchName} • ${slot.slotDate}',
                             style: const TextStyle(fontWeight: FontWeight.w600),
@@ -1224,13 +1713,25 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
                           subtitle: Text(
                             '${slot.startTime} - ${slot.endTime} • cap ${slot.capacity} • ${slot.isBookable ? 'bookable' : 'blocked'}',
                           ),
-                          trailing: TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _fillSlotForm(slot);
-                              });
-                            },
-                            child: const Text('Edit'),
+                          trailing: Wrap(
+                            spacing: 4,
+                            children: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _fillSlotForm(slot);
+                                  });
+                                },
+                                child: const Text('Edit'),
+                              ),
+                              IconButton(
+                                tooltip: 'Hapus slot',
+                                onPressed: _deletingSlots
+                                    ? null
+                                    : () => _deleteSingleSlot(slot),
+                                icon: const Icon(Icons.delete_outline),
+                              ),
+                            ],
                           ),
                         );
                       },
