@@ -3,12 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-<<<<<<< HEAD
 use App\Http\Requests\StorePackageRequest;
 use App\Http\Requests\UpdatePackageRequest;
-=======
 use App\Http\Requests\PackageIndexRequest;
->>>>>>> fc7ace865dfae888f032ba57ff5855d596c41b93
 use App\Http\Resources\PackageResource;
 use App\Models\Package;
 use App\Services\PackageReadService;
