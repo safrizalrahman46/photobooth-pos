@@ -42,6 +42,7 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
   int? _branchId;
   int _tabIndex = 0;
   String _paymentMethod = 'cash';
+  bool _autoPrintAfterPayment = true;
   bool _loading = true;
   bool _submitting = false;
   bool _printing = false;
@@ -593,14 +594,22 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
         return;
       }
 
-      _latestTransaction = _transactions.firstWhere(
+      final updatedTransaction = _transactions.firstWhere(
         (item) => item.id == transaction.id,
         orElse: () => transaction,
       );
 
+      setState(() {
+        _latestTransaction = updatedTransaction;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pembayaran berhasil ditambahkan.')),
       );
+
+      if (_autoPrintAfterPayment) {
+        await _printTransactionReceipt(updatedTransaction);
+      }
     } on ApiException catch (exception) {
       if (!mounted) {
         return;
@@ -1311,6 +1320,16 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
                         decoration: const InputDecoration(
                           labelText: 'Reference no (opsional)',
                         ),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Auto print setelah bayar'),
+                        value: _autoPrintAfterPayment,
+                        onChanged: (value) {
+                          setState(() {
+                            _autoPrintAfterPayment = value;
+                          });
+                        },
                       ),
                       const SizedBox(height: 12),
                       FilledButton.icon(

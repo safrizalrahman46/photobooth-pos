@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BulkTimeSlotBookableRequest;
+use App\Http\Requests\GenerateTimeSlotsRequest;
 use App\Http\Requests\StoreTimeSlotRequest;
 use App\Http\Requests\UpdateTimeSlotRequest;
 use App\Http\Resources\TimeSlotResource;
 use App\Models\TimeSlot;
 use App\Support\ApiResponder;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -96,6 +99,86 @@ class TimeSlotController extends Controller
         $timeSlot->save();
 
         return $this->responder->success(new TimeSlotResource($timeSlot->load('branch')), 'Slot waktu berhasil diperbarui.');
+    }
+
+    public function destroy(Request $request, TimeSlot $timeSlot): JsonResponse
+    {
+        abort_unless($request->user()?->can('settings.manage') || $request->user()?->hasRole('owner'), 403);
+
+        $timeSlot->delete();
+
+        return $this->responder->success(null, 'Slot waktu berhasil dihapus.');
+    }
+
+    public function bulkBookable(BulkTimeSlotBookableRequest $request): JsonResponse
+    {
+        $payload = $request->validated();
+
+        $updatedCount = TimeSlot::query()
+            ->whereIn('id', $payload['slot_ids'])
+            ->update([
+                'is_bookable' => (bool) $payload['is_bookable'],
+                'updated_at' => now(),
+            ]);
+
+        return $this->responder->success([
+            'updated_count' => $updatedCount,
+            'is_bookable' => (bool) $payload['is_bookable'],
+        ], 'Status bookable slot berhasil diperbarui.');
+    }
+
+    public function generate(GenerateTimeSlotsRequest $request): JsonResponse
+    {
+        $payload = $request->validated();
+
+        $startDate = Carbon::parse($payload['start_date'])->startOfDay();
+        $endDate = Carbon::parse($payload['end_date'])->startOfDay();
+        $interval = (int) $payload['interval_minutes'];
+        $branchId = (int) $payload['branch_id'];
+        $capacity = (int) $payload['capacity'];
+        $isBookable = (bool) ($payload['is_bookable'] ?? true);
+
+        $createdCount = 0;
+        $skippedCount = 0;
+
+        for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+            $dateString = $date->toDateString();
+            $cursor = Carbon::parse($dateString.' '.$payload['day_start_time']);
+            $dayEnd = Carbon::parse($dateString.' '.$payload['day_end_time']);
+
+            while ($cursor->copy()->addMinutes($interval)->lte($dayEnd)) {
+                $slotStart = $cursor->copy();
+                $slotEnd = $cursor->copy()->addMinutes($interval);
+                $startTime = $slotStart->format('H:i:s');
+                $endTime = $slotEnd->format('H:i:s');
+
+                if ($this->hasOverlap($branchId, $dateString, $startTime, $endTime)) {
+                    $skippedCount++;
+                    $cursor->addMinutes($interval);
+                    continue;
+                }
+
+                TimeSlot::query()->create([
+                    'branch_id' => $branchId,
+                    'slot_date' => $dateString,
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                    'capacity' => $capacity,
+                    'is_bookable' => $isBookable,
+                ]);
+
+                $createdCount++;
+                $cursor->addMinutes($interval);
+            }
+        }
+
+        return $this->responder->success([
+            'created_count' => $createdCount,
+            'skipped_count' => $skippedCount,
+            'branch_id' => $branchId,
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
+        ], 'Generate slot jam selesai.');
     }
 
     private function hasOverlap(

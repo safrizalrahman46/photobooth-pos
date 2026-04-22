@@ -5,15 +5,15 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserProfileResource;
-use App\Services\ApiAuthService;
+use App\Models\User;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
     public function __construct(
-        private readonly ApiAuthService $apiAuthService,
         private readonly ApiResponder $responder,
     ) {}
 
@@ -21,26 +21,35 @@ class AuthController extends Controller
     {
         $payload = $request->validated();
 
-        $result = $this->apiAuthService->login($payload, $request->userAgent());
+        $user = User::query()->where('email', $payload['email'])->first();
 
-        if ($result === null) {
+        if (! $user || ! Hash::check($payload['password'], $user->password)) {
             return $this->responder->error('Email atau password tidak valid.', 422);
         }
 
-        if (isset($result['error'])) {
-            return $this->responder->error((string) $result['error'], (int) ($result['status'] ?? 422));
+        if (! $user->is_active) {
+            return $this->responder->error('Akun tidak aktif.', 403);
         }
 
+        $deviceName = $payload['device_name'] ?? $request->userAgent() ?? 'api-device';
+        $token = $user->createToken($deviceName)->plainTextToken;
+
+        $user->forceFill(['last_login_at' => now()])->save();
+
         return $this->responder->success([
-            'token' => (string) $result['token'],
-            'token_type' => (string) $result['token_type'],
-            'user' => new UserProfileResource($result['user']),
+            'token' => $token,
+            'token_type' => 'Bearer',
+            'user' => new UserProfileResource($user->loadMissing('roles', 'permissions')),
         ], 'Login berhasil.');
     }
 
     public function logout(Request $request): JsonResponse
     {
-        $this->apiAuthService->logout($request);
+        $token = $request->user()?->currentAccessToken();
+
+        if ($token) {
+            $token->delete();
+        }
 
         return $this->responder->success(null, 'Logout berhasil.');
     }

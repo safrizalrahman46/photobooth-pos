@@ -8,23 +8,34 @@ use App\Http\Requests\UpdatePackageRequest;
 use App\Http\Requests\PackageIndexRequest;
 use App\Http\Resources\PackageResource;
 use App\Models\Package;
-use App\Services\PackageReadService;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PackageController extends Controller
 {
     public function __construct(
-        private readonly PackageReadService $packageReadService,
         private readonly ApiResponder $responder,
     ) {}
 
-    public function index(PackageIndexRequest $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $payload = $request->validated();
-        $perPage = (int) ($payload['per_page'] ?? 15);
+        $perPage = min((int) $request->integer('per_page', 15), 100);
 
-        $packages = $this->packageReadService->paginateActive($payload, $perPage);
+        $query = Package::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name');
+
+        if ($request->filled('branch_id')) {
+            $branchId = (int) $request->integer('branch_id');
+            $query->where(function ($builder) use ($branchId) {
+                $builder->where('branch_id', $branchId)
+                    ->orWhereNull('branch_id');
+            });
+        }
+
+        $packages = $query->paginate($perPage)->withQueryString();
 
         return $this->responder->paginated($packages, PackageResource::collection($packages), 'Daftar paket berhasil dimuat.');
     }

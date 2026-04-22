@@ -1,59 +1,106 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Ready To Pict - Photobooth POS
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Project ini berisi:
 
-## About Laravel
+- Website publik booking + queue board
+- Admin panel (Filament)
+- API backend (Laravel Sanctum)
+- Desktop app Windows (Flutter) untuk kasir + owner
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Tech Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Backend: Laravel 12, PHP 8.2+
+- Admin: Filament 4
+- Frontend web: Blade + Vue + Vite
+- Desktop: Flutter (Windows)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Fitur Utama
 
-## Learning Laravel
+- Booking online dengan slot jam per cabang
+- Queue operasional (check-in booking, walk-in, call next, transition)
+- POS transaksi + pembayaran
+- Laporan ringkas owner
+- Manajemen cabang, paket, slot jam, blackout date, printer setting
+- Desktop kasir/owner terhubung ke API Laravel yang sama
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Setup Backend & Web
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+1) Install dependency
 
-## Laravel Sponsors
+```bash
+composer install
+npm install
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+2) Setup environment
 
-### Premium Partners
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+3) Setup database
 
-## Contributing
+```bash
+php artisan migrate --seed
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+4) Jalankan aplikasi
 
-## Code of Conduct
+```bash
+php artisan serve
+npm run dev
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Build Production Web
 
-## Security Vulnerabilities
+```bash
+npm run build
+php artisan optimize
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Menjalankan Desktop App (Windows)
 
-## License
+Masuk ke folder desktop:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+cd apps/desktop_flutter
+flutter pub get
+flutter run -d windows
+```
+
+Build release:
+
+```bash
+flutter build windows
+```
+
+Output executable:
+
+`apps/desktop_flutter/build/windows/x64/runner/Release/desktop_flutter.exe`
+
+## Dokumen Deployment
+
+- Checklist go-live: `docs/GO_LIVE_CHECKLIST.md`
+- Runbook deploy lengkap: `docs/DEPLOYMENT_RUNBOOK.md`
+- Desktop packaging + installer script: `apps/desktop_flutter/scripts/`
+
+## Testing
+
+- Backend:
+
+```bash
+php artisan test
+```
+
+- Desktop:
+
+```bash
+cd apps/desktop_flutter
+flutter analyze
+flutter test
+```
+
+## Catatan Midtrans
+
+Integrasi Midtrans sudah disiapkan di kode. Untuk aktivasi penuh, isi kredensial Midtrans di `.env` sesuai environment yang dipakai.

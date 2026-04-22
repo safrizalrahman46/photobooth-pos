@@ -370,6 +370,69 @@ class ApiClient {
     return TimeSlotManagementItem.fromJson(data);
   }
 
+  Future<void> deleteTimeSlot({required int slotId}) async {
+    await _send(
+      method: 'DELETE',
+      path: '/manage/time-slots/$slotId',
+      authenticated: true,
+    );
+  }
+
+  Future<Map<String, dynamic>> bulkSetTimeSlotsBookable({
+    required List<int> slotIds,
+    required bool isBookable,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/manage/time-slots/bulk-bookable',
+      authenticated: true,
+      body: {'slot_ids': slotIds, 'is_bookable': isBookable},
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons bulk update slot tidak valid.');
+    }
+
+    return data;
+  }
+
+  Future<Map<String, dynamic>> generateTimeSlots({
+    required int branchId,
+    required String startDate,
+    required String endDate,
+    required String dayStartTime,
+    required String dayEndTime,
+    required int intervalMinutes,
+    required int capacity,
+    bool isBookable = true,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/manage/time-slots/generate',
+      authenticated: true,
+      body: {
+        'branch_id': branchId,
+        'start_date': startDate,
+        'end_date': endDate,
+        'day_start_time': dayStartTime,
+        'day_end_time': dayEndTime,
+        'interval_minutes': intervalMinutes,
+        'capacity': capacity,
+        'is_bookable': isBookable,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons generate slot tidak valid.');
+    }
+
+    return data;
+  }
+
   Future<List<QueueTicketItem>> fetchQueueTickets({
     int? branchId,
     String? queueDate,
@@ -707,6 +770,11 @@ class ApiClient {
         body: body != null ? jsonEncode(body) : null,
       ),
       'PUT' => await http.put(
+        uri,
+        headers: _headers(authenticated: authenticated),
+        body: body != null ? jsonEncode(body) : null,
+      ),
+      'DELETE' => await http.delete(
         uri,
         headers: _headers(authenticated: authenticated),
         body: body != null ? jsonEncode(body) : null,

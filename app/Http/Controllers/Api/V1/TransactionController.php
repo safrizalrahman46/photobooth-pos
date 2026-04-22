@@ -4,34 +4,39 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTransactionRequest;
-use App\Http\Requests\TransactionIndexRequest;
 use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
-use App\Services\TransactionReadService;
 use App\Services\TransactionService;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class TransactionController extends Controller
 {
     public function __construct(
-        private readonly TransactionReadService $transactionReadService,
         private readonly TransactionService $transactionService,
         private readonly ApiResponder $responder,
     ) {}
 
-    public function index(TransactionIndexRequest $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-<<<<<<< HEAD
         abort_unless($request->user()?->can('transaction.view'), 403);
 
         $perPage = min((int) $request->integer('per_page', 15), 100);
-=======
-        $payload = $request->validated();
-        $perPage = (int) ($payload['per_page'] ?? 15);
->>>>>>> fc7ace865dfae888f032ba57ff5855d596c41b93
 
-        $transactions = $this->transactionReadService->paginate($payload, $perPage);
+        $query = Transaction::query()
+            ->with(['items', 'payments'])
+            ->orderByDesc('created_at');
+
+        if ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->integer('branch_id'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status')->toString());
+        }
+
+        $transactions = $query->paginate($perPage)->withQueryString();
 
         return $this->responder->paginated($transactions, TransactionResource::collection($transactions), 'Daftar transaksi berhasil dimuat.');
     }

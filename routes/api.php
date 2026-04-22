@@ -46,6 +46,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/manage/time-slots', [TimeSlotController::class, 'index']);
         Route::post('/manage/time-slots', [TimeSlotController::class, 'store']);
         Route::put('/manage/time-slots/{timeSlot}', [TimeSlotController::class, 'update']);
+        Route::delete('/manage/time-slots/{timeSlot}', [TimeSlotController::class, 'destroy']);
+        Route::post('/manage/time-slots/bulk-bookable', [TimeSlotController::class, 'bulkBookable']);
+        Route::post('/manage/time-slots/generate', [TimeSlotController::class, 'generate']);
 
         Route::get('/app-settings', [AppSettingController::class, 'show']);
         Route::put('/app-settings/{group}', [AppSettingController::class, 'update']);
