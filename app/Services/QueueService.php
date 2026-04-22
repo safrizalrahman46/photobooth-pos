@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Enums\QueueSourceType;
 use App\Enums\QueueStatus;
 use App\Models\Booking;
+use App\Models\Branch;
 use App\Models\QueueTicket;
 use App\Support\CodeGenerator;
 use Carbon\Carbon;
@@ -123,7 +124,7 @@ class QueueService
     {
         $ticket = QueueTicket::query()
             ->where('branch_id', $branchId)
-            ->whereDate('queue_date', $date)
+            ->where('queue_date', $date)
             ->where('status', QueueStatus::Waiting)
             ->orderByDesc('priority')
             ->orderBy('queue_number')
@@ -138,10 +139,14 @@ class QueueService
 
     private function nextQueueNumber(int $branchId, string $queueDate): int
     {
+        Branch::query()
+            ->whereKey($branchId)
+            ->lockForUpdate()
+            ->value('id');
+
         $maxQueue = QueueTicket::query()
             ->where('branch_id', $branchId)
-            ->whereDate('queue_date', $queueDate)
-            ->lockForUpdate()
+            ->where('queue_date', $queueDate)
             ->max('queue_number');
 
         return ((int) $maxQueue) + 1;
