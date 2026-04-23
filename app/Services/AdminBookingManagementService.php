@@ -124,6 +124,22 @@ class AdminBookingManagementService
             ]);
         }
 
+        $bookingStatus = $booking->status instanceof BookingStatus
+            ? $booking->status->value
+            : (string) $booking->status;
+
+        if ($bookingStatus === BookingStatus::Pending->value) {
+            throw ValidationException::withMessages([
+                'booking' => 'Booking belum diverifikasi. Konfirmasi booking terlebih dahulu.',
+            ]);
+        }
+
+        if (in_array($bookingStatus, [BookingStatus::Cancelled->value, BookingStatus::Done->value], true)) {
+            throw ValidationException::withMessages([
+                'booking' => 'Status booking saat ini tidak dapat diproses pembayaran.',
+            ]);
+        }
+
         $booking->loadMissing(['package', 'addOns', 'transaction.items', 'transaction.payments']);
 
         $beforeStatus = $booking->status instanceof BookingStatus

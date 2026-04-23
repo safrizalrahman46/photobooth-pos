@@ -190,7 +190,6 @@ class AdminQueuePageService
             ->with(['branch:id,name', 'package:id,name'])
             ->whereDate('booking_date', $targetDate)
             ->whereIn('status', [
-                BookingStatus::Pending->value,
                 BookingStatus::Confirmed->value,
                 BookingStatus::Paid->value,
                 BookingStatus::CheckedIn->value,

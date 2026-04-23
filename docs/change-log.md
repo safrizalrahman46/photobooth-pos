@@ -1,5 +1,45 @@
 # Change Log
 
+## 2026-04-22
+
+### Vue Admin Full Parity + Filament Soft Disable Control Plane
+
+- Menambahkan control plane admin UI:
+  - `config/admin_ui.php`
+  - env baru: `ADMIN_UI_DRIVER`, `ADMIN_UI_BLOCK_FILAMENT_ROUTES`, `ADMIN_UI_LEGACY_REDIRECTS`
+  - registrasi conditional `App\Providers\Filament\AdminPanelProvider` dari `AppServiceProvider` saat `ADMIN_UI_DRIVER=filament`.
+- Menambahkan middleware global web `BlockFilamentRoutesWhenDisabled` untuk memblok `filament/*` saat runtime admin berada di mode Vue.
+- Menambahkan parity endpoint web `admin.*` untuk resource yang sebelumnya dominan di Filament:
+  - `branches`
+  - `time-slots` (termasuk `generate` dan `bulk-bookable`)
+  - `blackout-dates`
+  - `payments` (manual add payment ke transaksi)
+  - `printer-settings` (termasuk set default)
+  - `app-settings` (`general|booking|payment`)
+- Menambahkan service layer backend untuk menjaga pola controller tipis:
+  - `AdminBranchService`
+  - `AdminTimeSlotService`
+  - `AdminBlackoutDateService`
+  - `AdminPrinterSettingService`
+  - `AdminPaymentService`
+  - `AdminAppSettingService`
+- Mengekstrak logic time slot dari `Api\V1\TimeSlotController` ke service reusable (`AdminTimeSlotService`) agar web admin dan API berbagi source of truth.
+- Memperluas bootstrap payload `AdminDashboardController` dengan endpoint URL + initial payload modul parity baru.
+- Memperluas `AdminDashboardDataService` untuk menyiapkan initial data modul baru (`branches`, `time_slots`, `blackout_dates`, `printer_settings`, `payments`, `payment_transaction_options`).
+- Menambah modul Vue di `AdminDashboardApp.vue` + page baru:
+  - `BranchesPage.vue`
+  - `TimeSlotsPage.vue`
+  - `BlackoutDatesPage.vue`
+  - `PaymentsPage.vue`
+  - `PrinterSettingsPage.vue`
+  - `AppSettingsPage.vue`
+- Menambahkan feature test `tests/Feature/AdminVueModulesTest.php` untuk baseline flow:
+  - block filament probe route (vue mode)
+  - auth guard admin dashboard
+  - branch CRUD basic
+  - overlap validation time slot
+  - invalid app setting group.
+
 ## 2026-04-19
 
 ### Booking Add-Ons Persistence and Availability

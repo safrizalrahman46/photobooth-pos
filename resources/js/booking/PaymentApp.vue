@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import PublicBookingNavbar from './PublicBookingNavbar.vue';
 
 const props = defineProps({
@@ -46,30 +46,50 @@ const props = defineProps({
 });
 
 const asString = (value) => (value === null || value === undefined ? '' : String(value));
+const isDisabled = (value) => value === false || value === 0 || value === '0';
 
-const onlinePaymentEnabled = computed(() => props.paymentSettings.midtrans_enabled === true || props.paymentSettings.midtrans_enabled === 1);
-const onsitePaymentEnabled = computed(() => props.paymentSettings.onsite_enabled !== false && props.paymentSettings.onsite_enabled !== 0);
-const defaultPaymentType = computed(() => {
-    if (onlinePaymentEnabled.value) {
-        return 'full';
+const onlinePaymentEnabled = computed(() => false);
+const fullPaymentEnabled = computed(() => !isDisabled(props.paymentSettings.full_payment_enabled));
+const dp50PaymentEnabled = computed(() => !isDisabled(props.paymentSettings.dp50_enabled));
+const transferReference = ref(asString(props.oldValues.transfer_reference || ''));
+
+const paymentOptions = computed(() => {
+    const options = [];
+
+    if (fullPaymentEnabled.value) {
+        options.push('full');
     }
 
-    return 'onsite';
+    if (dp50PaymentEnabled.value) {
+        options.push('dp50');
+    }
+
+    return options;
 });
 
-const paymentType = ref(asString(props.oldValues.payment_type || defaultPaymentType.value));
+const defaultPaymentType = computed(() => {
+    const candidate = asString(props.oldValues.payment_type);
+
+    if (paymentOptions.value.includes(candidate)) {
+        return candidate;
+    }
+
+    return paymentOptions.value[0] || 'full';
+});
+
+const paymentType = ref(defaultPaymentType.value);
 const processing = ref(false);
 const countdown = ref(600);
+
+watch(paymentOptions, (options) => {
+    if (!options.includes(paymentType.value)) {
+        paymentType.value = options[0] || 'full';
+    }
+});
 
 let countdownTimer = null;
 
 const packageAccentTokens = ['#2563eb', '#ec4899', '#22c55e', '#f59e0b', '#0ea5e9', '#8b5cf6'];
-
-const addonTotal = computed(() => {
-    return selectedAddons.value.reduce((total, addon) => total + (addon.price * addon.qty), 0);
-});
-
-const totalPrice = computed(() => Number(props.package?.base_price || 0) + addonTotal.value);
 
 const selectedAddons = computed(() => {
     if (!Array.isArray(props.bookingPayload?.addons)) {
@@ -87,6 +107,21 @@ const selectedAddons = computed(() => {
 });
 
 const addonsPayloadJson = computed(() => JSON.stringify(selectedAddons.value));
+
+const addonTotal = computed(() => {
+    return selectedAddons.value.reduce((total, addon) => total + (addon.price * addon.qty), 0);
+});
+
+const totalPrice = computed(() => Number(props.package?.base_price || 0) + addonTotal.value);
+const payNowAmount = computed(() => {
+    if (paymentType.value === 'dp50') {
+        return Math.round(totalPrice.value * 0.5);
+    }
+
+    return totalPrice.value;
+});
+
+const remainingAmount = computed(() => Math.max(totalPrice.value - payNowAmount.value, 0));
 
 const packageColor = computed(() => {
     if (props.package?.color) {
@@ -141,20 +176,18 @@ const displayTime = computed(() => {
 });
 
 const submitLabel = computed(() => {
-    return paymentType.value === 'onsite' ? 'Konfirmasi Booking' : 'Konfirmasi Pembayaran';
+    return 'Kirim Booking & Bukti Transfer';
 });
 
-const canSubmit = computed(() => {
-    return paymentType.value === 'full' ? onlinePaymentEnabled.value : onsitePaymentEnabled.value;
+const payNowLabel = computed(() => {
+    return paymentType.value === 'dp50' ? 'Bayar Sekarang (DP 50%)' : 'Bayar Sekarang';
 });
 
-if (!onlinePaymentEnabled.value && paymentType.value === 'full') {
-    paymentType.value = 'onsite';
-}
+const paymentHint = computed(() => {
+    return 'Transfer ke QRIS BRI personal owner, lalu upload bukti transfer di bawah ini untuk verifikasi admin.';
+});
 
-if (!onsitePaymentEnabled.value && paymentType.value === 'onsite') {
-    paymentType.value = 'full';
-}
+const canSubmit = computed(() => paymentOptions.value.includes(paymentType.value));
 
 const countdownLabel = computed(() => {
     const min = String(mins.value).padStart(2, '0');
@@ -213,8 +246,8 @@ onBeforeUnmount(() => {
                     Kembali
                 </a>
 
-                <h1 class="mb-2 text-[#1F2937]" style="font-size: 1.5rem; font-weight: 700;">Selesaikan Pembayaran</h1>
-                <p class="mb-6 text-sm text-gray-500">Lakukan pembayaran untuk konfirmasi booking</p>
+                <h1 class="mb-2 text-[#1F2937]" style="font-size: 1.5rem; font-weight: 700;">Konfirmasi Pembayaran QR</h1>
+                <p class="mb-6 text-sm text-gray-500">Pilih skema pembayaran: lunas atau DP 50%</p>
 
                 <div v-if="props.errors.length" class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     <ul class="space-y-1">
@@ -238,7 +271,7 @@ onBeforeUnmount(() => {
                         <p class="text-sm" :class="isCountdownDanger ? 'text-[#EF4444]' : 'text-[#F59E0B]'" style="font-weight: 600;">
                             {{ countdownLabel }}
                         </p>
-                        <p class="text-sm text-gray-500">Selesaikan sebelum waktu habis</p>
+                        <p class="text-sm text-gray-500">Selesaikan proses booking sebelum waktu habis</p>
                     </div>
                 </div>
 
@@ -249,45 +282,25 @@ onBeforeUnmount(() => {
                                 <rect x="2" y="5" width="20" height="14" rx="2" />
                                 <line x1="2" y1="10" x2="22" y2="10" />
                             </svg>
-                            Ringkasan Pembayaran
+                            Ringkasan Booking
                         </h2>
                     </div>
 
                     <div class="space-y-3 p-6">
                         <div class="flex justify-between text-sm" v-if="props.package">
-                            <span class="flex items-center gap-1.5 text-gray-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8l7-5h8l7 5z" />
-                                    <circle cx="12" cy="13" r="4" />
-                                </svg>
-                                Paket
-                            </span>
+                            <span class="flex items-center gap-1.5 text-gray-500">Paket</span>
                             <span class="rounded-full px-2 py-0.5 text-xs text-white" :style="{ backgroundColor: packageColor, fontWeight: 500 }">
                                 {{ props.package.name }}
                             </span>
                         </div>
 
                         <div class="flex justify-between text-sm">
-                            <span class="flex items-center gap-1.5 text-gray-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                    <line x1="16" y1="2" x2="16" y2="6" />
-                                    <line x1="8" y1="2" x2="8" y2="6" />
-                                    <line x1="3" y1="10" x2="21" y2="10" />
-                                </svg>
-                                Tanggal
-                            </span>
+                            <span class="text-gray-500">Tanggal</span>
                             <span class="text-[#1F2937]" style="font-weight: 500;">{{ displayDate }}</span>
                         </div>
 
                         <div class="flex justify-between text-sm">
-                            <span class="flex items-center gap-1.5 text-gray-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <path d="M12 6v6l4 2" />
-                                </svg>
-                                Waktu
-                            </span>
+                            <span class="text-gray-500">Waktu</span>
                             <span class="text-[#1F2937]" style="font-weight: 500;">{{ displayTime }}</span>
                         </div>
 
@@ -306,21 +319,27 @@ onBeforeUnmount(() => {
                                 <span class="text-[#1F2937]">{{ formatRupiah(addon.price * addon.qty) }}</span>
                             </div>
 
-                            <div class="flex justify-between border-t border-gray-100 pt-2">
-                                <span class="text-gray-600" style="font-weight: 500;">
-                                    {{ paymentType === 'onsite' ? 'Bayar di Tempat' : 'Total' }}
-                                </span>
-                                <span class="text-[#1F2937]" style="font-size: 1.25rem; font-weight: 700;">
-                                    {{ formatRupiah(totalPrice) }}
-                                </span>
+                            <div class="flex justify-between border-t border-gray-100 pt-2 text-sm">
+                                <span class="text-gray-600" style="font-weight: 500;">Total Tagihan</span>
+                                <span class="text-[#1F2937]" style="font-weight: 700;">{{ formatRupiah(totalPrice) }}</span>
+                            </div>
+
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">{{ payNowLabel }}</span>
+                                <span class="text-[#1F2937]" style="font-weight: 700;">{{ formatRupiah(payNowAmount) }}</span>
+                            </div>
+
+                            <div v-if="paymentType === 'dp50'" class="flex justify-between text-sm">
+                                <span class="text-gray-500">Sisa Pelunasan</span>
+                                <span class="text-[#1F2937]">{{ formatRupiah(remainingAmount) }}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div v-if="onlinePaymentEnabled || onsitePaymentEnabled" class="mb-6 grid gap-3" :class="onlinePaymentEnabled && onsitePaymentEnabled ? 'grid-cols-2' : 'grid-cols-1'">
+                <div v-if="paymentOptions.length" class="mb-6 grid gap-3" :class="paymentOptions.length > 1 ? 'grid-cols-2' : 'grid-cols-1'">
                     <button
-                        v-if="onlinePaymentEnabled"
+                        v-if="fullPaymentEnabled"
                         type="button"
                         class="rounded-xl border-2 p-4 text-left transition-all duration-200"
                         :class="paymentType === 'full'
@@ -328,29 +347,29 @@ onBeforeUnmount(() => {
                             : 'border-slate-300 bg-white hover:border-slate-400'"
                         @click="paymentType = 'full'"
                     >
-                        <p class="text-sm" :class="paymentType === 'full' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">Bayar Online</p>
-                        <p class="mt-0.5 text-xs text-gray-500">Midtrans • {{ formatRupiah(totalPrice) }}</p>
+                        <p class="text-sm" :class="paymentType === 'full' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">QR Lunas</p>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ formatRupiah(totalPrice) }}</p>
                     </button>
 
                     <button
-                        v-if="onsitePaymentEnabled"
+                        v-if="dp50PaymentEnabled"
                         type="button"
                         class="rounded-xl border-2 p-4 text-left transition-all duration-200"
-                        :class="paymentType === 'onsite'
+                        :class="paymentType === 'dp50'
                             ? 'border-[#2563EB] bg-[#2563EB]/5 shadow-sm'
                             : 'border-slate-300 bg-white hover:border-slate-400'"
-                        @click="paymentType = 'onsite'"
+                        @click="paymentType = 'dp50'"
                     >
-                        <p class="text-sm" :class="paymentType === 'onsite' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">Bayar di Tempat</p>
-                        <p class="mt-0.5 text-xs text-gray-500">Bayar saat datang</p>
+                        <p class="text-sm" :class="paymentType === 'dp50' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">QR DP 50%</p>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ formatRupiah(Math.round(totalPrice * 0.5)) }}</p>
                     </button>
                 </div>
 
                 <div v-else class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                    Metode pembayaran belum tersedia saat ini. Silakan hubungi admin studio.
+                    Metode pembayaran tidak tersedia saat ini. Silakan hubungi admin studio.
                 </div>
 
-                <div v-if="paymentType !== 'onsite'" class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
+                <div class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
                     <div class="border-b border-slate-300 px-6 pb-6 pt-6">
                         <h3 class="flex items-center gap-2 text-[#1F2937]" style="font-weight: 600;">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#2563EB]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -366,57 +385,17 @@ onBeforeUnmount(() => {
                                 <path d="M7 14h4" />
                                 <path d="M10 18h1" />
                             </svg>
-                            Bayar Online via Midtrans
+                            Pembayaran QR
                         </h3>
                     </div>
 
-                    <div class="flex flex-col items-center p-6">
-                        <div class="mb-4 flex h-52 w-52 items-center justify-center rounded-2xl border border-gray-100 bg-gray-50">
-                            <div class="grid grid-cols-5 gap-1">
-                                <div
-                                    v-for="index in 25"
-                                    :key="`qr-grid-${index}`"
-                                    class="h-8 w-8 rounded-sm"
-                                    :class="[1, 2, 3, 5, 6, 7, 9, 11, 15, 17, 19, 20, 21, 23, 24, 25].includes(index)
-                                        ? 'bg-[#1F2937]'
-                                        : 'bg-white'"
-                                />
-                            </div>
-                        </div>
-                        <p class="mb-2 text-[#1F2937]" style="font-size: 1.125rem; font-weight: 700;">{{ formatRupiah(totalPrice) }}</p>
-                        <div class="flex items-center gap-1.5 text-xs text-gray-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V6l8-4 8 4z" />
-                                <path d="M9 12l2 2 4-4" />
-                            </svg>
-                            Kamu akan diarahkan ke halaman pembayaran Midtrans
-                        </div>
-                    </div>
-                </div>
-
-                <div v-else class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
                     <div class="flex flex-col items-center p-6 text-center">
-                        <div class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#22C55E]/10">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-[#22C55E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" />
-                                <circle cx="12" cy="10" r="3" />
-                            </svg>
-                        </div>
-                        <p class="text-[#1F2937]" style="font-weight: 600;">Bayar di Tempat</p>
-                        <p class="mt-1 max-w-xs text-sm text-gray-500">
-                            Lakukan pembayaran langsung di studio saat kamu datang. Tunjukkan kode booking untuk konfirmasi.
-                        </p>
-                        <div class="mt-4 flex items-center gap-2 rounded-lg bg-[#F59E0B]/10 px-3 py-2 text-xs text-[#F59E0B]">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 6v6l4 2" />
-                            </svg>
-                            Harap datang 10 menit sebelum jadwal
-                        </div>
+                        <div class="mb-2 text-[#1F2937]" style="font-size: 1.125rem; font-weight: 700;">{{ formatRupiah(payNowAmount) }}</div>
+                        <p class="max-w-sm text-sm text-gray-500">{{ paymentHint }}</p>
                     </div>
                 </div>
 
-                <form :action="props.routes.store" method="post" @submit="handleSubmit">
+                <form :action="props.routes.store" method="post" enctype="multipart/form-data" @submit="handleSubmit">
                     <input type="hidden" name="_token" :value="props.csrfToken">
                     <input type="hidden" name="branch_id" :value="props.bookingPayload.branch_id">
                     <input type="hidden" name="package_id" :value="props.bookingPayload.package_id">
@@ -429,6 +408,27 @@ onBeforeUnmount(() => {
                     <input type="hidden" name="notes" :value="props.bookingPayload.notes || ''">
                     <input type="hidden" name="payment_type" :value="paymentType">
                     <input type="hidden" name="addons_payload" :value="addonsPayloadJson">
+
+                    <div class="mb-4 rounded-xl border border-slate-200 bg-white p-4">
+                        <label class="mb-2 block text-sm text-[#1F2937]" style="font-weight: 600;">Nomor Referensi Transfer (opsional)</label>
+                        <input
+                            v-model="transferReference"
+                            type="text"
+                            name="transfer_reference"
+                            placeholder="Contoh: 1234567890"
+                            class="mb-3 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-[#1F2937] outline-none focus:border-[#2563EB]"
+                        >
+
+                        <label class="mb-2 block text-sm text-[#1F2937]" style="font-weight: 600;">Upload Bukti Transfer <span class="text-red-500">*</span></label>
+                        <input
+                            type="file"
+                            name="transfer_proof"
+                            required
+                            accept=".jpg,.jpeg,.png,.webp,.pdf"
+                            class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-[#1F2937] file:mr-3 file:rounded-md file:border-0 file:bg-[#2563EB] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+                        >
+                        <p class="mt-2 text-xs text-slate-500">Format: JPG, PNG, WEBP, atau PDF (maks. 5MB).</p>
+                    </div>
 
                     <button
                         type="submit"

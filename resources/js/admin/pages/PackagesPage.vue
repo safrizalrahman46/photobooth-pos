@@ -86,13 +86,14 @@ const packageItems = computed(() => {
     return props.packageCards.map((pkg, index) => {
         const tone = cardTones[index % cardTones.length];
         const features = toFeatureList(pkg.description);
+        const thisMonthBookings = Number(pkg.thisMonthBookings ?? pkg.this_month_bookings ?? pkg.bookings ?? 0);
 
         return {
             ...pkg,
             tone,
             features,
-            isPopular: index === 0 && Number(pkg.bookings || 0) > 0,
-            thisMonthBookings: Number(pkg.bookings || 0),
+            isPopular: index === 0 && thisMonthBookings > 0,
+            thisMonthBookings,
             totalBookings: Number(pkg.total_bookings || 0),
         };
     });

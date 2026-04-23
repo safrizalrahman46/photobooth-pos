@@ -24,7 +24,7 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['toggle-mobile', 'toggle-collapse']);
+const emit = defineEmits(['toggle-mobile', 'toggle-collapse', 'logout']);
 
 const isActive = (itemId) => String(itemId || '') === String(props.activeModuleId || 'dashboard');
 const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group === groupKey);
@@ -150,7 +150,13 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
                         <p class="truncate text-[0.7rem]" style="color: #94A3B8;">Owner · Super Admin</p>
                     </div>
 
-                    <button v-if="!sidebarCollapsed" type="button" class="rounded-lg p-1.5 text-[#64748B]" aria-label="Logout">
+                    <button
+                        v-if="!sidebarCollapsed"
+                        type="button"
+                        class="rounded-lg p-1.5 text-[#64748B]"
+                        aria-label="Logout"
+                        @click="emit('logout')"
+                    >
                         <LogOut class="h-3.5 w-3.5" />
                     </button>
                 </div>

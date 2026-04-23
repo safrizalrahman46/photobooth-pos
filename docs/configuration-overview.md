@@ -3,7 +3,8 @@
 ## Tech Stack
 
 - Backend: Laravel 12
-- Admin Panel: Filament 4 + Livewire 3
+- Admin Panel Runtime: Vue admin shell (`AdminDashboardApp.vue`) + Laravel web controllers/services
+- Admin Fallback: Filament 4 + Livewire 3 (toggleable via env)
 - Frontend: Vue 3 + Vite 7
 - Styling: Tailwind CSS 4
 - Database target: PostgreSQL (project requirement)
@@ -71,6 +72,9 @@ Dari `.env.example`:
 
 - APP:
   - `APP_ENV`, `APP_DEBUG`, `APP_URL`
+  - `ADMIN_UI_DRIVER` (`vue` atau `filament`)
+  - `ADMIN_UI_BLOCK_FILAMENT_ROUTES` (`true|false`)
+  - `ADMIN_UI_LEGACY_REDIRECTS` (`true|false`)
 - DB:
   - default contoh `sqlite`, tapi untuk project ini gunakan PostgreSQL di `.env`
   - set minimal: `DB_CONNECTION=pgsql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`

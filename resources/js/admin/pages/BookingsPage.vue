@@ -454,7 +454,7 @@ const requestDeleteBooking = async (row) => {
 };
 
 const requestConfirmBooking = async (row) => {
-    const confirmed = window.confirm(`Confirm booking ${row.booking_code}?`);
+    const confirmed = window.confirm(`Verify booking ${row.booking_code}?`);
 
     if (!confirmed) {
         return;
@@ -588,7 +588,7 @@ watch(
             <div class="relative flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="text-[1.35rem] font-bold text-white">Bookings</h2>
-                    <p class="text-sm" style="color: rgba(255,255,255,0.78);">Real-time reservation monitoring with CRUD and booking/payment confirmations.</p>
+                    <p class="text-sm" style="color: rgba(255,255,255,0.78);">Real-time reservation monitoring with verification-first flow before payment confirmation.</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <button
@@ -722,7 +722,7 @@ watch(
                                         @click="requestConfirmBooking(row)"
                                     >
                                         <CheckCircle2 class="h-3 w-3" />
-                                        Confirm
+                                        Verify
                                     </button>
                                     <button
                                         v-if="row.can_confirm_payment"

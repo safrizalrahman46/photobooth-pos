@@ -13,10 +13,16 @@ class MidtransService
         return (bool) config('services.midtrans.enabled') && filled(config('services.midtrans.server_key'));
     }
 
-    public function createBookingTransaction(Booking $booking): array
+    public function createBookingTransaction(Booking $booking, float $chargeAmount): array
     {
         if (! $this->enabled()) {
             throw new RuntimeException('Midtrans belum dikonfigurasi.');
+        }
+
+        $normalizedChargeAmount = max((float) round($chargeAmount, 2), 0);
+
+        if ($normalizedChargeAmount <= 0) {
+            throw new RuntimeException('Nominal pembayaran tidak valid.');
         }
 
         $orderId = $booking->booking_code;
@@ -31,7 +37,7 @@ class MidtransService
             ->post(rtrim((string) config('services.midtrans.base_url'), '/').'/snap/v1/transactions', [
                 'transaction_details' => [
                     'order_id' => $orderId,
-                    'gross_amount' => (int) round((float) $booking->total_amount),
+                    'gross_amount' => (int) round($normalizedChargeAmount),
                 ],
                 'customer_details' => [
                     'first_name' => $booking->customer_name,
@@ -40,9 +46,9 @@ class MidtransService
                 ],
                 'item_details' => [[
                     'id' => 'booking-'.$booking->package_id,
-                    'price' => (int) round((float) $booking->total_amount),
+                    'price' => (int) round($normalizedChargeAmount),
                     'quantity' => 1,
-                    'name' => $booking->package?->name ?? 'Booking Photobooth',
+                    'name' => $this->resolveItemName($booking),
                 ]],
                 'expiry' => [
                     'unit' => 'minute',
@@ -72,6 +78,16 @@ class MidtransService
             'payload' => $payload,
             'expires_at' => now()->addMinutes($expiryMinutes),
         ];
+    }
+
+    private function resolveItemName(Booking $booking): string
+    {
+        $baseName = $booking->package?->name ?? 'Booking Photobooth';
+        $paymentType = (string) ($booking->payment_type ?? 'full');
+
+        return $paymentType === 'dp50'
+            ? $baseName.' - DP 50%'
+            : $baseName.' - Pelunasan';
     }
 
     public function verifyNotificationSignature(array $payload): bool

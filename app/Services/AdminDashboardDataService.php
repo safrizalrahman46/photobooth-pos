@@ -12,9 +12,13 @@ use App\Models\ActivityLog;
 use App\Models\Booking;
 use App\Models\DesignCatalog;
 use App\Models\Package;
+use App\Models\Payment;
+use App\Models\PrinterSetting;
 use App\Models\QueueTicket;
+use App\Models\TimeSlot;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\BlackoutDate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -53,6 +57,12 @@ class AdminDashboardDataService
             'initialUsers' => $this->userManagementRows(),
             'initialUserRoles' => $this->userRoleOptions(),
             'initialBookingOptions' => $this->bookingFormOptions(),
+            'initialBranches' => $this->branchManagementRows(),
+            'initialTimeSlots' => $this->timeSlotManagementRows(),
+            'initialBlackoutDates' => $this->blackoutDateManagementRows(),
+            'initialPrinterSettings' => $this->printerSettingManagementRows(),
+            'initialPayments' => $this->paymentManagementRows(),
+            'initialPaymentTransactionOptions' => $this->paymentTransactionOptions(),
         ];
     }
 
@@ -133,7 +143,7 @@ class AdminDashboardDataService
     public function packageManagementRows(): array
     {
         $startOfMonth = now()->startOfMonth()->toDateString();
-        $endOfMonth = now()->toDateString();
+        $endOfMonth = now()->endOfMonth()->toDateString();
 
         return Package::query()
             ->orderBy('sort_order')
@@ -366,6 +376,185 @@ class AdminDashboardDataService
                 return [
                     'value' => $name,
                     'label' => ucfirst($name),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function branchManagementRows(): array
+    {
+        return Branch::query()
+            ->withCount(['bookings', 'timeSlots', 'transactions', 'queueTickets'])
+            ->orderBy('name')
+            ->get(['id', 'code', 'name', 'timezone', 'phone', 'address', 'is_active', 'created_at', 'updated_at'])
+            ->map(function (Branch $branch): array {
+                return [
+                    'id' => (int) $branch->id,
+                    'code' => (string) $branch->code,
+                    'name' => (string) $branch->name,
+                    'timezone' => (string) $branch->timezone,
+                    'phone' => (string) ($branch->phone ?? ''),
+                    'address' => (string) ($branch->address ?? ''),
+                    'is_active' => (bool) $branch->is_active,
+                    'bookings_count' => (int) ($branch->bookings_count ?? 0),
+                    'time_slots_count' => (int) ($branch->time_slots_count ?? 0),
+                    'transactions_count' => (int) ($branch->transactions_count ?? 0),
+                    'queue_tickets_count' => (int) ($branch->queue_tickets_count ?? 0),
+                    'created_at' => $branch->created_at?->toIso8601String(),
+                    'updated_at' => $branch->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function timeSlotManagementRows(): array
+    {
+        return TimeSlot::query()
+            ->with('branch:id,name')
+            ->orderByDesc('slot_date')
+            ->orderBy('start_time')
+            ->get(['id', 'branch_id', 'slot_date', 'start_time', 'end_time', 'capacity', 'is_bookable', 'created_at', 'updated_at'])
+            ->map(function (TimeSlot $slot): array {
+                return [
+                    'id' => (int) $slot->id,
+                    'branch_id' => (int) $slot->branch_id,
+                    'branch_name' => (string) ($slot->branch?->name ?? '-'),
+                    'slot_date' => $slot->slot_date?->toDateString(),
+                    'slot_date_text' => $slot->slot_date?->format('d M Y') ?? '-',
+                    'start_time' => (string) $slot->start_time,
+                    'start_time_text' => substr((string) $slot->start_time, 0, 5),
+                    'end_time' => (string) $slot->end_time,
+                    'end_time_text' => substr((string) $slot->end_time, 0, 5),
+                    'capacity' => (int) $slot->capacity,
+                    'is_bookable' => (bool) $slot->is_bookable,
+                    'created_at' => $slot->created_at?->toIso8601String(),
+                    'updated_at' => $slot->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function blackoutDateManagementRows(): array
+    {
+        return BlackoutDate::query()
+            ->with('branch:id,name')
+            ->orderByDesc('blackout_date')
+            ->get(['id', 'branch_id', 'blackout_date', 'reason', 'is_closed', 'created_at', 'updated_at'])
+            ->map(function (BlackoutDate $blackout): array {
+                return [
+                    'id' => (int) $blackout->id,
+                    'branch_id' => (int) $blackout->branch_id,
+                    'branch_name' => (string) ($blackout->branch?->name ?? '-'),
+                    'blackout_date' => $blackout->blackout_date?->toDateString(),
+                    'blackout_date_text' => $blackout->blackout_date?->format('d M Y') ?? '-',
+                    'reason' => (string) ($blackout->reason ?? ''),
+                    'is_closed' => (bool) $blackout->is_closed,
+                    'created_at' => $blackout->created_at?->toIso8601String(),
+                    'updated_at' => $blackout->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function printerSettingManagementRows(): array
+    {
+        return PrinterSetting::query()
+            ->with('branch:id,name')
+            ->orderByDesc('is_default')
+            ->orderBy('device_name')
+            ->get([
+                'id',
+                'branch_id',
+                'device_name',
+                'printer_type',
+                'connection',
+                'paper_width_mm',
+                'is_default',
+                'is_active',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function (PrinterSetting $setting): array {
+                return [
+                    'id' => (int) $setting->id,
+                    'branch_id' => (int) $setting->branch_id,
+                    'branch_name' => (string) ($setting->branch?->name ?? '-'),
+                    'device_name' => (string) $setting->device_name,
+                    'printer_type' => (string) $setting->printer_type,
+                    'connection' => is_array($setting->connection) ? $setting->connection : [],
+                    'paper_width_mm' => (int) $setting->paper_width_mm,
+                    'is_default' => (bool) $setting->is_default,
+                    'is_active' => (bool) $setting->is_active,
+                    'created_at' => $setting->created_at?->toIso8601String(),
+                    'updated_at' => $setting->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function paymentManagementRows(): array
+    {
+        return Payment::query()
+            ->with([
+                'transaction:id,transaction_code,branch_id,booking_id,total_amount,paid_amount,status',
+                'transaction.branch:id,name',
+                'transaction.booking:id,customer_name',
+                'cashier:id,name',
+            ])
+            ->orderByDesc('paid_at')
+            ->limit(150)
+            ->get(['id', 'transaction_id', 'payment_code', 'method', 'amount', 'reference_no', 'paid_at', 'cashier_id', 'created_at', 'updated_at'])
+            ->map(function (Payment $payment): array {
+                return [
+                    'id' => (int) $payment->id,
+                    'payment_code' => (string) $payment->payment_code,
+                    'transaction_id' => (int) $payment->transaction_id,
+                    'transaction_code' => (string) ($payment->transaction?->transaction_code ?? '-'),
+                    'branch_name' => (string) ($payment->transaction?->branch?->name ?? '-'),
+                    'customer_name' => (string) ($payment->transaction?->booking?->customer_name ?? '-'),
+                    'method' => strtoupper((string) ($payment->method?->value ?? $payment->method)),
+                    'amount' => (float) $payment->amount,
+                    'amount_text' => $this->formatRupiah((float) $payment->amount),
+                    'reference_no' => (string) ($payment->reference_no ?? ''),
+                    'cashier_name' => (string) ($payment->cashier?->name ?? '-'),
+                    'paid_at' => $payment->paid_at?->toIso8601String(),
+                    'paid_at_text' => $payment->paid_at?->format('d M Y H:i') ?? '-',
+                    'transaction_status' => (string) ($payment->transaction?->status?->value ?? $payment->transaction?->status ?? 'unpaid'),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function paymentTransactionOptions(): array
+    {
+        return Transaction::query()
+            ->with(['branch:id,name', 'booking:id,customer_name'])
+            ->whereIn('status', [TransactionStatus::Unpaid->value, TransactionStatus::Partial->value])
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get(['id', 'transaction_code', 'branch_id', 'booking_id', 'total_amount', 'paid_amount', 'status'])
+            ->map(function (Transaction $transaction): array {
+                $total = (float) $transaction->total_amount;
+                $paid = (float) $transaction->paid_amount;
+                $remaining = max($total - $paid, 0);
+
+                return [
+                    'id' => (int) $transaction->id,
+                    'transaction_code' => (string) $transaction->transaction_code,
+                    'branch_id' => (int) $transaction->branch_id,
+                    'branch_name' => (string) ($transaction->branch?->name ?? '-'),
+                    'customer_name' => (string) ($transaction->booking?->customer_name ?? '-'),
+                    'status' => (string) ($transaction->status?->value ?? $transaction->status),
+                    'total_amount' => $total,
+                    'paid_amount' => $paid,
+                    'remaining_amount' => $remaining,
+                    'remaining_amount_text' => $this->formatRupiah($remaining),
                 ];
             })
             ->values()
@@ -1106,12 +1295,13 @@ class AdminDashboardDataService
             'notes' => (string) ($booking->notes ?? ''),
             'transaction_id' => $booking->transaction?->id ? (int) $booking->transaction->id : null,
             'can_confirm_booking' => (string) $booking->status->value === BookingStatus::Pending->value,
-            'can_confirm_payment' => (
-                ! in_array((string) $booking->status->value, [
-                    BookingStatus::Done->value,
-                    BookingStatus::Cancelled->value,
-                ], true)
-            ) && $remainingAmount > 0,
+            'can_confirm_payment' => in_array((string) $booking->status->value, [
+                BookingStatus::Confirmed->value,
+                BookingStatus::Paid->value,
+                BookingStatus::CheckedIn->value,
+                BookingStatus::InQueue->value,
+                BookingStatus::InSession->value,
+            ], true) && $remainingAmount > 0,
             'add_ons' => $addOns,
             'add_ons_count' => $addOns->count(),
             'add_ons_total' => (float) $addOns->sum('line_total'),
