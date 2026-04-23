@@ -22,9 +22,25 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    brandName: {
+        type: String,
+        default: 'Dashboard',
+    },
+    dashboardLabel: {
+        type: String,
+        default: 'Dashboard',
+    },
+    currentUser: {
+        type: Object,
+        default: () => ({
+            name: 'User',
+            initials: 'US',
+            roleLabel: 'User',
+        }),
+    },
 });
 
-const emit = defineEmits(['toggle-mobile', 'toggle-collapse']);
+const emit = defineEmits(['toggle-mobile', 'toggle-collapse', 'logout']);
 
 const isActive = (itemId) => String(itemId || '') === String(props.activeModuleId || 'dashboard');
 const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group === groupKey);
@@ -40,13 +56,13 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
         ></div>
 
         <aside
-            class="fixed inset-y-0 left-0 z-30 flex w-[240px] flex-col border-r border-[#EEF2FF] bg-white shadow-[2px_0_16px_rgba(37,99,235,0.06)] transition-all duration-300 lg:relative"
+            class="fixed inset-y-0 left-0 z-30 flex h-[100dvh] max-h-[100dvh] w-[240px] flex-col overflow-hidden border-r border-[#EEF2FF] bg-white shadow-[2px_0_16px_rgba(37,99,235,0.06)] transition-all duration-300 lg:relative lg:h-screen lg:max-h-screen"
             :class="[
                 mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
                 sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[240px]',
             ]"
         >
-            <div class="relative flex items-center px-4 py-5" style="min-height: 72px;">
+            <div class="relative flex shrink-0 items-center px-4 py-5" style="min-height: 72px;">
                 <div
                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
                     style="background: linear-gradient(135deg, #2563EB 0%, #60A5FA 100%); box-shadow: 0 4px 12px rgba(37,99,235,0.3);"
@@ -56,9 +72,9 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
 
                 <div v-if="!sidebarCollapsed" class="ml-3 min-w-0 flex-1 overflow-hidden">
                     <p class="whitespace-nowrap text-[0.875rem] font-bold tracking-[-0.01em]" style="font-family: Poppins, sans-serif; color: #1E3A8A;">
-                        Ready To Pict
+                        {{ brandName }}
                     </p>
-                    <span class="whitespace-nowrap text-xs font-medium" style="color: #60A5FA;">Owner Dashboard</span>
+                    <span class="whitespace-nowrap text-xs font-medium" style="color: #60A5FA;">{{ dashboardLabel }}</span>
                 </div>
 
                 <button
@@ -80,9 +96,9 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
                 </button>
             </div>
 
-            <div class="relative mx-4 h-px bg-[#EEF2FF]"></div>
+            <div class="relative mx-4 h-px shrink-0 bg-[#EEF2FF]"></div>
 
-            <nav class="relative flex-1 overflow-y-auto px-3 py-4">
+            <nav class="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4" style="-webkit-overflow-scrolling: touch;">
                 <div v-for="group in navGroups" :key="`nav-group-${group.key}`" class="mb-1">
                     <p
                         v-if="!sidebarCollapsed"
@@ -136,21 +152,27 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
                 </div>
             </nav>
 
-            <div class="relative border-t border-[#EEF2FF] p-3">
+            <div class="relative shrink-0 border-t border-[#EEF2FF] p-3">
                 <div class="flex items-center" :class="sidebarCollapsed ? 'justify-center' : 'gap-2.5 rounded-xl border border-[#EEF2FF] bg-[#F8FAFC] p-2.5'">
                     <div
                         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[0.7rem] font-bold text-white"
                         style="background: linear-gradient(135deg, #2563EB, #60A5FA);"
                     >
-                        AO
+                        {{ currentUser.initials || 'US' }}
                     </div>
 
                     <div v-if="!sidebarCollapsed" class="min-w-0 flex-1">
-                        <p class="truncate text-[0.8rem] font-semibold leading-tight" style="color: #1F2937;">Ahmad Owner</p>
-                        <p class="truncate text-[0.7rem]" style="color: #94A3B8;">Owner · Super Admin</p>
+                        <p class="truncate text-[0.8rem] font-semibold leading-tight" style="color: #1F2937;">{{ currentUser.name || 'User' }}</p>
+                        <p class="truncate text-[0.7rem]" style="color: #94A3B8;">{{ currentUser.roleLabel || 'User' }}</p>
                     </div>
 
-                    <button v-if="!sidebarCollapsed" type="button" class="rounded-lg p-1.5 text-[#64748B]" aria-label="Logout">
+                    <button
+                        v-if="!sidebarCollapsed"
+                        type="button"
+                        class="rounded-lg p-1.5 text-[#64748B]"
+                        aria-label="Logout"
+                        @click="emit('logout')"
+                    >
                         <LogOut class="h-3.5 w-3.5" />
                     </button>
                 </div>

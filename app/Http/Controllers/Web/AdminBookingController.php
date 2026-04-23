@@ -10,6 +10,8 @@ use App\Http\Requests\AdminUpdateBookingRequest;
 use App\Models\Booking;
 use App\Services\AdminBookingManagementService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminBookingController extends Controller
 {
@@ -85,5 +87,35 @@ class AdminBookingController extends Controller
                 'total_amount' => (float) $updatedTransaction->total_amount,
             ],
         ]);
+    }
+
+    public function transferProof(Booking $booking): StreamedResponse
+    {
+        $rawPath = trim((string) ($booking->transfer_proof_path ?? ''));
+        $normalizedPath = $this->normalizePublicDiskPath($rawPath);
+
+        abort_if($normalizedPath === '', 404, 'Transfer proof not found.');
+        abort_unless(Storage::disk('public')->exists($normalizedPath), 404, 'Transfer proof file is missing.');
+
+        $fileName = basename($normalizedPath);
+
+        return Storage::disk('public')->response($normalizedPath, $fileName, [
+            'Content-Disposition' => 'inline; filename="'.$fileName.'"',
+        ]);
+    }
+
+    private function normalizePublicDiskPath(string $path): string
+    {
+        $normalized = trim(str_replace('\\', '/', $path), '/');
+
+        if (str_starts_with($normalized, 'public/')) {
+            return trim(substr($normalized, 7), '/');
+        }
+
+        if (str_starts_with($normalized, 'storage/')) {
+            return trim(substr($normalized, 8), '/');
+        }
+
+        return $normalized;
     }
 }

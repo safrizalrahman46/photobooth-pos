@@ -1,5 +1,27 @@
 @php
     $general = $siteSettings['general'] ?? [];
+    $ui = is_array($siteSettings['ui']['booking'] ?? null) ? $siteSettings['ui']['booking'] : [];
+    $navigationConfig = is_array($ui['navigation'] ?? null) ? $ui['navigation'] : [];
+    $navigation = collect($navigationConfig)
+        ->map(function ($item, int $index): array {
+            $routeName = trim((string) ($item['route'] ?? ''));
+            $href = trim((string) ($item['href'] ?? ''));
+
+            if ($routeName !== '') {
+                try {
+                    $href = route($routeName);
+                } catch (\Throwable) {
+                    $href = $href !== '' ? $href : '#';
+                }
+            }
+
+            return [
+                'key' => trim((string) ($item['key'] ?? '')) ?: 'nav-'.$index,
+                'href' => $href !== '' ? $href : '#',
+                'label' => trim((string) ($item['label'] ?? '')) ?: 'Menu',
+            ];
+        })
+        ->values();
     $prefillPackage = old('package_id') ?: (request()->integer('package') ?: null);
 
     $oldValues = [
@@ -18,6 +40,7 @@
         'branches' => $branches->values(),
         'packages' => $packages->values(),
         'designCatalogs' => $designCatalogs->values(),
+        'addOns' => $addOns->values(),
         'oldValues' => $oldValues,
         'errors' => $errors->all(),
         'routes' => [
@@ -25,8 +48,14 @@
             'availability' => route('booking.availability'),
             'payment' => route('booking.payment.prepare'),
             'store' => route('booking.store'),
+            'booking' => route('booking.create'),
+            'admin' => route('admin.login'),
             'queueBoard' => route('queue.board'),
         ],
+        'navigation' => [
+            ...$navigation->all(),
+        ],
+        'ui' => $ui,
         'site' => [
             'brand_name' => $general['brand_name'] ?? config('app.name', 'Ready To Pict'),
             'short_name' => $general['short_name'] ?? 'Studio',

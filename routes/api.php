@@ -6,7 +6,6 @@ use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\CashierSessionController;
 use App\Http\Controllers\Api\V1\DesignCatalogController;
-use App\Http\Controllers\Api\V1\MidtransWebhookController;
 use App\Http\Controllers\Api\V1\PackageController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PrinterSettingController;
@@ -20,7 +19,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login']);
-    Route::post('/payments/midtrans/notifications', MidtransWebhookController::class);
 
     Route::get('/branches', [BranchController::class, 'index']);
     Route::get('/branches/{branch}', [BranchController::class, 'show']);

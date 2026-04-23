@@ -35,6 +35,13 @@ class QueueService
                 throw new RuntimeException('Status booking tidak dapat dimasukkan ke antrean.');
             }
 
+            if (! in_array($booking->status?->value ?? $booking->status, [
+                BookingStatus::Confirmed->value,
+                BookingStatus::Paid->value,
+            ], true)) {
+                throw new RuntimeException('Booking harus diverifikasi admin sebelum check-in antrean.');
+            }
+
             $queueNumber = $this->nextQueueNumber((int) $booking->branch_id, $date->toDateString());
 
             $ticket = QueueTicket::query()->create([
@@ -129,6 +136,16 @@ class QueueService
             ->orderByDesc('priority')
             ->orderBy('queue_number')
             ->first();
+
+        if (! $ticket) {
+            $ticket = QueueTicket::query()
+                ->where('branch_id', $branchId)
+                ->where('queue_date', $date)
+                ->where('status', QueueStatus::Skipped)
+                ->orderByDesc('priority')
+                ->orderBy('queue_number')
+                ->first();
+        }
 
         if (! $ticket) {
             return null;

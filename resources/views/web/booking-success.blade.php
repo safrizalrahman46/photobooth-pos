@@ -1,9 +1,16 @@
 @php
     $general = $siteSettings['general'] ?? [];
     $brandName = $general['brand_name'] ?? config('app.name', 'Ready To Pict');
-    $paymentLabel = $booking->payment_type === 'full'
-        ? ($booking->status?->value === 'paid' ? 'Lunas via Midtrans' : 'Menunggu pembayaran online')
-        : 'Bayar di studio';
+    $statusValue = $booking->status?->value ?? (string) $booking->status;
+    $hasTransferProof = filled($booking->transfer_proof_path);
+
+    if ($hasTransferProof) {
+        $paymentLabel = 'Bukti transfer sudah diterima. Menunggu verifikasi admin.';
+    } elseif ($booking->payment_type === 'dp50') {
+        $paymentLabel = 'Menunggu upload bukti transfer DP 50% via QR BRI';
+    } else {
+        $paymentLabel = 'Menunggu upload bukti transfer pelunasan via QR BRI';
+    }
 @endphp
 
 <x-layouts.public :title="'Booking Berhasil - '.$brandName">
@@ -23,8 +30,11 @@
             <div class="mt-4 rounded-2xl border border-[var(--rtp-outline)] bg-white p-4 text-sm text-[var(--rtp-muted)]">
                 <p class="font-semibold text-[var(--rtp-ink)]">Status pembayaran</p>
                 <p class="mt-1">{{ $paymentLabel }}</p>
-                @if ($booking->payment_type === 'full' && $booking->status?->value !== 'paid')
-                    <p class="mt-2 text-xs">Jika pembayaran tadi belum selesai, buka kembali link dari Midtrans atau hubungi admin studio.</p>
+                @if ($statusValue !== 'paid')
+                    <p class="mt-2 text-xs">Admin akan memverifikasi bukti transfer sebelum booking dikonfirmasi.</p>
+                @endif
+                @if (!empty($booking->payment_reference))
+                    <p class="mt-2 text-xs">Referensi transfer: {{ $booking->payment_reference }}</p>
                 @endif
             </div>
 
@@ -61,7 +71,7 @@
             </dl>
 
             <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                @if ($booking->payment_type === 'full' && $booking->status?->value !== 'paid' && $booking->payment_url)
+                @if ($booking->payment_gateway === 'midtrans' && in_array($booking->payment_type, ['full', 'dp50'], true) && $statusValue !== 'paid' && $booking->payment_url)
                     <a href="{{ $booking->payment_url }}" class="inline-flex items-center justify-center rounded-2xl bg-[var(--rtp-primary)] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:brightness-105">Lanjutkan Pembayaran</a>
                 @endif
                 <a href="{{ route('booking.create') }}" class="inline-flex items-center justify-center rounded-2xl bg-[var(--rtp-primary)] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:brightness-105">Buat Booking Lain</a>

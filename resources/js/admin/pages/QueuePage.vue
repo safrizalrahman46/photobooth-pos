@@ -1,9 +1,9 @@
 <script setup>
 import { computed, reactive, ref } from 'vue';
 import {
+    BellRing,
     CheckCircle2,
     ChevronDown,
-    ChevronUp,
     Clock3,
     Plus,
     RefreshCw,
@@ -63,6 +63,18 @@ const hasBookingOptions = computed(() => {
     return Array.isArray(props.bookingOptions) && props.bookingOptions.length > 0;
 });
 
+const hasCallableTicket = computed(() => {
+    if (!Array.isArray(props.waitingQueue) || !props.waitingQueue.length) {
+        return false;
+    }
+
+    return props.waitingQueue.some((ticket) => {
+        const status = String(ticket?.status || '').toLowerCase();
+
+        return status === 'waiting' || status === 'skipped';
+    });
+});
+
 const selectedBooking = computed(() => {
     const bookingId = Number(bookingForm.booking_id || 0);
 
@@ -109,6 +121,27 @@ const canProcessTicket = (ticketId) => {
     return Number(ticketId || 0) === Number(props.queueProcessingTicketId || 0);
 };
 
+const queueStatusLabel = (status) => {
+    const normalized = String(status || '').trim();
+
+    if (!normalized) {
+        return 'Status Berikutnya';
+    }
+
+    const resolved = props.resolveQueueStatus?.(normalized);
+    const mappedLabel = String(resolved?.label || '').trim();
+
+    if (mappedLabel) {
+        return mappedLabel;
+    }
+
+    return normalized
+        .split('_')
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+};
+
 const fallbackNextStatus = (status) => {
     const current = String(status || '').toLowerCase();
 
@@ -151,7 +184,7 @@ const fallbackPreviousStatus = (status) => {
 
 const queueCallNext = async () => {
     if (!activeBranchId.value) {
-        localError.value = 'Please select a branch before calling next queue.';
+        localError.value = 'Pilih branch terlebih dahulu sebelum pemanggilan antrean.';
         return;
     }
 
@@ -329,7 +362,7 @@ const submitQueue = async () => {
 
                     <template v-else>
                         <p class="mt-5 text-lg font-semibold text-white">No active session</p>
-                        <p class="mt-1 text-sm text-white/85">Click Call Next to start the next ticket.</p>
+                        <p class="mt-1 text-sm text-white/85">Klik Panggil Antrean untuk memulai tiket berikutnya.</p>
                     </template>
                 </div>
 
@@ -442,21 +475,13 @@ const submitQueue = async () => {
                             <div class="flex flex-col gap-1">
                                 <button
                                     type="button"
-                                    class="inline-flex h-6 w-6 items-center justify-center rounded-md border"
-                                    style="border-color: #CBD5E1; color: #64748B;"
+                                    class="inline-flex min-h-[30px] min-w-[128px] items-center justify-center rounded-md border px-2 py-1 text-[11px] font-semibold"
+                                    style="border-color: #BFDBFE; background: #EFF6FF; color: #1D4ED8;"
                                     :disabled="queueActionLoading || canProcessTicket(ticket.ticket_id) || !ticket.next_status"
                                     @click="promoteTicket(ticket)"
+                                    title="Naikkan status antrean ke tahap berikutnya"
                                 >
-                                    <ChevronUp class="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                    type="button"
-                                    class="inline-flex h-6 w-6 items-center justify-center rounded-md border"
-                                    style="border-color: #CBD5E1; color: #64748B;"
-                                    :disabled="queueActionLoading || canProcessTicket(ticket.ticket_id) || !ticket.previous_status"
-                                    @click="demoteTicket(ticket)"
-                                >
-                                    <ChevronDown class="h-3.5 w-3.5" />
+                                    {{ ticket.next_status ? `Lanjut ke ${queueStatusLabel(ticket.next_status)}` : 'Naikkan Status' }}
                                 </button>
                             </div>
 
@@ -479,10 +504,10 @@ const submitQueue = async () => {
                             type="button"
                             class="mt-3 rounded-xl px-3 py-2 text-sm font-semibold"
                             style="background: #2563EB; color: #FFFFFF;"
-                            :disabled="queueActionLoading"
+                            :disabled="queueActionLoading || !hasCallableTicket"
                             @click="queueCallNext"
                         >
-                            Call Next
+                            {{ hasCallableTicket ? 'Panggil Antrean' : 'Belum Ada Antrean' }}
                         </button>
                     </div>
                 </div>
@@ -494,11 +519,11 @@ const submitQueue = async () => {
                 type="button"
                 class="inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-sm font-semibold"
                 style="border-color: #DBEAFE; background: #EFF6FF; color: #1D4ED8;"
-                :disabled="queueActionLoading || queueLoading"
+                :disabled="queueActionLoading || queueLoading || !hasCallableTicket"
                 @click="queueCallNext"
             >
-                <Plus class="h-4 w-4" />
-                Call Next Queue
+                <BellRing class="h-4 w-4" />
+                Panggil Antrean Berikutnya
             </button>
             <span class="text-xs text-[#94A3B8]">Branch: {{ activeBranchId || '-' }}</span>
         </div>

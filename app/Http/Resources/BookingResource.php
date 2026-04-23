@@ -29,6 +29,8 @@ class BookingResource extends JsonResource
             'payment_url' => $this->payment_url,
             'payment_expires_at' => $this->payment_expires_at?->toIso8601String(),
             'paid_at' => $this->paid_at?->toIso8601String(),
+            'transfer_proof_path' => $this->transfer_proof_path,
+            'transfer_proof_uploaded_at' => $this->transfer_proof_uploaded_at?->toIso8601String(),
             'addons' => $this->addons ?? [],
             'addon_total' => (float) $this->addon_total,
             'total_amount' => (float) $this->total_amount,

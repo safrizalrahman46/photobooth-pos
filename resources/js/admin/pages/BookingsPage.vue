@@ -6,6 +6,8 @@ const props = defineProps({
     search: { type: String, default: '' },
     filterStatus: { type: String, default: 'all' },
     filterTabs: { type: Array, default: () => [] },
+    sortBy: { type: String, default: 'date_time' },
+    sortDir: { type: String, default: 'desc' },
     panelBookingsUrl: { type: String, default: '/admin/bookings' },
     normalizedRows: { type: Array, default: () => [] },
     loading: { type: Boolean, default: false },
@@ -34,6 +36,7 @@ const props = defineProps({
 const emit = defineEmits([
     'update:search',
     'set-filter-status',
+    'set-sort',
     'go-prev-page',
     'go-next-page',
     'refresh-bookings',
@@ -72,9 +75,15 @@ const bookingForm = reactive({
 
 const paymentForm = reactive({
     method: '',
+    payment_type: 'full',
     amount: '',
     reference_no: '',
     notes: '',
+});
+const paymentContext = reactive({
+    total_amount: 0,
+    paid_amount: 0,
+    remaining_amount: 0,
 });
 
 const branchOptions = computed(() => Array.isArray(props.bookingOptions?.branches) ? props.bookingOptions.branches : []);
@@ -109,6 +118,34 @@ const selectedBranchName = computed(() => {
 
 const formatCurrency = (value) => `Rp ${Number(value || 0).toLocaleString('id-ID')}`;
 
+const sortIndicator = (column) => {
+    if (String(props.sortBy || '') !== String(column || '')) {
+        return '-';
+    }
+
+    return String(props.sortDir || 'desc') === 'asc' ? '^' : 'v';
+};
+
+const resolvePaymentAmountByType = (paymentType) => {
+    const totalAmount = Math.max(0, Number(paymentContext.total_amount || 0));
+    const paidAmount = Math.max(0, Number(paymentContext.paid_amount || 0));
+    const remainingAmount = Math.max(0, Number(paymentContext.remaining_amount || (totalAmount - paidAmount)));
+
+    if (paymentType === 'dp50') {
+        const dpTargetAmount = Math.round(totalAmount * 0.5);
+        const dpRemainingAmount = Math.max(dpTargetAmount - paidAmount, 0);
+
+        return dpRemainingAmount > 0 ? dpRemainingAmount : remainingAmount;
+    }
+
+    return remainingAmount > 0 ? remainingAmount : totalAmount;
+};
+
+const syncPaymentAmountByType = () => {
+    const nextAmount = resolvePaymentAmountByType(String(paymentForm.payment_type || 'full'));
+    paymentForm.amount = String(nextAmount);
+};
+
 const bookingDetailAddOns = computed(() => {
     const source = Array.isArray(bookingDetail.value?.add_ons) ? bookingDetail.value.add_ons : [];
 
@@ -127,6 +164,14 @@ const bookingDetailAddOnsTotal = computed(() => {
     }
 
     return bookingDetailAddOns.value.reduce((sum, item) => sum + Number(item.line_total || 0), 0);
+});
+
+const bookingDetailProofUrl = computed(() => String(bookingDetail.value?.transfer_proof_url || '').trim());
+const bookingDetailProofFileName = computed(() => String(bookingDetail.value?.transfer_proof_file_name || '').trim());
+const bookingDetailProofIsImage = computed(() => {
+    const candidate = bookingDetailProofFileName.value || bookingDetailProofUrl.value.split('?')[0];
+
+    return /\.(jpg|jpeg|png|webp|gif)$/i.test(candidate);
 });
 
 const toHourMinute = (value) => String(value || '').slice(0, 5);
@@ -454,7 +499,7 @@ const requestDeleteBooking = async (row) => {
 };
 
 const requestConfirmBooking = async (row) => {
-    const confirmed = window.confirm(`Confirm booking ${row.booking_code}?`);
+    const confirmed = window.confirm(`Verify booking ${row.booking_code}?`);
 
     if (!confirmed) {
         return;
@@ -471,10 +516,18 @@ const requestConfirmBooking = async (row) => {
 };
 
 const openPaymentModal = (row) => {
+    const totalAmount = Math.max(0, Number(row.total_amount || row.amount || 0));
+    const paidAmount = Math.max(0, Number(row.paid_amount || 0));
+    const remainingAmount = Math.max(0, Number(row.remaining_amount || (totalAmount - paidAmount)));
+
     paymentTargetId.value = Number(row.record_id || 0);
     paymentTargetCode.value = String(row.booking_code || row.id || '-');
+    paymentContext.total_amount = totalAmount;
+    paymentContext.paid_amount = paidAmount;
+    paymentContext.remaining_amount = remainingAmount;
     paymentForm.method = String(paymentMethods.value[0]?.value || 'cash');
-    paymentForm.amount = String(row.remaining_amount || row.total_amount || '');
+    paymentForm.payment_type = 'full';
+    syncPaymentAmountByType();
     paymentForm.reference_no = '';
     paymentForm.notes = 'Payment confirmed from booking page';
     localError.value = '';
@@ -562,6 +615,17 @@ watch(
 );
 
 watch(
+    () => paymentForm.payment_type,
+    () => {
+        if (!paymentModalOpen.value) {
+            return;
+        }
+
+        syncPaymentAmountByType();
+    },
+);
+
+watch(
     resolvedDefaultBranchId,
     (nextBranchId) => {
         if (!bookingModalOpen.value) {
@@ -588,7 +652,7 @@ watch(
             <div class="relative flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="text-[1.35rem] font-bold text-white">Bookings</h2>
-                    <p class="text-sm" style="color: rgba(255,255,255,0.78);">Real-time reservation monitoring with CRUD and booking/payment confirmations.</p>
+                    <p class="text-sm" style="color: rgba(255,255,255,0.78);">Real-time reservation monitoring with payment-first flow before booking verification.</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <button
@@ -651,13 +715,41 @@ watch(
                 <table class="w-full">
                     <thead>
                         <tr style="border-bottom: 1px solid #CCFBF1; background: #F0FDFA;">
-                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Booking ID</th>
-                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Customer</th>
-                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Package</th>
-                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Date and Time</th>
-                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Amount</th>
-                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Payment</th>
-                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Status</th>
+                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">
+                                <button type="button" class="inline-flex items-center gap-1 font-semibold" @click="emit('set-sort', 'booking_code')">
+                                    Booking ID <span>{{ sortIndicator('booking_code') }}</span>
+                                </button>
+                            </th>
+                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">
+                                <button type="button" class="inline-flex items-center gap-1 font-semibold" @click="emit('set-sort', 'customer')">
+                                    Customer <span>{{ sortIndicator('customer') }}</span>
+                                </button>
+                            </th>
+                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">
+                                <button type="button" class="inline-flex items-center gap-1 font-semibold" @click="emit('set-sort', 'package')">
+                                    Package <span>{{ sortIndicator('package') }}</span>
+                                </button>
+                            </th>
+                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">
+                                <button type="button" class="inline-flex items-center gap-1 font-semibold" @click="emit('set-sort', 'date_time')">
+                                    Date and Time <span>{{ sortIndicator('date_time') }}</span>
+                                </button>
+                            </th>
+                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">
+                                <button type="button" class="inline-flex items-center gap-1 font-semibold" @click="emit('set-sort', 'amount')">
+                                    Amount <span>{{ sortIndicator('amount') }}</span>
+                                </button>
+                            </th>
+                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">
+                                <button type="button" class="inline-flex items-center gap-1 font-semibold" @click="emit('set-sort', 'payment')">
+                                    Payment <span>{{ sortIndicator('payment') }}</span>
+                                </button>
+                            </th>
+                            <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">
+                                <button type="button" class="inline-flex items-center gap-1 font-semibold" @click="emit('set-sort', 'status')">
+                                    Status <span>{{ sortIndicator('status') }}</span>
+                                </button>
+                            </th>
                             <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Actions</th>
                         </tr>
                     </thead>
@@ -722,10 +814,10 @@ watch(
                                         @click="requestConfirmBooking(row)"
                                     >
                                         <CheckCircle2 class="h-3 w-3" />
-                                        Confirm
+                                        Verify
                                     </button>
                                     <button
-                                        v-if="row.can_confirm_payment"
+                                        v-if="row.can_confirm_payment && !row.can_confirm_booking"
                                         type="button"
                                         class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold"
                                         style="border-color: #FDE68A; color: #D97706;"
@@ -931,7 +1023,7 @@ watch(
                     {{ localError }}
                 </p>
 
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                     <label class="text-sm text-[#475569]">
                         Method
                         <select v-model="paymentForm.method" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
@@ -941,11 +1033,22 @@ watch(
                     </label>
 
                     <label class="text-sm text-[#475569]">
-                        Amount
-                        <input v-model="paymentForm.amount" type="number" min="1" step="1000" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                        Payment Type
+                        <select v-model="paymentForm.payment_type" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
+                            <option value="full">Full Payment</option>
+                            <option value="dp50">DP 50%</option>
+                        </select>
                     </label>
 
-                    <label class="text-sm text-[#475569] md:col-span-2">
+                    <label class="text-sm text-[#475569]">
+                        Amount
+                        <input v-model="paymentForm.amount" type="number" min="1" step="1000" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                        <p class="mt-1 text-xs text-[#64748B]">
+                            DP 50%: {{ formatCurrency(resolvePaymentAmountByType('dp50')) }} | Remaining: {{ formatCurrency(paymentContext.remaining_amount) }}
+                        </p>
+                    </label>
+
+                    <label class="text-sm text-[#475569] md:col-span-3">
                         Reference Number
                         <input v-model="paymentForm.reference_no" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
                     </label>
@@ -985,6 +1088,41 @@ watch(
                     <p><span class="font-semibold text-[#0F172A]">Design:</span> {{ bookingDetail?.design_name || '-' }}</p>
                     <p><span class="font-semibold text-[#0F172A]">Date:</span> {{ bookingDetail?.date || '-' }}</p>
                     <p><span class="font-semibold text-[#0F172A]">Time:</span> {{ bookingDetail?.time || '-' }}</p>
+                </div>
+
+                <div class="mt-4 rounded-xl border" style="border-color: #E2E8F0; background: #FFFFFF;">
+                    <div class="border-b px-4 py-3" style="border-color: #E2E8F0;">
+                        <h4 class="text-sm font-semibold text-[#0F172A]">Bukti Pembayaran</h4>
+                        <p class="text-xs text-[#64748B]">
+                            Reference: {{ bookingDetail?.payment_reference || '-' }}
+                            <span class="mx-1">|</span>
+                            Uploaded: {{ bookingDetail?.transfer_proof_uploaded_at_text || '-' }}
+                        </p>
+                    </div>
+
+                    <div class="p-4">
+                        <div v-if="bookingDetailProofUrl" class="space-y-3">
+                            <img
+                                v-if="bookingDetailProofIsImage"
+                                :src="bookingDetailProofUrl"
+                                alt="Bukti pembayaran"
+                                class="max-h-64 w-full rounded-lg border object-contain"
+                                style="border-color: #E2E8F0; background: #F8FAFC;"
+                            >
+                            <a
+                                :href="bookingDetailProofUrl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-semibold"
+                                style="border-color: #BFDBFE; color: #1D4ED8;"
+                            >
+                                Lihat file bukti: {{ bookingDetail?.transfer_proof_file_name || 'Bukti Pembayaran' }}
+                            </a>
+                        </div>
+                        <p v-else class="text-sm text-[#64748B]">
+                            Customer belum mengunggah bukti pembayaran.
+                        </p>
+                    </div>
                 </div>
 
                 <div class="mt-4 rounded-xl border" style="border-color: #CCFBF1; background: #F8FAFC;">

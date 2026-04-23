@@ -19,13 +19,25 @@ import ActivityLogsPage from './pages/ActivityLogsPage.vue';
 import BookingsPage from './pages/BookingsPage.vue';
 import DashboardPage from './pages/DashboardPage.vue';
 import AddOnsPage from './pages/AddOnsPage.vue';
+import AppSettingsPage from './pages/AppSettingsPage.vue';
+import BlackoutDatesPage from './pages/BlackoutDatesPage.vue';
+import BranchesPage from './pages/BranchesPage.vue';
 import DesignsPage from './pages/DesignsPage.vue';
 import PackagesPage from './pages/PackagesPage.vue';
+import PaymentsPage from './pages/PaymentsPage.vue';
+import PrinterSettingsPage from './pages/PrinterSettingsPage.vue';
 import QueuePage from './pages/QueuePage.vue';
 import ReportsPage from './pages/ReportsPage.vue';
 import SettingsPage from './pages/SettingsPage.vue';
+import TimeSlotsPage from './pages/TimeSlotsPage.vue';
 import TransactionsPage from './pages/TransactionsPage.vue';
 import UsersPage from './pages/UsersPage.vue';
+import { useAppSettingsModule } from './composables/useAppSettingsModule';
+import { useBlackoutDatesModule } from './composables/useBlackoutDatesModule';
+import { useBranchesModule } from './composables/useBranchesModule';
+import { usePaymentsModule } from './composables/usePaymentsModule';
+import { usePrinterSettingsModule } from './composables/usePrinterSettingsModule';
+import { useTimeSlotsModule } from './composables/useTimeSlotsModule';
 
 const props = defineProps({
     initialStats: {
@@ -192,6 +204,78 @@ const props = defineProps({
         type: String,
         default: '/admin/settings/branches',
     },
+    branchesDataUrl: {
+        type: String,
+        default: '',
+    },
+    branchStoreUrl: {
+        type: String,
+        default: '',
+    },
+    branchBaseUrl: {
+        type: String,
+        default: '/admin/branches',
+    },
+    timeSlotsDataUrl: {
+        type: String,
+        default: '',
+    },
+    timeSlotStoreUrl: {
+        type: String,
+        default: '',
+    },
+    timeSlotBaseUrl: {
+        type: String,
+        default: '/admin/time-slots',
+    },
+    timeSlotGenerateUrl: {
+        type: String,
+        default: '',
+    },
+    timeSlotBulkBookableUrl: {
+        type: String,
+        default: '',
+    },
+    blackoutDatesDataUrl: {
+        type: String,
+        default: '',
+    },
+    blackoutDateStoreUrl: {
+        type: String,
+        default: '',
+    },
+    blackoutDateBaseUrl: {
+        type: String,
+        default: '/admin/blackout-dates',
+    },
+    paymentsDataUrl: {
+        type: String,
+        default: '',
+    },
+    paymentsStoreUrlBase: {
+        type: String,
+        default: '/admin/payments',
+    },
+    printerSettingsDataUrl: {
+        type: String,
+        default: '',
+    },
+    printerSettingStoreUrl: {
+        type: String,
+        default: '',
+    },
+    printerSettingBaseUrl: {
+        type: String,
+        default: '/admin/printer-settings',
+    },
+    appSettingsDataUrl: {
+        type: String,
+        default: '',
+    },
+    appSettingBaseUrl: {
+        type: String,
+        default: '/admin/app-settings',
+    },
     initialPackages: {
         type: Array,
         default: () => [],
@@ -208,6 +292,39 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    initialBranches: {
+        type: Array,
+        default: () => [],
+    },
+    initialTimeSlots: {
+        type: Array,
+        default: () => [],
+    },
+    initialBlackoutDates: {
+        type: Array,
+        default: () => [],
+    },
+    initialPayments: {
+        type: Array,
+        default: () => [],
+    },
+    initialPaymentTransactionOptions: {
+        type: Array,
+        default: () => [],
+    },
+    initialPrinterSettings: {
+        type: Array,
+        default: () => [],
+    },
+    initialAppSettingsGroups: {
+        type: Object,
+        default: () => ({
+            general: {},
+            booking: {},
+            payment: {},
+            ui: {},
+        }),
+    },
     initialUserRoles: {
         type: Array,
         default: () => [],
@@ -222,14 +339,32 @@ const props = defineProps({
             add_ons: [],
         }),
     },
+    brand: {
+        type: Object,
+        default: () => ({}),
+    },
+    currentUser: {
+        type: Object,
+        default: () => ({}),
+    },
+    uiConfig: {
+        type: Object,
+        default: () => ({}),
+    },
     panelUrl: {
         type: String,
         default: '/admin',
+    },
+    logoutUrl: {
+        type: String,
+        default: '/admin/logout',
     },
 });
 
 const search = ref('');
 const filterStatus = ref('all');
+const bookingSortBy = ref('date_time');
+const bookingSortDir = ref('desc');
 const activeRevenuePeriod = ref('7d');
 const loading = ref(false);
 const mobileOpen = ref(false);
@@ -250,13 +385,18 @@ let reportDebounceTimer = null;
 let activeRequestController = null;
 let queueRefreshInterval = null;
 
-const filterTabs = [
-    { key: 'all', label: 'All' },
-    { key: 'pending', label: 'Pending' },
-    { key: 'booked', label: 'Booked' },
-    { key: 'used', label: 'Completed' },
-    { key: 'expired', label: 'Cancelled' },
-];
+const filterTabs = computed(() => {
+    const source = Array.isArray(props.uiConfig?.booking_filter_tabs)
+        ? props.uiConfig.booking_filter_tabs
+        : [];
+
+    return source
+        .map((item) => ({
+            key: String(item?.key || '').trim(),
+            label: String(item?.label || '').trim(),
+        }))
+        .filter((item) => item.key !== '' && item.label !== '');
+});
 
 const bookingStatusMap = {
     pending: { label: 'Pending', bg: '#FFFBEB', color: '#D97706' },
@@ -357,6 +497,30 @@ const initialsFromName = (name) => {
     return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
 };
 
+const sidebarBrandName = computed(() => {
+    const value = String(props.brand?.name || '').trim();
+
+    return value || 'Dashboard';
+});
+
+const sidebarDashboardLabel = computed(() => {
+    const value = String(props.brand?.dashboard_label || '').trim();
+
+    return value || 'Dashboard';
+});
+
+const sidebarCurrentUser = computed(() => {
+    const name = String(props.currentUser?.name || '').trim();
+    const roleLabel = String(props.currentUser?.role_label || '').trim();
+    const role = String(props.currentUser?.role || '').trim();
+
+    return {
+        name: name || 'User',
+        initials: initialsFromName(name || 'User'),
+        roleLabel: roleLabel || (role ? role.charAt(0).toUpperCase() + role.slice(1) : 'User'),
+    };
+});
+
 const panelBaseUrl = computed(() => {
     const value = String(props.panelUrl || '/admin').trim();
 
@@ -388,21 +552,52 @@ const toPathname = (value, fallback = '/admin') => {
     }
 };
 
-const panelBasePath = computed(() => toPathname(panelBaseUrl.value, '/admin'));
-
 const panelBookingsUrl = computed(() => `${panelBaseUrl.value}/bookings`);
 const panelTransactionsUrl = computed(() => `${panelBaseUrl.value}/transactions`);
-const panelActivitiesUrl = computed(() => `${panelBaseUrl.value}/activity-logs`);
-const panelReportsUrl = computed(() => `${panelBaseUrl.value}/reports`);
-const panelSettingsUrl = computed(() => `${panelBaseUrl.value}/settings`);
 
-const navGroups = [
-    { key: 'overview', label: 'Overview' },
-    { key: 'management', label: 'Management' },
-    { key: 'operations', label: 'Operations' },
-    { key: 'analytics', label: 'Analytics' },
-    { key: 'system', label: 'System' },
-];
+const navIconMap = {
+    dashboard: LayoutDashboard,
+    package: Package,
+    palette: Palette,
+    users: Users,
+    calendar: Calendar,
+    list: ListOrdered,
+    receipt: Receipt,
+    chart: BarChart3,
+    activity: Activity,
+    settings: Settings,
+};
+
+const resolveNavIcon = (iconKey) => {
+    const key = String(iconKey || '').trim().toLowerCase();
+
+    return navIconMap[key] || LayoutDashboard;
+};
+
+const resolveNavHref = (href) => {
+    const text = String(href || '').trim();
+
+    if (!text) {
+        return panelBaseUrl.value;
+    }
+
+    if (text.startsWith('/') || text.startsWith('http://') || text.startsWith('https://')) {
+        return text;
+    }
+
+    return `${panelBaseUrl.value}/${text.replace(/^\/+/, '')}`;
+};
+
+const navGroups = computed(() => {
+    const source = Array.isArray(props.uiConfig?.nav_groups) ? props.uiConfig.nav_groups : [];
+
+    return source
+        .map((item) => ({
+            key: String(item?.key || '').trim(),
+            label: String(item?.label || '').trim(),
+        }))
+        .filter((item) => item.key !== '' && item.label !== '');
+});
 
 const queueStats = computed(() => {
     const stats = queueLiveState.value?.stats || {};
@@ -431,24 +626,33 @@ const navBadgeFor = (itemId) => {
 };
 
 const navItems = computed(() => {
-    const items = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/admin', group: 'overview' },
-        { id: 'packages', label: 'Packages', icon: Package, href: `${panelBaseUrl.value}/packages`, group: 'management' },
-        { id: 'add-ons', label: 'Add-ons', icon: Package, href: `${panelBaseUrl.value}/add-ons`, group: 'management' },
-        { id: 'designs', label: 'Designs', icon: Palette, href: `${panelBaseUrl.value}/design-catalogs`, group: 'management' },
-        { id: 'users', label: 'Users', icon: Users, href: `${panelBaseUrl.value}/users`, group: 'management' },
-        { id: 'bookings', label: 'Bookings', icon: Calendar, href: panelBookingsUrl.value, group: 'operations' },
-        { id: 'queue', label: 'Queue', icon: ListOrdered, href: `${panelBaseUrl.value}/queue-tickets`, group: 'operations' },
-        { id: 'transactions', label: 'Transactions', icon: Receipt, href: panelTransactionsUrl.value, group: 'operations' },
-        { id: 'reports', label: 'Reports', icon: BarChart3, href: panelReportsUrl.value, group: 'analytics' },
-        { id: 'activity-logs', label: 'Activity Logs', icon: Activity, href: panelActivitiesUrl.value, group: 'analytics' },
-        { id: 'settings', label: 'Settings', icon: Settings, href: panelSettingsUrl.value, group: 'system' },
-    ];
+    const source = Array.isArray(props.uiConfig?.nav_items) ? props.uiConfig.nav_items : [];
+    const validGroupSet = new Set(navGroups.value.map((group) => group.key));
+    const fallbackGroup = navGroups.value[0]?.key || 'overview';
 
-    return items.map((item) => ({
-        ...item,
-        badge: navBadgeFor(item.id),
-    }));
+    return source
+        .map((item, index) => {
+            const id = String(item?.id || '').trim();
+            const label = String(item?.label || '').trim();
+            const rawGroup = String(item?.group || '').trim();
+            const group = validGroupSet.has(rawGroup) ? rawGroup : fallbackGroup;
+
+            if (id === '' || label === '') {
+                return null;
+            }
+
+            return {
+                id,
+                label,
+                icon: resolveNavIcon(item?.icon),
+                href: resolveNavHref(item?.href),
+                group,
+                badge: navBadgeFor(id),
+                sort_order: Number(item?.sort_order || index),
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 });
 
 const currentPath = computed(() => {
@@ -470,49 +674,55 @@ const normalizedCurrentPath = computed(() => {
 });
 
 const activeModuleId = computed(() => {
-    const base = panelBasePath.value;
     const path = normalizedCurrentPath.value;
 
-    if (path === base) {
-        return 'dashboard';
-    }
+    const fallback = navItems.value.find((item) => item.id === 'dashboard')?.id
+        || navItems.value[0]?.id
+        || 'dashboard';
 
-    const map = [
-        { id: 'packages', path: `${base}/packages` },
-        { id: 'add-ons', path: `${base}/add-ons` },
-        { id: 'designs', path: `${base}/design-catalogs` },
-        { id: 'users', path: `${base}/users` },
-        { id: 'bookings', path: `${base}/bookings` },
-        { id: 'queue', path: `${base}/queue-tickets` },
-        { id: 'transactions', path: `${base}/transactions` },
-        { id: 'reports', path: `${base}/reports` },
-        { id: 'activity-logs', path: `${base}/activity-logs` },
-        { id: 'settings', path: `${base}/settings` },
-    ];
+    const candidates = navItems.value
+        .map((item) => ({
+            id: item.id,
+            path: toPathname(item.href, ''),
+        }))
+        .filter((item) => item.path !== '')
+        .sort((a, b) => b.path.length - a.path.length);
 
-    const matched = map.find((entry) => path === entry.path || path.startsWith(`${entry.path}/`));
+    const matched = candidates.find((item) => path === item.path || path.startsWith(`${item.path}/`));
 
-    return matched ? matched.id : 'dashboard';
+    return matched?.id || fallback;
 });
 
-const topbarMetaById = {
-    dashboard: { title: 'Dashboard', subtitle: 'Business overview and key metrics' },
-    packages: { title: 'Packages', subtitle: 'Manage your photobooth packages' },
-    'add-ons': { title: 'Add-ons', subtitle: 'Manage package add-ons and pricing' },
-    designs: { title: 'Designs', subtitle: 'Photo design templates and themes' },
-    users: { title: 'Users', subtitle: 'Manage staff and customer accounts' },
-    bookings: { title: 'Bookings', subtitle: 'Track and manage all reservations' },
-    queue: { title: 'Queue', subtitle: 'Live session queue management' },
-    transactions: { title: 'Transactions', subtitle: 'Payment history and records' },
-    reports: { title: 'Reports', subtitle: 'Business analytics and insights' },
-    'activity-logs': { title: 'Activity Logs', subtitle: 'System activity and audit trail' },
-    settings: { title: 'Settings', subtitle: 'Configure your business preferences' },
-};
+const topbarMetaById = computed(() => {
+    const source = props.uiConfig?.topbar_meta;
+
+    if (!source || typeof source !== 'object') {
+        return {};
+    }
+
+    const rows = {};
+
+    Object.entries(source).forEach(([id, value]) => {
+        const key = String(id || '').trim();
+        const title = String(value?.title || '').trim();
+        const subtitle = String(value?.subtitle || '').trim();
+
+        if (key === '') {
+            return;
+        }
+
+        rows[key] = { title, subtitle };
+    });
+
+    return rows;
+});
 
 const topbarTitle = computed(() => {
     const id = String(activeModuleId.value || 'dashboard');
+    const title = String(topbarMetaById.value[id]?.title || '').trim();
+    const navLabel = String(navItems.value.find((item) => item.id === id)?.label || '').trim();
 
-    return topbarMetaById[id]?.title || 'Dashboard';
+    return title || navLabel || 'Dashboard';
 });
 
 const topbarDate = computed(() => {
@@ -659,7 +869,7 @@ const waitingQueue = computed(() => {
         branch_id: item.branch_id ? Number(item.branch_id) : null,
         queue_date: String(item.queue_date || ''),
         source_type: String(item.source_type || ''),
-        queue_code: String(item.queue_code || `Q${String(index + 1).padStart(3, '0')}`),
+        queue_code: String(item.queue_code || '-'),
         queue_number: Number(item.queue_number || index + 1),
         customer_name: String(item.customer_name || '-'),
         package_name: String(item.package_name || '-'),
@@ -719,6 +929,11 @@ const normalizedRows = computed(() => {
         paid_amount: Number(row.paid_amount || 0),
         remaining_amount: Number(row.remaining_amount || 0),
         notes: String(row.notes || ''),
+        payment_reference: String(row.payment_reference || ''),
+        transfer_proof_url: String(row.transfer_proof_url || ''),
+        transfer_proof_file_name: String(row.transfer_proof_file_name || ''),
+        transfer_proof_uploaded_at: String(row.transfer_proof_uploaded_at || ''),
+        transfer_proof_uploaded_at_text: String(row.transfer_proof_uploaded_at_text || ''),
         transaction_id: row.transaction_id ? Number(row.transaction_id) : null,
         can_confirm_booking: Boolean(row.can_confirm_booking),
         can_confirm_payment: Boolean(row.can_confirm_payment),
@@ -903,12 +1118,33 @@ const filteredActivityRows = computed(() => {
     });
 });
 
-const settingsTab = ref('branch');
-const settingsTabs = [
-    { id: 'branch', label: 'Branch Setting' },
-    { id: 'hours', label: 'Operating Hours' },
-    { id: 'security', label: 'Security' },
-];
+const settingsTabs = computed(() => {
+    const source = Array.isArray(props.uiConfig?.settings_tabs)
+        ? props.uiConfig.settings_tabs
+        : [];
+
+    return source
+        .map((item) => ({
+            id: String(item?.id || '').trim(),
+            label: String(item?.label || '').trim(),
+        }))
+        .filter((item) => item.id !== '' && item.label !== '');
+});
+const settingsTab = ref('');
+
+watch(
+    settingsTabs,
+    (tabs) => {
+        const rows = Array.isArray(tabs) ? tabs : [];
+
+        if (rows.some((tab) => tab.id === settingsTab.value)) {
+            return;
+        }
+
+        settingsTab.value = rows[0]?.id || 'branch';
+    },
+    { immediate: true },
+);
 
 const normalizeSettings = (source) => {
     const settingsSource = source && typeof source === 'object' ? source : {};
@@ -1165,84 +1401,6 @@ const reportStatusRows = computed(() => {
     return Array.isArray(rowsValue) ? rowsValue : [];
 });
 
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'reports') {
-        return;
-    }
-
-    if (!reportFilters.value.from || !reportFilters.value.to) {
-        setDefaultReportRange();
-    }
-
-    fetchReportSummary();
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'packages' && nextValue !== 'designs' && nextValue !== 'add-ons') {
-        return;
-    }
-
-    if (!packages.value.length && !packageLoading.value) {
-        fetchPackagesData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'add-ons') {
-        return;
-    }
-
-    if (!addOnLoading.value) {
-        fetchAddOnsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'designs') {
-        return;
-    }
-
-    if (!designs.value.length && !designLoading.value) {
-        fetchDesignsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'users') {
-        return;
-    }
-
-    if (!users.value.length && !userLoading.value) {
-        fetchUsersData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'settings') {
-        return;
-    }
-
-    if (!settingsLoading.value) {
-        fetchSettingsData();
-    }
-}, { immediate: true });
-
-watch(
-    () => [
-        reportFilters.value.from,
-        reportFilters.value.to,
-        reportFilters.value.package_id,
-        reportFilters.value.cashier_id,
-    ],
-    () => {
-        if (activeModuleId.value !== 'reports') {
-            return;
-        }
-
-        scheduleReportFetch();
-    },
-);
-
 const resolveBookingStatus = (status) => {
     return bookingStatusMap[status] || {
         label: status || 'Unknown',
@@ -1268,6 +1426,25 @@ const parseRequestError = async (response) => {
     } catch {
         return `HTTP ${response.status}`;
     }
+};
+
+const submitLogout = () => {
+    if (typeof document === 'undefined' || !props.logoutUrl) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = props.logoutUrl;
+
+    const tokenInput = document.createElement('input');
+    tokenInput.type = 'hidden';
+    tokenInput.name = '_token';
+    tokenInput.value = getCsrfToken();
+    form.appendChild(tokenInput);
+
+    document.body.appendChild(form);
+    form.submit();
 };
 
 const applyPackagesPayload = (payload) => {
@@ -2055,6 +2232,121 @@ const createUser = async (formPayload) => {
     }
 };
 
+const {
+    branchRows,
+    branchLoading,
+    branchSaving,
+    branchError,
+    deletingBranchId,
+    fetchBranchesData,
+    createBranch,
+    updateBranch,
+    deleteBranch,
+} = useBranchesModule({
+    props,
+    bookingOptions,
+    parseRequestError,
+    getCsrfToken,
+});
+
+const {
+    timeSlotRows,
+    timeSlotLoading,
+    timeSlotSaving,
+    timeSlotError,
+    deletingTimeSlotId,
+    fetchTimeSlotsData,
+    createTimeSlot,
+    updateTimeSlot,
+    deleteTimeSlot,
+    generateTimeSlots,
+    bulkBookableTimeSlots,
+} = useTimeSlotsModule({
+    props,
+    parseRequestError,
+    getCsrfToken,
+});
+
+const {
+    blackoutDateRows,
+    blackoutDateLoading,
+    blackoutDateSaving,
+    blackoutDateError,
+    deletingBlackoutDateId,
+    fetchBlackoutDatesData,
+    createBlackoutDate,
+    updateBlackoutDate,
+    deleteBlackoutDate,
+} = useBlackoutDatesModule({
+    props,
+    parseRequestError,
+    getCsrfToken,
+});
+
+const {
+    paymentRows,
+    paymentTransactionRows,
+    paymentLoading,
+    paymentSaving,
+    paymentError,
+    fetchPaymentsData,
+    createPayment,
+} = usePaymentsModule({
+    props,
+    parseRequestError,
+    getCsrfToken,
+    formatRupiah,
+});
+
+const {
+    printerSettingRows,
+    printerSettingLoading,
+    printerSettingSaving,
+    printerSettingError,
+    deletingPrinterSettingId,
+    fetchPrinterSettingsData,
+    createPrinterSetting,
+    updatePrinterSetting,
+    deletePrinterSetting,
+    setDefaultPrinterSetting,
+} = usePrinterSettingsModule({
+    props,
+    parseRequestError,
+    getCsrfToken,
+});
+
+const {
+    appSettingsGroups,
+    appSettingsLoading,
+    appSettingsSaving,
+    appSettingsError,
+    appSettingsSuccess,
+    fetchAppSettingsData,
+    updateAppSetting,
+} = useAppSettingsModule({
+    props,
+    parseRequestError,
+    getCsrfToken,
+});
+
+const branchOptionsForManagement = computed(() => {
+    const options = branchRows.value
+        .filter((row) => row.id > 0)
+        .map((row) => ({
+            id: row.id,
+            name: row.name,
+        }));
+
+    if (options.length) {
+        return options;
+    }
+
+    return settingsBranchOptions.value.map((branch) => ({
+        id: Number(branch.id || 0),
+        name: String(branch.name || '-'),
+    })).filter((branch) => branch.id > 0);
+});
+
 const refreshBookings = async (page = Number(pagination.value.current_page || 1)) => {
     await fetchRows(page);
 };
@@ -2181,6 +2473,7 @@ const confirmBooking = async ({ id, reason = '' }) => {
         }
 
         await refreshBookings(Number(pagination.value.current_page || 1));
+        await fetchQueueData({ silent: true });
     } catch (error) {
         bookingError.value = error instanceof Error ? error.message : 'Failed to confirm booking.';
         throw error;
@@ -2437,6 +2730,8 @@ const fetchRows = async (page = 1) => {
         params.set('page', String(page));
         params.set('per_page', String(pagination.value.per_page || 15));
         params.set('status', String(filterStatus.value || 'all'));
+        params.set('sort_by', String(bookingSortBy.value || 'date_time'));
+        params.set('sort_dir', String(bookingSortDir.value || 'desc'));
 
         if (trimmedSearch) {
             params.set('search', trimmedSearch);
@@ -2484,6 +2779,24 @@ const setFilterStatus = (status) => {
     fetchRows(1);
 };
 
+const setBookingSort = (sortBy) => {
+    const key = String(sortBy || '').trim();
+    const allowedSorts = ['booking_code', 'customer', 'package', 'date_time', 'amount', 'payment', 'status'];
+
+    if (!allowedSorts.includes(key)) {
+        return;
+    }
+
+    if (bookingSortBy.value === key) {
+        bookingSortDir.value = bookingSortDir.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        bookingSortBy.value = key;
+        bookingSortDir.value = key === 'date_time' ? 'desc' : 'asc';
+    }
+
+    fetchRows(1);
+};
+
 const goToPrevPage = () => {
     if (!canGoPrev.value) {
         return;
@@ -2500,6 +2813,84 @@ const goToNextPage = () => {
     fetchRows(Number(pagination.value.current_page || 1) + 1);
 };
 
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'reports') {
+        return;
+    }
+
+    if (!reportFilters.value.from || !reportFilters.value.to) {
+        setDefaultReportRange();
+    }
+
+    fetchReportSummary();
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'packages' && nextValue !== 'designs' && nextValue !== 'add-ons') {
+        return;
+    }
+
+    if (!packages.value.length && !packageLoading.value) {
+        fetchPackagesData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'add-ons') {
+        return;
+    }
+
+    if (!addOnLoading.value) {
+        fetchAddOnsData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'designs') {
+        return;
+    }
+
+    if (!designs.value.length && !designLoading.value) {
+        fetchDesignsData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'users') {
+        return;
+    }
+
+    if (!users.value.length && !userLoading.value) {
+        fetchUsersData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'settings') {
+        return;
+    }
+
+    if (!settingsLoading.value) {
+        fetchSettingsData();
+    }
+}, { immediate: true });
+
+watch(
+    () => [
+        reportFilters.value.from,
+        reportFilters.value.to,
+        reportFilters.value.package_id,
+        reportFilters.value.cashier_id,
+    ],
+    () => {
+        if (activeModuleId.value !== 'reports') {
+            return;
+        }
+
+        scheduleReportFetch();
+    },
+);
+
 watch(search, () => {
     if (activeModuleId.value !== 'bookings') {
         return;
@@ -2513,6 +2904,66 @@ watch(search, () => {
         fetchRows(1);
     }, 350);
 });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'branches') {
+        return;
+    }
+
+    if (!branchRows.value.length && !branchLoading.value) {
+        fetchBranchesData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'time-slots') {
+        return;
+    }
+
+    if (!timeSlotRows.value.length && !timeSlotLoading.value) {
+        fetchTimeSlotsData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'blackout-dates') {
+        return;
+    }
+
+    if (!blackoutDateRows.value.length && !blackoutDateLoading.value) {
+        fetchBlackoutDatesData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'payments') {
+        return;
+    }
+
+    if (!paymentRows.value.length && !paymentLoading.value) {
+        fetchPaymentsData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'printer-settings') {
+        return;
+    }
+
+    if (!printerSettingRows.value.length && !printerSettingLoading.value) {
+        fetchPrinterSettingsData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'app-settings') {
+        return;
+    }
+
+    if (!appSettingsLoading.value) {
+        fetchAppSettingsData();
+    }
+}, { immediate: true });
 
 watch(activeModuleId, (nextValue) => {
     if (nextValue !== 'queue') {
@@ -2550,8 +3001,12 @@ onBeforeUnmount(() => {
                 :active-module-id="activeModuleId"
                 :mobile-open="mobileOpen"
                 :sidebar-collapsed="sidebarCollapsed"
+                :brand-name="sidebarBrandName"
+                :dashboard-label="sidebarDashboardLabel"
+                :current-user="sidebarCurrentUser"
                 @toggle-mobile="mobileOpen = !mobileOpen"
                 @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
+                @logout="submitLogout"
             />
 
             <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -2630,6 +3085,49 @@ onBeforeUnmount(() => {
                             @delete-design="deleteDesign"
                         />
 
+                        <BranchesPage
+                            v-else-if="activeModuleId === 'branches'"
+                            :branch-rows="branchRows"
+                            :loading="branchLoading"
+                            :saving="branchSaving"
+                            :deleting-branch-id="deletingBranchId"
+                            :error-message="branchError"
+                            @refresh-branches="fetchBranchesData"
+                            @create-branch="createBranch"
+                            @update-branch="updateBranch"
+                            @delete-branch="deleteBranch"
+                        />
+
+                        <TimeSlotsPage
+                            v-else-if="activeModuleId === 'time-slots'"
+                            :time-slot-rows="timeSlotRows"
+                            :branch-options="branchOptionsForManagement"
+                            :loading="timeSlotLoading"
+                            :saving="timeSlotSaving"
+                            :deleting-time-slot-id="deletingTimeSlotId"
+                            :error-message="timeSlotError"
+                            @refresh-time-slots="fetchTimeSlotsData"
+                            @create-time-slot="createTimeSlot"
+                            @update-time-slot="updateTimeSlot"
+                            @delete-time-slot="deleteTimeSlot"
+                            @generate-time-slots="generateTimeSlots"
+                            @bulk-bookable="bulkBookableTimeSlots"
+                        />
+
+                        <BlackoutDatesPage
+                            v-else-if="activeModuleId === 'blackout-dates'"
+                            :blackout-date-rows="blackoutDateRows"
+                            :branch-options="branchOptionsForManagement"
+                            :loading="blackoutDateLoading"
+                            :saving="blackoutDateSaving"
+                            :deleting-blackout-date-id="deletingBlackoutDateId"
+                            :error-message="blackoutDateError"
+                            @refresh-blackout-dates="fetchBlackoutDatesData"
+                            @create-blackout-date="createBlackoutDate"
+                            @update-blackout-date="updateBlackoutDate"
+                            @delete-blackout-date="deleteBlackoutDate"
+                        />
+
                         <UsersPage
                             v-else-if="activeModuleId === 'users'"
                             :user-rows="userRows"
@@ -2648,6 +3146,8 @@ onBeforeUnmount(() => {
                             :search="search"
                             :filter-status="filterStatus"
                             :filter-tabs="filterTabs"
+                            :sort-by="bookingSortBy"
+                            :sort-dir="bookingSortDir"
                             :panel-bookings-url="panelBookingsUrl"
                             :normalized-rows="normalizedRows"
                             :loading="loading"
@@ -2665,6 +3165,7 @@ onBeforeUnmount(() => {
                             :resolve-booking-status="resolveBookingStatus"
                             @update:search="search = $event"
                             @set-filter-status="setFilterStatus"
+                            @set-sort="setBookingSort"
                             @refresh-bookings="refreshBookings()"
                             @create-booking="createBooking"
                             @update-booking="updateBooking"
@@ -2707,6 +3208,17 @@ onBeforeUnmount(() => {
                             :resolve-transaction-status="resolveTransactionStatus"
                         />
 
+                        <PaymentsPage
+                            v-else-if="activeModuleId === 'payments'"
+                            :payment-rows="paymentRows"
+                            :transaction-options="paymentTransactionRows"
+                            :loading="paymentLoading"
+                            :saving="paymentSaving"
+                            :error-message="paymentError"
+                            @refresh-payments="fetchPaymentsData"
+                            @create-payment="createPayment"
+                        />
+
                         <ReportsPage
                             v-else-if="activeModuleId === 'reports'"
                             :report-filters="reportFilters"
@@ -2729,6 +3241,32 @@ onBeforeUnmount(() => {
                             :resolve-activity-tone="resolveActivityTone"
                             @update:activity-search="activitySearch = $event"
                             @update:activity-module-filter="activityModuleFilter = $event"
+                        />
+
+                        <PrinterSettingsPage
+                            v-else-if="activeModuleId === 'printer-settings'"
+                            :printer-setting-rows="printerSettingRows"
+                            :branch-options="branchOptionsForManagement"
+                            :loading="printerSettingLoading"
+                            :saving="printerSettingSaving"
+                            :deleting-printer-setting-id="deletingPrinterSettingId"
+                            :error-message="printerSettingError"
+                            @refresh-printer-settings="fetchPrinterSettingsData"
+                            @create-printer-setting="createPrinterSetting"
+                            @update-printer-setting="updatePrinterSetting"
+                            @delete-printer-setting="deletePrinterSetting"
+                            @set-default-printer-setting="setDefaultPrinterSetting"
+                        />
+
+                        <AppSettingsPage
+                            v-else-if="activeModuleId === 'app-settings'"
+                            :groups="appSettingsGroups"
+                            :loading="appSettingsLoading"
+                            :saving="appSettingsSaving"
+                            :error-message="appSettingsError"
+                            :success-message="appSettingsSuccess"
+                            @refresh-app-settings="fetchAppSettingsData"
+                            @update-app-setting="updateAppSetting"
                         />
 
                         <SettingsPage

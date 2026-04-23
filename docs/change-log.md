@@ -1,5 +1,83 @@
 # Change Log
 
+## 2026-04-23
+
+### Dynamic Frontend Data + UI Config Externalization
+
+- Menghilangkan hardcoded data bisnis di frontend booking dan menggantinya dengan payload backend:
+  - add-ons aktif dari database
+  - preview desain dari catalog aktif
+  - langkah booking mobile (`ui.booking.steps`)
+  - navbar public (`ui.booking.navigation`)
+- Menambahkan group App Settings baru `ui` untuk mengelola konfigurasi label/menu frontend secara terpusat.
+- Menambahkan dukungan update `ui` pada `AdminAppSettingService` dan editor group `UI` di page `AppSettingsPage.vue`.
+- Menambahkan `uiConfig` ke bootstrap admin dashboard agar menu/group/topbar/filter tabs/settings tabs admin tidak hardcoded di Vue.
+- Menambahkan `brand` dan `currentUser` dari backend ke frontend admin untuk menghapus profil contoh statis di sidebar.
+- Memperbarui `AdminDashboardApp.vue` agar menu admin dibentuk dari konfigurasi `ui.admin.nav_items` dan `ui.admin.nav_groups`, termasuk mapping icon key dinamis.
+- Memperbarui blade booking create/payment untuk menyuntikkan konfigurasi `ui.booking` sebagai props Vue.
+- Validasi teknis:
+  - lint PHP untuk file service/controller/blade terkait berhasil.
+  - `npm run build` berhasil.
+
+### Admin Vue Modular Composable Refactor + Wiring Stabilization
+
+- Merapikan dokumentasi dan wiring modul parity terbaru pada admin Vue agar tidak terjadi blank page/reference error.
+- Menambahkan bootstrap URL parity module pada `AdminDashboardController` untuk kebutuhan fetch/action frontend:
+  - branches, time-slots, blackout-dates, payments, printer-settings, app-settings.
+- Mengekstrak logic state + API modul parity dari `AdminDashboardApp.vue` ke composable terpisah:
+  - `useBranchesModule`
+  - `useTimeSlotsModule`
+  - `useBlackoutDatesModule`
+  - `usePaymentsModule`
+  - `usePrinterSettingsModule`
+  - `useAppSettingsModule`
+- Menjaga `AdminDashboardApp.vue` sebagai orchestrator:
+  - import composable
+  - binding props/event ke page components
+  - watcher `activeModuleId` untuk auto-fetch per modul.
+- Validasi teknis:
+  - `npm.cmd run build` berhasil setelah refactor modular.
+
+## 2026-04-22
+
+### Vue Admin Full Parity + Filament Soft Disable Control Plane
+
+- Menambahkan control plane admin UI:
+  - `config/admin_ui.php`
+  - env baru: `ADMIN_UI_DRIVER`, `ADMIN_UI_BLOCK_FILAMENT_ROUTES`, `ADMIN_UI_LEGACY_REDIRECTS`
+  - registrasi conditional `App\Providers\Filament\AdminPanelProvider` dari `AppServiceProvider` saat `ADMIN_UI_DRIVER=filament`.
+- Menambahkan middleware global web `BlockFilamentRoutesWhenDisabled` untuk memblok `filament/*` saat runtime admin berada di mode Vue.
+- Menambahkan parity endpoint web `admin.*` untuk resource yang sebelumnya dominan di Filament:
+  - `branches`
+  - `time-slots` (termasuk `generate` dan `bulk-bookable`)
+  - `blackout-dates`
+  - `payments` (manual add payment ke transaksi)
+  - `printer-settings` (termasuk set default)
+  - `app-settings` (`general|booking|payment`)
+- Menambahkan service layer backend untuk menjaga pola controller tipis:
+  - `AdminBranchService`
+  - `AdminTimeSlotService`
+  - `AdminBlackoutDateService`
+  - `AdminPrinterSettingService`
+  - `AdminPaymentService`
+  - `AdminAppSettingService`
+- Mengekstrak logic time slot dari `Api\V1\TimeSlotController` ke service reusable (`AdminTimeSlotService`) agar web admin dan API berbagi source of truth.
+- Memperluas bootstrap payload `AdminDashboardController` dengan endpoint URL + initial payload modul parity baru.
+- Memperluas `AdminDashboardDataService` untuk menyiapkan initial data modul baru (`branches`, `time_slots`, `blackout_dates`, `printer_settings`, `payments`, `payment_transaction_options`).
+- Menambah modul Vue di `AdminDashboardApp.vue` + page baru:
+  - `BranchesPage.vue`
+  - `TimeSlotsPage.vue`
+  - `BlackoutDatesPage.vue`
+  - `PaymentsPage.vue`
+  - `PrinterSettingsPage.vue`
+  - `AppSettingsPage.vue`
+- Menambahkan feature test `tests/Feature/AdminVueModulesTest.php` untuk baseline flow:
+  - block filament probe route (vue mode)
+  - auth guard admin dashboard
+  - branch CRUD basic
+  - overlap validation time slot
+  - invalid app setting group.
+
 ## 2026-04-19
 
 ### Booking Add-Ons Persistence and Availability

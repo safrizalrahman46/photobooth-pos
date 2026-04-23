@@ -21,6 +21,7 @@ class AdminBookingManagementService
     public function __construct(
         private readonly BookingService $bookingService,
         private readonly TransactionService $transactionService,
+        private readonly QueueService $queueService,
     ) {}
 
     public function create(array $payload): Booking
@@ -89,6 +90,8 @@ class AdminBookingManagementService
 
     public function confirm(Booking $booking, ?int $actorId = null, ?string $reason = null): Booking
     {
+        $booking->loadMissing(['transaction', 'queueTicket']);
+
         $status = $booking->status instanceof BookingStatus
             ? $booking->status
             : BookingStatus::from((string) $booking->status);
@@ -99,6 +102,14 @@ class AdminBookingManagementService
             ]);
         }
 
+        $remainingAmount = $this->remainingAmountForVerification($booking);
+
+        if ($remainingAmount > 0) {
+            throw ValidationException::withMessages([
+                'booking' => 'Booking harus dibayar terlebih dahulu sebelum diverifikasi.',
+            ]);
+        }
+
         if ($status === BookingStatus::Pending) {
             $this->bookingService->updateStatus(
                 $booking,
@@ -106,12 +117,17 @@ class AdminBookingManagementService
                 $actorId,
                 $reason ?: 'Confirmed from owner dashboard'
             );
+        }
 
+        if ($booking->approved_at === null) {
             $booking->update([
                 'approved_by' => $actorId ?: $booking->approved_by,
                 'approved_at' => now(),
             ]);
         }
+
+        $booking = $booking->refresh();
+        $this->autoCheckInQueueAfterVerification($booking);
 
         return $booking->refresh();
     }
@@ -121,6 +137,16 @@ class AdminBookingManagementService
         if ($cashierId <= 0) {
             throw ValidationException::withMessages([
                 'cashier' => 'Authenticated cashier is required to confirm payment.',
+            ]);
+        }
+
+        $bookingStatus = $booking->status instanceof BookingStatus
+            ? $booking->status->value
+            : (string) $booking->status;
+
+        if (in_array($bookingStatus, [BookingStatus::Cancelled->value, BookingStatus::Done->value], true)) {
+            throw ValidationException::withMessages([
+                'booking' => 'Status booking saat ini tidak dapat diproses pembayaran.',
             ]);
         }
 
@@ -454,5 +480,44 @@ class AdminBookingManagementService
             'total_amount' => $total,
             'paid_amount' => max((float) $booking->paid_amount, $paid),
         ]);
+    }
+
+    private function autoCheckInQueueAfterVerification(Booking $booking): void
+    {
+        $bookingDate = $booking->booking_date?->toDateString();
+
+        if ($bookingDate !== now()->toDateString()) {
+            return;
+        }
+
+        if ($booking->queueTicket) {
+            return;
+        }
+
+        $status = $booking->status instanceof BookingStatus
+            ? $booking->status->value
+            : (string) $booking->status;
+
+        if (! in_array($status, [BookingStatus::Confirmed->value, BookingStatus::Paid->value], true)) {
+            return;
+        }
+
+        try {
+            $this->queueService->checkInBooking($booking);
+        } catch (\RuntimeException) {
+            // Keep verification successful even if queue auto check-in is skipped.
+        }
+    }
+
+    private function remainingAmountForVerification(Booking $booking): float
+    {
+        if ($booking->transaction) {
+            return max(
+                (float) $booking->transaction->total_amount - (float) $booking->transaction->paid_amount,
+                0
+            );
+        }
+
+        return max((float) $booking->total_amount - (float) $booking->paid_amount, 0);
     }
 }

@@ -16,6 +16,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    addOns: {
+        type: Array,
+        default: () => [],
+    },
     oldValues: {
         type: Object,
         default: () => ({}),
@@ -32,80 +36,30 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    navigation: {
+        type: Array,
+        default: () => [],
+    },
+    ui: {
+        type: Object,
+        default: () => ({}),
+    },
     csrfToken: {
         type: String,
         required: true,
     },
 });
 
-const stepLabels = ['Paket', 'Tanggal', 'Waktu', 'Add-on'];
+const stepLabels = computed(() => {
+    const source = Array.isArray(props.ui?.steps) ? props.ui.steps : [];
+    const rows = source
+        .map((item) => String(item || '').trim())
+        .filter((item) => item !== '');
 
-const addOnCatalog = [
-    { id: 'extra-person', label: '+ 1 orang (include cetak 1 4R)', price: 15000 },
-    { id: 'extra-print', label: '+ 1 cetak 4R', price: 15000 },
-    { id: 'extra-time', label: '+ 5 menit durasi foto', price: 20000 },
-    { id: 'costume', label: 'Sewa 1 kostum', price: 10000 },
-    { id: 'ganci-bening', label: 'Ganci bening 1 pcs', price: 10000 },
-    { id: 'ganci-besi', label: 'Ganci besi 1 pcs', price: 20000 },
-    { id: 'diy', label: 'DIY 1 pcs', price: 5000 },
-];
-
-const addOnMax = {
-    'extra-person': 5,
-    'extra-print': 10,
-    'extra-time': 3,
-    costume: 5,
-    'ganci-bening': 10,
-    'ganci-besi': 10,
-    diy: 10,
-};
+    return rows.length ? rows : ['Step'];
+});
 
 const packageAccentTokens = ['#2563eb', '#ec4899', '#22c55e', '#f59e0b', '#0ea5e9', '#8b5cf6'];
-
-const packagePhotoCatalog = {
-    basic: [
-        {
-            src: 'https://images.unsplash.com/photo-1638108413764-3ca5cefc242d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaG90byUyMHN0dWRpbyUyMHBvcnRyYWl0JTIwYmFzaWMlMjBzZWxmaWUlMjBib290aHxlbnwxfHx8fDE3NzUzODgyMzl8MA&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Portrait Studio',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1582510870942-6b1b57c94992?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaG90byUyMGJvb3RoJTIwZnJpZW5kcyUyMGdyb3VwJTIwcG9ydHJhaXQlMjBzdHVkaW98ZW58MXx8fHwxNzc1Mzg4MjQ0fDA&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Group Photo',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1675979138868-374ff3176fc1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkaW8lMjBwb3J0cmFpdCUyMHBob3RvZ3JhcGh5JTIwcmluZyUyMGxpZ2h0fGVufDF8fHx8MTc3NTM4ODUyNnww&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Ring Light Portrait',
-        },
-    ],
-    'mandi-bola': [
-        {
-            src: 'https://images.unsplash.com/photo-1622600113744-fe36f577cb6b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiYWxsJTIwcGl0JTIwY29sb3JmdWwlMjBmdW4lMjBwaG90b3Nob290fGVufDF8fHx8MTc3NTM4ODIzOXww&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Mandi Bola',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1571513721963-d855fd8df4c2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2aW50YWdlJTIwcmV0cm8lMjBwaG90b3Nob290JTIwYWVzdGhldGljJTIwc3R1ZGlvfGVufDF8fHx8MTc3NTM4ODI0NHww&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Vintage',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1760727408754-c5c9ef169f8d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb2xvcmZ1bCUyMGJhbGwlMjBwaXQlMjBjaGlsZHJlbiUyMHBsYXklMjBhZXN0aGV0aWN8ZW58MXx8fHwxNzc1Mzg4NTIxfDA&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Colorful Fun',
-        },
-    ],
-    minimarket: [
-        {
-            src: 'https://images.unsplash.com/photo-1772113726165-623176411022?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFya2V0JTIwY29udmVuaWVuY2UlMjBzdG9yZSUyMGFlc3RoZXRpYyUyMHBob3Rvc2hvb3R8ZW58MXx8fHwxNzc1Mzg4MjM5fDA&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Minimarket',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1645636511736-cb60b1bb0ce1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb2ZhJTIwY291Y2glMjBsaWZlc3R5bGUlMjBwaG90b3Nob290JTIwc3R1ZGlvfGVufDF8fHx8MTc3NTM4ODI0NHww&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Sofa',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1745267199638-e74b14870044?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncm9jZXJ5JTIwc3RvcmUlMjBhaXNsZSUyMHNoZWx2ZXMlMjBhZXN0aGV0aWN8ZW58MXx8fHwxNzc1Mzg4NTI2fDA&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Grocery Aesthetic',
-        },
-    ],
-};
 
 const asString = (value) => (value === null || value === undefined ? '' : String(value));
 const normalizeTime = (value) => asString(value).slice(0, 5);
@@ -133,6 +87,7 @@ const isMobile = ref(false);
 const activeMobileStep = ref(0);
 
 let slotAbortController = null;
+let slotRefreshIntervalId = null;
 
 const filteredPackages = computed(() => {
     if (!branchId.value) {
@@ -162,24 +117,32 @@ const selectedPackage = computed(() => {
 
 const showBranchSelector = computed(() => props.branches.length > 1);
 
+const availableAddOns = computed(() => {
+    const selectedPackageId = Number(packageId.value || 0);
+
+    return (props.addOns || [])
+        .filter((item) => {
+            const addOnPackageId = item.package_id ? Number(item.package_id) : null;
+
+            return addOnPackageId === null || !selectedPackageId || addOnPackageId === selectedPackageId;
+        })
+        .map((item) => ({
+            id: asString(item.id),
+            code: asString(item.code || ''),
+            label: asString(item.name || item.label || '-'),
+            description: asString(item.description || ''),
+            price: Number(item.price || 0),
+            max_qty: Math.max(1, Number(item.max_qty || 1)),
+        }));
+});
+
 const selectedPackagePhotoSet = computed(() => {
-    const selected = selectedPackage.value;
-
-    if (!selected) {
-        return packagePhotoCatalog.basic;
-    }
-
-    const source = `${asString(selected.code)} ${asString(selected.name)}`.toLowerCase();
-
-    if (source.includes('mandi bola') || source.includes('mandi-bola') || source.includes('vintage')) {
-        return packagePhotoCatalog['mandi-bola'];
-    }
-
-    if (source.includes('mini') || source.includes('sofa') || source.includes('market')) {
-        return packagePhotoCatalog.minimarket;
-    }
-
-    return packagePhotoCatalog.basic;
+    return filteredDesignCatalogs.value
+        .filter((item) => asString(item.preview_url).trim() !== '')
+        .map((item) => ({
+            src: asString(item.preview_url),
+            label: asString(item.name || 'Design Preview'),
+        }));
 });
 
 const selectedBookingDateObject = computed({
@@ -218,7 +181,7 @@ const selectedBranch = computed(() => {
 });
 
 const activeAddons = computed(() => {
-    return addOnCatalog.filter((item) => Number(addonQty.value[item.id] || 0) > 0);
+    return availableAddOns.value.filter((item) => Number(addonQty.value[item.id] || 0) > 0);
 });
 
 const selectedAddonsPayload = computed(() => {
@@ -241,8 +204,6 @@ const addOnTotal = computed(() => {
 const basePrice = computed(() => Number(selectedPackage.value?.base_price || 0));
 
 const totalPrice = computed(() => basePrice.value + addOnTotal.value);
-
-const totalPeople = computed(() => 2 + Number(addonQty.value['extra-person'] || 0));
 
 const canSubmit = computed(() => {
     return Boolean(
@@ -430,6 +391,24 @@ const loadAvailability = async () => {
     }
 };
 
+const startAutoRefreshAvailability = () => {
+    if (slotRefreshIntervalId) {
+        window.clearInterval(slotRefreshIntervalId);
+    }
+
+    slotRefreshIntervalId = window.setInterval(() => {
+        if (document.hidden) {
+            return;
+        }
+
+        if (!branchId.value || !packageId.value || !bookingDate.value) {
+            return;
+        }
+
+        loadAvailability();
+    }, 15000);
+};
+
 const choosePackage = (id) => {
     packageId.value = asString(id);
 };
@@ -443,10 +422,13 @@ const chooseSlot = (slot) => {
 };
 
 const incAddon = (addonId) => {
+    const addon = availableAddOns.value.find((item) => asString(item.id) === asString(addonId));
     const current = Number(addonQty.value[addonId] || 0);
+    const maxQty = Math.max(1, Number(addon?.max_qty || 1));
+
     addonQty.value = {
         ...addonQty.value,
-        [addonId]: Math.min(current + 1, Number(addOnMax[addonId] || 5)),
+        [addonId]: Math.min(current + 1, maxQty),
     };
 };
 
@@ -467,7 +449,7 @@ const decAddon = (addonId) => {
 };
 
 const nextStep = () => {
-    if (activeMobileStep.value >= stepLabels.length - 1) {
+    if (activeMobileStep.value >= stepLabels.value.length - 1) {
         return;
     }
 
@@ -565,6 +547,7 @@ onMounted(() => {
 
     updateMobileState();
     window.addEventListener('resize', updateMobileState);
+    startAutoRefreshAvailability();
 });
 
 onBeforeUnmount(() => {
@@ -573,12 +556,17 @@ onBeforeUnmount(() => {
     if (slotAbortController) {
         slotAbortController.abort();
     }
+
+    if (slotRefreshIntervalId) {
+        window.clearInterval(slotRefreshIntervalId);
+        slotRefreshIntervalId = null;
+    }
 });
 </script>
 
 <template>
     <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
-        <PublicBookingNavbar :routes="props.routes" :site="props.site" />
+        <PublicBookingNavbar :routes="props.routes" :site="props.site" :navigation="props.navigation" />
 
         <div class="pointer-events-none absolute inset-0 overflow-hidden">
             <div class="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-[#2563EB]/5" />
@@ -719,14 +707,10 @@ onBeforeUnmount(() => {
                                         </p>
 
                                         <div class="mt-3 space-y-1">
-                                            <div class="flex items-center gap-1.5 text-xs text-gray-500">1–2 orang</div>
                                             <div class="flex items-center gap-1.5 text-xs text-gray-500">Durasi {{ formatDuration(pkg.duration_minutes) }}</div>
-                                            <div class="flex items-center gap-1.5 text-xs text-gray-500">1 cetak 4R + all soft file</div>
+                                            <div class="line-clamp-2 text-xs text-gray-500">{{ pkg.description || 'Lihat detail paket saat pemesanan.' }}</div>
                                         </div>
 
-                                        <div class="mt-2 w-fit rounded-md bg-gray-100 px-2 py-0.5 text-[0.65rem] text-gray-400">
-                                            {{ index % 2 === 0 ? 'Device 1' : 'Device 2' }}
-                                        </div>
                                     </button>
                                 </div>
                             </div>
@@ -849,15 +833,16 @@ onBeforeUnmount(() => {
                             </div>
 
                             <div class="space-y-4 p-4 sm:p-6">
-                                <div class="grid gap-2 sm:grid-cols-2">
+                                <div v-if="availableAddOns.length" class="grid gap-2 sm:grid-cols-2">
                                     <div
-                                        v-for="addon in addOnCatalog"
+                                        v-for="addon in availableAddOns"
                                         :key="addon.id"
                                         class="flex items-center justify-between rounded-xl border border-slate-300 px-4 py-3 transition-all duration-200"
                                         :class="Number(addonQty[addon.id] || 0) > 0 ? 'border-[#2563EB] bg-[#2563EB]/5' : 'border-gray-200 bg-white'"
                                     >
                                         <div class="mr-3 min-w-0 flex-1">
                                             <p class="truncate text-sm text-[#1F2937]">{{ addon.label }}</p>
+                                            <p v-if="addon.description" class="truncate text-[11px] text-[#64748B]">{{ addon.description }}</p>
                                             <p class="text-xs text-[#2563EB]" style="font-weight: 600;">
                                                 {{ formatRupiah(addon.price) }}
                                                 <span class="text-gray-400" style="font-weight: 400;"> / item</span>
@@ -878,8 +863,8 @@ onBeforeUnmount(() => {
                                             <button
                                                 type="button"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg transition-all"
-                                                :class="Number(addonQty[addon.id] || 0) >= Number(addOnMax[addon.id] || 5) ? 'cursor-not-allowed bg-gray-100 text-gray-300' : 'bg-[#2563EB] text-white shadow-sm hover:bg-[#2563EB]/90'"
-                                                :disabled="Number(addonQty[addon.id] || 0) >= Number(addOnMax[addon.id] || 5)"
+                                                :class="Number(addonQty[addon.id] || 0) >= Number(addon.max_qty || 1) ? 'cursor-not-allowed bg-gray-100 text-gray-300' : 'bg-[#2563EB] text-white shadow-sm hover:bg-[#2563EB]/90'"
+                                                :disabled="Number(addonQty[addon.id] || 0) >= Number(addon.max_qty || 1)"
                                                 @click="incAddon(addon.id)"
                                             >
                                                 +
@@ -887,6 +872,9 @@ onBeforeUnmount(() => {
                                         </div>
                                     </div>
                                 </div>
+                                <p v-else class="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                                    Belum ada add-on aktif untuk paket ini.
+                                </p>
 
                                 <div class="space-y-4 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
                                     <h3 class="text-[#1F2937]" style="font-size: 0.875rem; font-weight: 600;">Data Pemesan</h3>
@@ -969,11 +957,6 @@ onBeforeUnmount(() => {
                                     <span class="text-sm text-[#1F2937]" style="font-weight: 600;">{{ bookingTime || 'Belum dipilih' }}</span>
                                 </div>
 
-                                <div class="flex items-center justify-between border border-slate-300 rounded-lg bg-gray-50 p-3">
-                                    <span class="text-sm text-gray-600">Jumlah Orang</span>
-                                    <span class="text-sm text-[#1F2937]" style="font-weight: 600;">{{ totalPeople }} orang</span>
-                                </div>
-
                                 <div v-if="selectedBranch" class="flex items-center justify-between border border-slate-300 rounded-lg bg-gray-700 p-3">
                                     <span class="text-sm text-gray-600">Cabang</span>
                                     <span class="text-sm text-[#1F2937]" style="font-weight: 600;">{{ selectedBranch.name }}</span>
@@ -1032,34 +1015,39 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
                             <div class="p-0">
-                                <div
-                                    class="photo-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-3"
-                                    style="-ms-overflow-style: none; scrollbar-width: none;"
-                                >
+                                <template v-if="selectedPackagePhotoSet.length">
                                     <div
-                                        v-for="(photo, index) in selectedPackagePhotoSet"
-                                        :key="`photo-${index}`"
-                                        class="group relative h-[200px] w-[280px] flex-shrink-0 snap-center overflow-hidden rounded-xl"
+                                        class="photo-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-3"
+                                        style="-ms-overflow-style: none; scrollbar-width: none;"
                                     >
-                                        <img :src="photo.src" :alt="photo.label" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
-                                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                                        <div class="absolute inset-x-0 bottom-0 px-3 pb-3">
-                                            <span class="text-xs text-white" style="font-weight: 600;">{{ photo.label }}</span>
-                                            <p class="mt-0.5 text-[0.6rem] text-white/70">Paket {{ selectedPackage?.name || '-' }}</p>
-                                        </div>
-                                        <div class="absolute right-2 top-2 rounded-full bg-black/40 px-2 py-0.5 text-[0.6rem] text-white">
-                                            {{ index + 1 }}/{{ selectedPackagePhotoSet.length }}
+                                        <div
+                                            v-for="(photo, index) in selectedPackagePhotoSet"
+                                            :key="`photo-${index}`"
+                                            class="group relative h-[200px] w-[280px] flex-shrink-0 snap-center overflow-hidden rounded-xl"
+                                        >
+                                            <img :src="photo.src" :alt="photo.label" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                            <div class="absolute inset-x-0 bottom-0 px-3 pb-3">
+                                                <span class="text-xs text-white" style="font-weight: 600;">{{ photo.label }}</span>
+                                                <p class="mt-0.5 text-[0.6rem] text-white/70">Paket {{ selectedPackage?.name || '-' }}</p>
+                                            </div>
+                                            <div class="absolute right-2 top-2 rounded-full bg-black/40 px-2 py-0.5 text-[0.6rem] text-white">
+                                                {{ index + 1 }}/{{ selectedPackagePhotoSet.length }}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="flex justify-center gap-1.5 pb-3">
-                                    <div
-                                        v-for="(photo, index) in selectedPackagePhotoSet"
-                                        :key="`photo-indicator-${index}`"
-                                        class="h-1.5 rounded-full bg-gray-200 transition-all"
-                                        :style="index === 0 ? { width: '16px', backgroundColor: '#2563EB' } : { width: '6px' }"
-                                    />
-                                </div>
+                                    <div class="flex justify-center gap-1.5 pb-3">
+                                        <div
+                                            v-for="(photo, index) in selectedPackagePhotoSet"
+                                            :key="`photo-indicator-${index}`"
+                                            class="h-1.5 rounded-full bg-gray-200 transition-all"
+                                            :style="index === 0 ? { width: '16px', backgroundColor: '#2563EB' } : { width: '6px' }"
+                                        />
+                                    </div>
+                                </template>
+                                <p v-else class="px-4 py-6 text-center text-xs text-[#94A3B8]">
+                                    Belum ada preview desain aktif untuk paket ini.
+                                </p>
                             </div>
                         </div>
                     </aside>

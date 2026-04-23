@@ -3,7 +3,8 @@
 ## Tech Stack
 
 - Backend: Laravel 12
-- Admin Panel: Filament 4 + Livewire 3
+- Admin Panel Runtime: Vue admin shell (`AdminDashboardApp.vue`) + Laravel web controllers/services
+- Admin Fallback: Filament 4 + Livewire 3 (toggleable via env)
 - Frontend: Vue 3 + Vite 7
 - Styling: Tailwind CSS 4
 - Database target: PostgreSQL (project requirement)
@@ -52,6 +53,24 @@ File: `vite.config.js`
 - Plugin aktif: Laravel plugin, Vue plugin, Tailwind plugin.
 - Watch ignore: `storage/framework/views/**` untuk menghindari loop rebuild dari compiled Blade.
 
+## Frontend Admin Structure
+
+- Entry admin Vue:
+  - `resources/js/admin/AdminDashboardApp.vue`
+- Admin pages (UI per modul):
+  - `resources/js/admin/pages/*`
+- Admin composables (state + API layer modul parity):
+  - `resources/js/admin/composables/useBranchesModule.js`
+  - `resources/js/admin/composables/useTimeSlotsModule.js`
+  - `resources/js/admin/composables/useBlackoutDatesModule.js`
+  - `resources/js/admin/composables/usePaymentsModule.js`
+  - `resources/js/admin/composables/usePrinterSettingsModule.js`
+  - `resources/js/admin/composables/useAppSettingsModule.js`
+- Tujuan modularisasi:
+  - `AdminDashboardApp.vue` fokus sebagai orchestrator layout/routing modul.
+  - Logic CRUD/fetch tiap modul dipisah agar maintenance lebih mudah dan risiko konflik perubahan lebih kecil.
+  - Label/menu admin utama dikirim dari backend melalui `uiConfig` (App Setting group `ui.admin`) agar frontend tidak menyimpan label statis.
+
 ## CSS Pipeline
 
 File: `resources/css/app.css`
@@ -71,6 +90,9 @@ Dari `.env.example`:
 
 - APP:
   - `APP_ENV`, `APP_DEBUG`, `APP_URL`
+  - `ADMIN_UI_DRIVER` (`vue` atau `filament`)
+  - `ADMIN_UI_BLOCK_FILAMENT_ROUTES` (`true|false`)
+  - `ADMIN_UI_LEGACY_REDIRECTS` (`true|false`)
 - DB:
   - default contoh `sqlite`, tapi untuk project ini gunakan PostgreSQL di `.env`
   - set minimal: `DB_CONNECTION=pgsql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
@@ -78,6 +100,13 @@ Dari `.env.example`:
   - default contoh: `SESSION_DRIVER=database`, `QUEUE_CONNECTION=database`, `CACHE_STORE=database`
 - Mail:
   - default `MAIL_MAILER=log` (ubah untuk SMTP jika dibutuhkan)
+
+## App Settings Groups
+
+- `general`: brand/site identity.
+- `booking`: behavior booking/queue.
+- `payment`: toggle metode pembayaran.
+- `ui`: konfigurasi label/menu frontend (`ui.admin` untuk dashboard admin dan `ui.booking` untuk navbar/step booking).
 
 ## Cache & Rebuild Rekomendasi Setelah Perubahan Konfigurasi
 
