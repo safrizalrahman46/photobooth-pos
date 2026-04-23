@@ -2,6 +2,23 @@
 
 ## 2026-04-23
 
+### Dynamic Frontend Data + UI Config Externalization
+
+- Menghilangkan hardcoded data bisnis di frontend booking dan menggantinya dengan payload backend:
+  - add-ons aktif dari database
+  - preview desain dari catalog aktif
+  - langkah booking mobile (`ui.booking.steps`)
+  - navbar public (`ui.booking.navigation`)
+- Menambahkan group App Settings baru `ui` untuk mengelola konfigurasi label/menu frontend secara terpusat.
+- Menambahkan dukungan update `ui` pada `AdminAppSettingService` dan editor group `UI` di page `AppSettingsPage.vue`.
+- Menambahkan `uiConfig` ke bootstrap admin dashboard agar menu/group/topbar/filter tabs/settings tabs admin tidak hardcoded di Vue.
+- Menambahkan `brand` dan `currentUser` dari backend ke frontend admin untuk menghapus profil contoh statis di sidebar.
+- Memperbarui `AdminDashboardApp.vue` agar menu admin dibentuk dari konfigurasi `ui.admin.nav_items` dan `ui.admin.nav_groups`, termasuk mapping icon key dinamis.
+- Memperbarui blade booking create/payment untuk menyuntikkan konfigurasi `ui.booking` sebagai props Vue.
+- Validasi teknis:
+  - lint PHP untuk file service/controller/blade terkait berhasil.
+  - `npm run build` berhasil.
+
 ### Admin Vue Modular Composable Refactor + Wiring Stabilization
 
 - Merapikan dokumentasi dan wiring modul parity terbaru pada admin Vue agar tidak terjadi blank page/reference error.

@@ -14,3 +14,4 @@ Folder ini menyimpan dokumentasi konfigurasi dan perubahan implementasi proyek.
 - `booking-flow.md`: alur booking publik termasuk page data pemesan sebelum booking sesi foto.
 - `admin-dashboard-config.md`: konfigurasi dashboard admin (Filament + Vue + endpoint data).
 - `change-log.md`: catatan perubahan yang sudah diimplementasikan.
+- `implementation-update-2026-04-23.md`: dokumentasi lengkap perubahan terbaru terkait dynamic frontend data dan konfigurasi UI berbasis backend.
