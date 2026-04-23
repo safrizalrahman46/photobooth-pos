@@ -8,10 +8,12 @@ use App\Http\Requests\QueueCallNextRequest;
 use App\Http\Requests\QueueCheckInRequest;
 use App\Http\Requests\QueueTransitionRequest;
 use App\Http\Requests\QueueWalkInRequest;
+use App\Models\Booking;
 use App\Models\QueueTicket;
 use App\Services\AdminQueuePageService;
 use App\Services\QueueService;
 use Illuminate\Http\JsonResponse;
+use RuntimeException;
 
 class AdminQueueController extends Controller
 {
@@ -28,7 +30,14 @@ class AdminQueueController extends Controller
         $payload = $request->validated();
         $queueDate = (string) ($payload['queue_date'] ?? now()->toDateString());
 
-        $queueService->callNextForBranch((int) $payload['branch_id'], $payload['queue_date'] ?? null);
+        try {
+            $queueService->callNext((int) $payload['branch_id'], $queueDate);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
@@ -39,7 +48,26 @@ class AdminQueueController extends Controller
 
     public function checkIn(QueueCheckInRequest $request, QueueService $queueService, AdminQueuePageService $service): JsonResponse
     {
-        $ticket = $queueService->checkInByBookingId((int) $request->validated('booking_id'));
+        $booking = Booking::query()
+            ->whereKey((int) $request->validated('booking_id'))
+            ->with('queueTicket')
+            ->firstOrFail();
+
+        if ($booking->queueTicket) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking ini sudah memiliki tiket antrean.',
+            ], 422);
+        }
+
+        try {
+            $ticket = $queueService->checkInBooking($booking);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
@@ -71,7 +99,14 @@ class AdminQueueController extends Controller
         $payload = $request->validated();
         $queueDate = (string) ($payload['queue_date'] ?? now()->toDateString());
 
-        $queueService->createWalkInFromPayload($payload);
+        try {
+            $queueService->createWalkIn($payload);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,

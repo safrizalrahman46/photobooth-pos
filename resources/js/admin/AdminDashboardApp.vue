@@ -350,6 +350,8 @@ const props = defineProps({
 
 const search = ref('');
 const filterStatus = ref('all');
+const bookingSortBy = ref('date_time');
+const bookingSortDir = ref('desc');
 const activeRevenuePeriod = ref('7d');
 const loading = ref(false);
 const mobileOpen = ref(false);
@@ -857,6 +859,11 @@ const normalizedRows = computed(() => {
         paid_amount: Number(row.paid_amount || 0),
         remaining_amount: Number(row.remaining_amount || 0),
         notes: String(row.notes || ''),
+        payment_reference: String(row.payment_reference || ''),
+        transfer_proof_url: String(row.transfer_proof_url || ''),
+        transfer_proof_file_name: String(row.transfer_proof_file_name || ''),
+        transfer_proof_uploaded_at: String(row.transfer_proof_uploaded_at || ''),
+        transfer_proof_uploaded_at_text: String(row.transfer_proof_uploaded_at_text || ''),
         transaction_id: row.transaction_id ? Number(row.transaction_id) : null,
         can_confirm_booking: Boolean(row.can_confirm_booking),
         can_confirm_payment: Boolean(row.can_confirm_payment),
@@ -2375,6 +2382,7 @@ const confirmBooking = async ({ id, reason = '' }) => {
         }
 
         await refreshBookings(Number(pagination.value.current_page || 1));
+        await fetchQueueData({ silent: true });
     } catch (error) {
         bookingError.value = error instanceof Error ? error.message : 'Failed to confirm booking.';
         throw error;
@@ -2631,6 +2639,8 @@ const fetchRows = async (page = 1) => {
         params.set('page', String(page));
         params.set('per_page', String(pagination.value.per_page || 15));
         params.set('status', String(filterStatus.value || 'all'));
+        params.set('sort_by', String(bookingSortBy.value || 'date_time'));
+        params.set('sort_dir', String(bookingSortDir.value || 'desc'));
 
         if (trimmedSearch) {
             params.set('search', trimmedSearch);
@@ -2675,6 +2685,24 @@ const fetchRows = async (page = 1) => {
 
 const setFilterStatus = (status) => {
     filterStatus.value = status;
+    fetchRows(1);
+};
+
+const setBookingSort = (sortBy) => {
+    const key = String(sortBy || '').trim();
+    const allowedSorts = ['booking_code', 'customer', 'package', 'date_time', 'amount', 'payment', 'status'];
+
+    if (!allowedSorts.includes(key)) {
+        return;
+    }
+
+    if (bookingSortBy.value === key) {
+        bookingSortDir.value = bookingSortDir.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        bookingSortBy.value = key;
+        bookingSortDir.value = key === 'date_time' ? 'desc' : 'asc';
+    }
+
     fetchRows(1);
 };
 
@@ -3024,6 +3052,8 @@ onBeforeUnmount(() => {
                             :search="search"
                             :filter-status="filterStatus"
                             :filter-tabs="filterTabs"
+                            :sort-by="bookingSortBy"
+                            :sort-dir="bookingSortDir"
                             :panel-bookings-url="panelBookingsUrl"
                             :normalized-rows="normalizedRows"
                             :loading="loading"
@@ -3041,6 +3071,7 @@ onBeforeUnmount(() => {
                             :resolve-booking-status="resolveBookingStatus"
                             @update:search="search = $event"
                             @set-filter-status="setFilterStatus"
+                            @set-sort="setBookingSort"
                             @refresh-bookings="refreshBookings()"
                             @create-booking="createBooking"
                             @update-booking="updateBooking"

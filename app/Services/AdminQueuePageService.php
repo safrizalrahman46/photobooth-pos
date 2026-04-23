@@ -85,6 +85,7 @@ class AdminQueuePageService
                 QueueStatus::Waiting->value,
                 QueueStatus::Called->value,
                 QueueStatus::CheckedIn->value,
+                QueueStatus::Skipped->value,
             ])
             ->orderBy('queue_number')
             ->limit(8)
@@ -132,6 +133,7 @@ class AdminQueuePageService
                     QueueStatus::Called->value,
                     QueueStatus::CheckedIn->value,
                     QueueStatus::InSession->value,
+                    QueueStatus::Skipped->value,
                 ])
                 ->count(),
             'in_session' => QueueTicket::query()
@@ -245,6 +247,7 @@ class AdminQueuePageService
             QueueStatus::Called->value => QueueStatus::CheckedIn->value,
             QueueStatus::CheckedIn->value => QueueStatus::InSession->value,
             QueueStatus::InSession->value => QueueStatus::Finished->value,
+            QueueStatus::Skipped->value => QueueStatus::Called->value,
             default => null,
         };
     }

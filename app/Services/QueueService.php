@@ -138,6 +138,16 @@ class QueueService
             ->first();
 
         if (! $ticket) {
+            $ticket = QueueTicket::query()
+                ->where('branch_id', $branchId)
+                ->where('queue_date', $date)
+                ->where('status', QueueStatus::Skipped)
+                ->orderByDesc('priority')
+                ->orderBy('queue_number')
+                ->first();
+        }
+
+        if (! $ticket) {
             return null;
         }
 

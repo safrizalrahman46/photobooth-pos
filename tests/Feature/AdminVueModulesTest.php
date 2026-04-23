@@ -185,6 +185,68 @@ class AdminVueModulesTest extends TestCase
         $this->assertSame(0, (int) ($slot['remaining_slots'] ?? -1));
     }
 
+    public function test_booking_availability_marks_past_time_slots_as_unavailable_for_today(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-23 13:30:00', 'Asia/Jakarta'));
+
+        try {
+            $bookingDate = '2026-04-23';
+
+            $branch = Branch::query()->create([
+                'code' => 'BRANCH-SLOT-PAST-01',
+                'name' => 'Branch Slot Past',
+                'timezone' => 'Asia/Jakarta',
+                'is_active' => true,
+            ]);
+
+            $package = Package::query()->create([
+                'branch_id' => $branch->id,
+                'code' => 'PKG-SLOT-PAST-01',
+                'name' => 'Package Slot Past',
+                'duration_minutes' => 30,
+                'base_price' => 100000,
+                'is_active' => true,
+                'sort_order' => 0,
+            ]);
+
+            TimeSlot::query()->create([
+                'branch_id' => $branch->id,
+                'slot_date' => $bookingDate,
+                'start_time' => '10:00:00',
+                'end_time' => '11:00:00',
+                'capacity' => 1,
+                'is_bookable' => true,
+            ]);
+
+            TimeSlot::query()->create([
+                'branch_id' => $branch->id,
+                'slot_date' => $bookingDate,
+                'start_time' => '14:00:00',
+                'end_time' => '15:00:00',
+                'capacity' => 1,
+                'is_bookable' => true,
+            ]);
+
+            $slots = collect(
+                $this->getJson('/booking/availability?branch_id='.$branch->id.'&package_id='.$package->id.'&date='.$bookingDate)
+                    ->assertOk()
+                    ->assertJsonPath('success', true)
+                    ->json('data')
+            );
+
+            $pastSlot = $slots->firstWhere('start_time', '10:00:00');
+            $futureSlot = $slots->firstWhere('start_time', '14:00:00');
+
+            $this->assertNotNull($pastSlot);
+            $this->assertNotNull($futureSlot);
+            $this->assertFalse((bool) ($pastSlot['is_available'] ?? true));
+            $this->assertSame(0, (int) ($pastSlot['remaining_slots'] ?? -1));
+            $this->assertTrue((bool) ($futureSlot['is_available'] ?? false));
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_app_setting_rejects_unknown_group(): void
     {
         $user = User::factory()->create();

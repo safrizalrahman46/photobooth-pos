@@ -129,5 +129,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('/bookings/{booking}', [AdminBookingController::class, 'destroy']);
         Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm']);
         Route::post('/bookings/{booking}/confirm-payment', [AdminBookingController::class, 'confirmPayment']);
+        Route::get('/bookings/{booking}/transfer-proof', [AdminBookingController::class, 'transferProof'])->name('bookings.transfer-proof');
     });
 });

@@ -22,6 +22,7 @@ use App\Models\BlackoutDate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 
 class AdminDashboardDataService
@@ -30,11 +31,17 @@ class AdminDashboardDataService
         private readonly AdminQueuePageService $adminQueuePageService,
     ) {}
 
-    public function bootstrapPayload(string $search = '', string $status = 'all', int $perPage = 15): array
+    public function bootstrapPayload(
+        string $search = '',
+        string $status = 'all',
+        int $perPage = 15,
+        string $sortBy = 'date_time',
+        string $sortDir = 'desc',
+    ): array
     {
         return array_merge(
             $this->snapshot(),
-            $this->rowsPayload($search, $status, $perPage),
+            $this->rowsPayload($search, $status, $perPage, $sortBy, $sortDir),
         );
     }
 
@@ -561,9 +568,15 @@ class AdminDashboardDataService
             ->all();
     }
 
-    public function rowsPayload(string $search = '', string $status = 'all', int $perPage = 15): array
+    public function rowsPayload(
+        string $search = '',
+        string $status = 'all',
+        int $perPage = 15,
+        string $sortBy = 'date_time',
+        string $sortDir = 'desc',
+    ): array
     {
-        $paginator = $this->paginatedRows($search, $status, $perPage);
+        $paginator = $this->paginatedRows($search, $status, $perPage, $sortBy, $sortDir);
 
         return [
             'rows' => $paginator->items(),
@@ -743,7 +756,13 @@ class AdminDashboardDataService
         ];
     }
 
-    public function paginatedRows(string $search = '', string $status = 'all', int $perPage = 15): LengthAwarePaginator
+    public function paginatedRows(
+        string $search = '',
+        string $status = 'all',
+        int $perPage = 15,
+        string $sortBy = 'date_time',
+        string $sortDir = 'desc',
+    ): LengthAwarePaginator
     {
         $perPage = max(1, min($perPage, 100));
 
@@ -756,12 +775,11 @@ class AdminDashboardDataService
                 'transaction:id,booking_id,total_amount,paid_amount,status',
                 'transaction.payments:id,transaction_id,method',
                 'transaction.items:id,transaction_id,item_type,item_ref_id,item_name,qty,unit_price,line_total',
-            ])
-            ->latest('booking_date')
-            ->latest('start_at');
+            ]);
 
         $this->applyStatusFilter($query, $status);
         $this->applySearchFilter($query, $search);
+        $this->applySort($query, $sortBy, $sortDir);
 
         $paginator = $query->paginate($perPage)->withQueryString();
 
@@ -1221,6 +1239,34 @@ class AdminDashboardDataService
         });
     }
 
+    protected function applySort(Builder $query, string $sortBy, string $sortDir): void
+    {
+        $direction = strtolower($sortDir) === 'asc' ? 'asc' : 'desc';
+
+        match ($sortBy) {
+            'booking_code' => $query->orderBy('booking_code', $direction),
+            'customer' => $query->orderBy('customer_name', $direction),
+            'package' => $query->orderBy(
+                Package::query()
+                    ->select('name')
+                    ->whereColumn('packages.id', 'bookings.package_id')
+                    ->limit(1),
+                $direction
+            ),
+            'amount' => $query
+                ->orderBy('total_amount', $direction)
+                ->orderBy('paid_amount', $direction),
+            'payment' => $query
+                ->orderBy('paid_amount', $direction)
+                ->orderBy('total_amount', $direction),
+            'status' => $query->orderBy('status', $direction),
+            default => $query
+                ->orderBy('booking_date', $direction)
+                ->orderBy('start_at', $direction)
+                ->orderBy('id', $direction),
+        };
+    }
+
     protected function toDashboardRow(Booking $booking): array
     {
         $status = $this->mapUiStatus((string) $booking->status->value);
@@ -1265,6 +1311,21 @@ class AdminDashboardDataService
         $paidAmount = (float) $booking->paid_amount;
         $remainingAmount = max($totalAmount - $paidAmount, 0);
         $paymentStatus = $this->resolveBookingPaymentStatus($booking);
+        $transferProofPath = $this->normalizePublicDiskPath((string) ($booking->transfer_proof_path ?? ''));
+        $transferProofExists = $transferProofPath !== '' && Storage::disk('public')->exists($transferProofPath);
+        $transferProofUrl = $transferProofExists
+            ? route('admin.bookings.transfer-proof', ['booking' => (int) $booking->id], false)
+            : '';
+        $transferProofUploadedAt = $booking->transfer_proof_uploaded_at;
+        $statusValue = (string) $booking->status->value;
+        $isClosedStatus = in_array($statusValue, [
+            BookingStatus::Cancelled->value,
+            BookingStatus::Done->value,
+        ], true);
+        $canConfirmBooking = ! $isClosedStatus
+            && $booking->approved_at === null
+            && $remainingAmount <= 0;
+        $canConfirmPayment = ! $isClosedStatus && $remainingAmount > 0;
 
         return [
             'record_id' => (int) $booking->id,
@@ -1282,7 +1343,7 @@ class AdminDashboardDataService
             'booking_date_iso' => $booking->booking_date?->toDateString(),
             'start_time' => $booking->start_at?->format('H:i') ?? '',
             'status' => $status,
-            'status_raw' => (string) $booking->status->value,
+            'status_raw' => $statusValue,
             'payment' => $this->paymentLabel($booking),
             'payment_status' => $paymentStatus,
             'pkg' => (string) ($booking->package?->name ?? '-'),
@@ -1293,15 +1354,14 @@ class AdminDashboardDataService
             'paid_amount' => $paidAmount,
             'remaining_amount' => $remainingAmount,
             'notes' => (string) ($booking->notes ?? ''),
+            'payment_reference' => (string) ($booking->payment_reference ?? ''),
+            'transfer_proof_url' => (string) $transferProofUrl,
+            'transfer_proof_file_name' => $transferProofExists ? basename($transferProofPath) : '',
+            'transfer_proof_uploaded_at' => $transferProofUploadedAt?->toIso8601String(),
+            'transfer_proof_uploaded_at_text' => $transferProofUploadedAt?->format('d M Y H:i') ?? '',
             'transaction_id' => $booking->transaction?->id ? (int) $booking->transaction->id : null,
-            'can_confirm_booking' => (string) $booking->status->value === BookingStatus::Pending->value,
-            'can_confirm_payment' => in_array((string) $booking->status->value, [
-                BookingStatus::Confirmed->value,
-                BookingStatus::Paid->value,
-                BookingStatus::CheckedIn->value,
-                BookingStatus::InQueue->value,
-                BookingStatus::InSession->value,
-            ], true) && $remainingAmount > 0,
+            'can_confirm_booking' => $canConfirmBooking,
+            'can_confirm_payment' => $canConfirmPayment,
             'add_ons' => $addOns,
             'add_ons_count' => $addOns->count(),
             'add_ons_total' => (float) $addOns->sum('line_total'),
@@ -1531,5 +1591,20 @@ class AdminDashboardDataService
     protected function formatRupiah(float $amount): string
     {
         return 'Rp ' . number_format($amount, 0, ',', '.');
+    }
+
+    private function normalizePublicDiskPath(string $path): string
+    {
+        $normalized = trim(str_replace('\\', '/', $path), '/');
+
+        if (str_starts_with($normalized, 'public/')) {
+            return trim(substr($normalized, 7), '/');
+        }
+
+        if (str_starts_with($normalized, 'storage/')) {
+            return trim(substr($normalized, 8), '/');
+        }
+
+        return $normalized;
     }
 }

@@ -24,6 +24,7 @@ class SlotService
         $timezone = is_string($branchTimezone) && trim($branchTimezone) !== ''
             ? $branchTimezone
             : config('app.timezone', 'UTC');
+        $nowInTimezone = now($timezone);
 
         $isClosed = BlackoutDate::query()
             ->where('branch_id', $branchId)
@@ -50,10 +51,20 @@ class SlotService
             ->whereIn('status', BookingStatus::activeStatuses())
             ->get(['start_at', 'end_at']);
 
-        return $slots->map(function (TimeSlot $slot) use ($bookings, $package, $slotDate, $timezone) {
+        return $slots->map(function (TimeSlot $slot) use ($bookings, $package, $slotDate, $timezone, $nowInTimezone) {
             $slotStart = Carbon::createFromFormat('Y-m-d H:i:s', $slotDate.' '.$slot->start_time, $timezone);
             $slotEnd = Carbon::createFromFormat('Y-m-d H:i:s', $slotDate.' '.$slot->end_time, $timezone);
             $sessionEnd = $slotStart->copy()->addMinutes((int) $package->duration_minutes);
+
+            if ($slotStart->lte($nowInTimezone)) {
+                return [
+                    'slot_id' => $slot->id,
+                    'start_time' => $slot->start_time,
+                    'end_time' => $slot->end_time,
+                    'remaining_slots' => 0,
+                    'is_available' => false,
+                ];
+            }
 
             if ($sessionEnd->gt($slotEnd)) {
                 return [

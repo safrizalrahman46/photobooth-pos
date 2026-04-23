@@ -15,12 +15,16 @@ class AdminDashboardDataController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:all,pending,booked,used,expired'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'sort_by' => ['nullable', 'in:booking_code,customer,package,date_time,amount,payment,status'],
+            'sort_dir' => ['nullable', 'in:asc,desc'],
         ]);
 
         $rowsPayload = $service->rowsPayload(
             (string) ($payload['search'] ?? ''),
             (string) ($payload['status'] ?? 'all'),
             (int) ($payload['per_page'] ?? 15),
+            (string) ($payload['sort_by'] ?? 'date_time'),
+            (string) ($payload['sort_dir'] ?? 'desc'),
         );
 
         return response()->json([
