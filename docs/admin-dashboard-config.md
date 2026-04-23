@@ -16,10 +16,45 @@ Dokumen ini merangkum arsitektur admin terbaru berbasis Vue (`AdminDashboardApp.
 
 - Shell admin: route web `/admin` (controller `AdminDashboardController`).
 - Frontend shell: `resources/js/admin/AdminDashboardApp.vue`.
+- Halaman Vue dipisah per page di `resources/js/admin/pages/*`.
+- Logic state + API modul parity dipisah ke composable:
+  - `resources/js/admin/composables/useBranchesModule.js`
+  - `resources/js/admin/composables/useTimeSlotsModule.js`
+  - `resources/js/admin/composables/useBlackoutDatesModule.js`
+  - `resources/js/admin/composables/usePaymentsModule.js`
+  - `resources/js/admin/composables/usePrinterSettingsModule.js`
+  - `resources/js/admin/composables/useAppSettingsModule.js`
 - Bootstrap props dikirim dari `AdminDashboardController`, termasuk URL endpoint modul dan initial payload.
 - Legacy redirect kompatibilitas:
   - `/panel/* -> /admin` (jika `ADMIN_UI_LEGACY_REDIRECTS=true`)
   - `/admin/admin-dashboard -> /admin` (jika `ADMIN_UI_LEGACY_REDIRECTS=true`)
+
+## Bootstrap Endpoint Map (Parity Modules)
+
+- Branches:
+  - `branchesDataUrl`
+  - `branchStoreUrl`
+  - `branchBaseUrl`
+- Time slots:
+  - `timeSlotsDataUrl`
+  - `timeSlotStoreUrl`
+  - `timeSlotBaseUrl`
+  - `timeSlotGenerateUrl`
+  - `timeSlotBulkBookableUrl`
+- Blackout dates:
+  - `blackoutDatesDataUrl`
+  - `blackoutDateStoreUrl`
+  - `blackoutDateBaseUrl`
+- Payments:
+  - `paymentsDataUrl`
+  - `paymentsStoreUrlBase`
+- Printer settings:
+  - `printerSettingsDataUrl`
+  - `printerSettingStoreUrl`
+  - `printerSettingBaseUrl`
+- App settings:
+  - `appSettingsDataUrl`
+  - `appSettingBaseUrl`
 
 ## Route Matrix (Vue Mode)
 
@@ -54,3 +89,4 @@ Dokumen ini merangkum arsitektur admin terbaru berbasis Vue (`AdminDashboardApp.
 1. `php artisan route:list` menampilkan route `admin.*` baru.
 2. Dengan `ADMIN_UI_DRIVER=vue`, akses `filament/*` diblokir `404` (jika block aktif).
 3. `npm.cmd run build` sukses setelah update module Vue.
+4. Modul `/admin/branches`, `/admin/time-slots`, `/admin/blackout-dates`, `/admin/payments`, `/admin/printer-settings`, `/admin/app-settings` menampilkan page tanpa blank state akibat reference error.

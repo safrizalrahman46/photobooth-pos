@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-04-23
+
+### Admin Vue Modular Composable Refactor + Wiring Stabilization
+
+- Merapikan dokumentasi dan wiring modul parity terbaru pada admin Vue agar tidak terjadi blank page/reference error.
+- Menambahkan bootstrap URL parity module pada `AdminDashboardController` untuk kebutuhan fetch/action frontend:
+  - branches, time-slots, blackout-dates, payments, printer-settings, app-settings.
+- Mengekstrak logic state + API modul parity dari `AdminDashboardApp.vue` ke composable terpisah:
+  - `useBranchesModule`
+  - `useTimeSlotsModule`
+  - `useBlackoutDatesModule`
+  - `usePaymentsModule`
+  - `usePrinterSettingsModule`
+  - `useAppSettingsModule`
+- Menjaga `AdminDashboardApp.vue` sebagai orchestrator:
+  - import composable
+  - binding props/event ke page components
+  - watcher `activeModuleId` untuk auto-fetch per modul.
+- Validasi teknis:
+  - `npm.cmd run build` berhasil setelah refactor modular.
+
 ## 2026-04-22
 
 ### Vue Admin Full Parity + Filament Soft Disable Control Plane

@@ -11,9 +11,16 @@
 ## 2) Web
 
 - [ ] `npm run build` berhasil
-- [ ] admin Filament bisa login
+- [ ] admin login bisa diakses sesuai driver aktif (`ADMIN_UI_DRIVER=vue|filament`)
 - [ ] resource master data terisi (cabang, paket, slot jam)
 - [ ] blackout date dan printer setting terisi sesuai cabang
+- [ ] modul admin parity Vue bisa diakses normal:
+  - [ ] `/admin/branches`
+  - [ ] `/admin/time-slots`
+  - [ ] `/admin/blackout-dates`
+  - [ ] `/admin/payments`
+  - [ ] `/admin/printer-settings`
+  - [ ] `/admin/app-settings`
 - [ ] halaman booking publik bisa create booking
 - [ ] halaman queue board tampil normal
 

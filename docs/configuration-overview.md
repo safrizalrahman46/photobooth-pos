@@ -53,6 +53,23 @@ File: `vite.config.js`
 - Plugin aktif: Laravel plugin, Vue plugin, Tailwind plugin.
 - Watch ignore: `storage/framework/views/**` untuk menghindari loop rebuild dari compiled Blade.
 
+## Frontend Admin Structure
+
+- Entry admin Vue:
+  - `resources/js/admin/AdminDashboardApp.vue`
+- Admin pages (UI per modul):
+  - `resources/js/admin/pages/*`
+- Admin composables (state + API layer modul parity):
+  - `resources/js/admin/composables/useBranchesModule.js`
+  - `resources/js/admin/composables/useTimeSlotsModule.js`
+  - `resources/js/admin/composables/useBlackoutDatesModule.js`
+  - `resources/js/admin/composables/usePaymentsModule.js`
+  - `resources/js/admin/composables/usePrinterSettingsModule.js`
+  - `resources/js/admin/composables/useAppSettingsModule.js`
+- Tujuan modularisasi:
+  - `AdminDashboardApp.vue` fokus sebagai orchestrator layout/routing modul.
+  - Logic CRUD/fetch tiap modul dipisah agar maintenance lebih mudah dan risiko konflik perubahan lebih kecil.
+
 ## CSS Pipeline
 
 File: `resources/css/app.css`
