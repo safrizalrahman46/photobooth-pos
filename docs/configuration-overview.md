@@ -69,6 +69,7 @@ File: `vite.config.js`
 - Tujuan modularisasi:
   - `AdminDashboardApp.vue` fokus sebagai orchestrator layout/routing modul.
   - Logic CRUD/fetch tiap modul dipisah agar maintenance lebih mudah dan risiko konflik perubahan lebih kecil.
+  - Label/menu admin utama dikirim dari backend melalui `uiConfig` (App Setting group `ui.admin`) agar frontend tidak menyimpan label statis.
 
 ## CSS Pipeline
 
@@ -99,6 +100,13 @@ Dari `.env.example`:
   - default contoh: `SESSION_DRIVER=database`, `QUEUE_CONNECTION=database`, `CACHE_STORE=database`
 - Mail:
   - default `MAIL_MAILER=log` (ubah untuk SMTP jika dibutuhkan)
+
+## App Settings Groups
+
+- `general`: brand/site identity.
+- `booking`: behavior booking/queue.
+- `payment`: toggle metode pembayaran.
+- `ui`: konfigurasi label/menu frontend (`ui.admin` untuk dashboard admin dan `ui.booking` untuk navbar/step booking).
 
 ## Cache & Rebuild Rekomendasi Setelah Perubahan Konfigurasi
 

@@ -39,6 +39,10 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    navigation: {
+        type: Array,
+        default: () => [],
+    },
     csrfToken: {
         type: String,
         required: true,
@@ -48,7 +52,7 @@ const props = defineProps({
 const asString = (value) => (value === null || value === undefined ? '' : String(value));
 const isDisabled = (value) => value === false || value === 0 || value === '0';
 
-const onlinePaymentEnabled = computed(() => false);
+const onlinePaymentEnabled = computed(() => !isDisabled(props.paymentSettings.online_payment_enabled));
 const fullPaymentEnabled = computed(() => !isDisabled(props.paymentSettings.full_payment_enabled));
 const dp50PaymentEnabled = computed(() => !isDisabled(props.paymentSettings.dp50_enabled));
 const transferReference = ref(asString(props.oldValues.transfer_reference || ''));
@@ -226,7 +230,7 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="min-h-screen bg-[#F8FAFC]">
-        <PublicBookingNavbar :routes="props.routes" :site="props.site" />
+        <PublicBookingNavbar :routes="props.routes" :site="props.site" :navigation="props.navigation" />
 
         <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
             <div class="pointer-events-none absolute inset-0 overflow-hidden">

@@ -141,6 +141,10 @@ class AppSettingService
                 'midtrans_enabled' => (bool) config('services.midtrans.enabled', false),
                 'currency' => 'IDR',
             ]),
+            'ui' => $this->get('ui', [
+                'admin' => $this->defaultAdminUiConfig(),
+                'booking' => $this->defaultBookingUiConfig(),
+            ]),
         ];
     }
 
@@ -231,6 +235,81 @@ class AppSettingService
             'queue_board_enabled' => true,
             'default_branch_id' => null,
         ]);
+    }
+
+    private function defaultAdminUiConfig(): array
+    {
+        return [
+            'nav_groups' => [
+                ['key' => 'overview', 'label' => 'Overview'],
+                ['key' => 'management', 'label' => 'Management'],
+                ['key' => 'operations', 'label' => 'Operations'],
+                ['key' => 'analytics', 'label' => 'Analytics'],
+                ['key' => 'system', 'label' => 'System'],
+            ],
+            'nav_items' => [
+                ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'href' => '/admin', 'group' => 'overview'],
+                ['id' => 'packages', 'label' => 'Packages', 'icon' => 'package', 'href' => '/admin/packages', 'group' => 'management'],
+                ['id' => 'add-ons', 'label' => 'Add-ons', 'icon' => 'package', 'href' => '/admin/add-ons', 'group' => 'management'],
+                ['id' => 'designs', 'label' => 'Designs', 'icon' => 'palette', 'href' => '/admin/design-catalogs', 'group' => 'management'],
+                ['id' => 'branches', 'label' => 'Branches', 'icon' => 'users', 'href' => '/admin/branches', 'group' => 'management'],
+                ['id' => 'time-slots', 'label' => 'Time Slots', 'icon' => 'calendar', 'href' => '/admin/time-slots', 'group' => 'management'],
+                ['id' => 'blackout-dates', 'label' => 'Blackout Dates', 'icon' => 'calendar', 'href' => '/admin/blackout-dates', 'group' => 'management'],
+                ['id' => 'users', 'label' => 'Users', 'icon' => 'users', 'href' => '/admin/users', 'group' => 'management'],
+                ['id' => 'bookings', 'label' => 'Bookings', 'icon' => 'calendar', 'href' => '/admin/bookings', 'group' => 'operations'],
+                ['id' => 'queue', 'label' => 'Queue', 'icon' => 'list', 'href' => '/admin/queue-tickets', 'group' => 'operations'],
+                ['id' => 'transactions', 'label' => 'Transactions', 'icon' => 'receipt', 'href' => '/admin/transactions', 'group' => 'operations'],
+                ['id' => 'payments', 'label' => 'Payments', 'icon' => 'receipt', 'href' => '/admin/payments', 'group' => 'operations'],
+                ['id' => 'reports', 'label' => 'Reports', 'icon' => 'chart', 'href' => '/admin/reports', 'group' => 'analytics'],
+                ['id' => 'activity-logs', 'label' => 'Activity Logs', 'icon' => 'activity', 'href' => '/admin/activity-logs', 'group' => 'analytics'],
+                ['id' => 'printer-settings', 'label' => 'Printer Settings', 'icon' => 'settings', 'href' => '/admin/printer-settings', 'group' => 'system'],
+                ['id' => 'app-settings', 'label' => 'App Settings', 'icon' => 'settings', 'href' => '/admin/app-settings', 'group' => 'system'],
+                ['id' => 'settings', 'label' => 'Settings', 'icon' => 'settings', 'href' => '/admin/settings', 'group' => 'system'],
+            ],
+            'topbar_meta' => [
+                'dashboard' => ['title' => 'Dashboard', 'subtitle' => 'Business overview and key metrics'],
+                'packages' => ['title' => 'Packages', 'subtitle' => 'Manage your photobooth packages'],
+                'add-ons' => ['title' => 'Add-ons', 'subtitle' => 'Manage package add-ons and pricing'],
+                'designs' => ['title' => 'Designs', 'subtitle' => 'Photo design templates and themes'],
+                'branches' => ['title' => 'Branches', 'subtitle' => 'Manage operational branches'],
+                'time-slots' => ['title' => 'Time Slots', 'subtitle' => 'Manage slot availability and capacity'],
+                'blackout-dates' => ['title' => 'Blackout Dates', 'subtitle' => 'Control blocked booking dates'],
+                'users' => ['title' => 'Users', 'subtitle' => 'Manage staff and customer accounts'],
+                'bookings' => ['title' => 'Bookings', 'subtitle' => 'Track and manage all reservations'],
+                'queue' => ['title' => 'Queue', 'subtitle' => 'Live session queue management'],
+                'transactions' => ['title' => 'Transactions', 'subtitle' => 'Payment history and records'],
+                'payments' => ['title' => 'Payments', 'subtitle' => 'Record and review payment entries'],
+                'reports' => ['title' => 'Reports', 'subtitle' => 'Business analytics and insights'],
+                'activity-logs' => ['title' => 'Activity Logs', 'subtitle' => 'System activity and audit trail'],
+                'printer-settings' => ['title' => 'Printer Settings', 'subtitle' => 'Configure printer devices per branch'],
+                'app-settings' => ['title' => 'App Settings', 'subtitle' => 'Manage app-wide JSON configuration groups'],
+                'settings' => ['title' => 'Settings', 'subtitle' => 'Configure your business preferences'],
+            ],
+            'booking_filter_tabs' => [
+                ['key' => 'all', 'label' => 'All'],
+                ['key' => 'pending', 'label' => 'Pending'],
+                ['key' => 'booked', 'label' => 'Booked'],
+                ['key' => 'used', 'label' => 'Completed'],
+                ['key' => 'expired', 'label' => 'Cancelled'],
+            ],
+            'settings_tabs' => [
+                ['id' => 'branch', 'label' => 'Branch Setting'],
+                ['id' => 'hours', 'label' => 'Operating Hours'],
+                ['id' => 'security', 'label' => 'Security'],
+            ],
+        ];
+    }
+
+    private function defaultBookingUiConfig(): array
+    {
+        return [
+            'steps' => ['Paket', 'Tanggal', 'Waktu', 'Add-on'],
+            'navigation' => [
+                ['key' => 'book', 'label' => 'Book', 'route' => 'booking.create'],
+                ['key' => 'admin', 'label' => 'Admin', 'route' => 'admin.login'],
+                ['key' => 'queue', 'label' => 'Queue', 'route' => 'queue.board'],
+            ],
+        ];
     }
 
     private function activeBranchesPayload(): array

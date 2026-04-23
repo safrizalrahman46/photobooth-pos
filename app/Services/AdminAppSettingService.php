@@ -6,7 +6,7 @@ use Illuminate\Validation\ValidationException;
 
 class AdminAppSettingService
 {
-    private const ALLOWED_GROUPS = ['general', 'booking', 'payment'];
+    private const ALLOWED_GROUPS = ['general', 'booking', 'payment', 'ui'];
 
     public function __construct(
         private readonly AppSettingService $appSettingService,
@@ -30,4 +30,3 @@ class AdminAppSettingService
         return $this->rows();
     }
 }
-

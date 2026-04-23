@@ -17,6 +17,16 @@ class AdminDashboardController extends Controller
     ): View
     {
         $settingsPayload = $appSettingService->settingsPayload();
+        $publicSettings = $appSettingService->publicSettings();
+        $generalSettings = is_array($publicSettings['general'] ?? null) ? $publicSettings['general'] : [];
+        $uiSettings = is_array($publicSettings['ui'] ?? null) ? $publicSettings['ui'] : [];
+        $adminUiConfig = is_array($uiSettings['admin'] ?? null) ? $uiSettings['admin'] : [];
+        $currentUser = auth()->user();
+        $currentRole = '';
+
+        if ($currentUser && method_exists($currentUser, 'getRoleNames')) {
+            $currentRole = (string) ($currentUser->getRoleNames()->first() ?? '');
+        }
 
         $bootstrap = array_merge(
             $service->bootstrapPayload('', 'all', 15),
@@ -24,7 +34,20 @@ class AdminDashboardController extends Controller
                 'queueLive' => $queuePageService->live(),
                 'queueBookingOptions' => $queuePageService->bookingOptions(),
                 'initialSettings' => $settingsPayload,
+                'initialAppSettingsGroups' => $publicSettings,
                 'defaultBranchId' => $settingsPayload['default_branch_id'] ?? null,
+                'brand' => [
+                    'name' => (string) ($generalSettings['brand_name'] ?? config('app.name', 'Ready To Pict')),
+                    'short_name' => (string) ($generalSettings['short_name'] ?? 'Studio'),
+                    'dashboard_label' => (string) ($generalSettings['dashboard_label'] ?? 'Owner Dashboard'),
+                ],
+                'currentUser' => [
+                    'name' => (string) ($currentUser?->name ?? ''),
+                    'email' => (string) ($currentUser?->email ?? ''),
+                    'role' => strtolower($currentRole),
+                    'role_label' => $currentRole !== '' ? ucfirst($currentRole) : '',
+                ],
+                'uiConfig' => $adminUiConfig,
             ],
             [
                 'dataUrl' => route('admin.dashboard.data'),

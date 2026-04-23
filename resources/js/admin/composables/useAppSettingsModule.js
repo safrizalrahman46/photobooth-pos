@@ -11,6 +11,7 @@ export const useAppSettingsModule = ({
             general: {},
             booking: {},
             payment: {},
+            ui: {},
         });
     const appSettingsLoading = ref(false);
     const appSettingsSaving = ref(false);
@@ -28,6 +29,7 @@ export const useAppSettingsModule = ({
             general: nextGroups.general && typeof nextGroups.general === 'object' ? nextGroups.general : {},
             booking: nextGroups.booking && typeof nextGroups.booking === 'object' ? nextGroups.booking : {},
             payment: nextGroups.payment && typeof nextGroups.payment === 'object' ? nextGroups.payment : {},
+            ui: nextGroups.ui && typeof nextGroups.ui === 'object' ? nextGroups.ui : {},
         };
     };
 

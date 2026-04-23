@@ -322,6 +322,7 @@ const props = defineProps({
             general: {},
             booking: {},
             payment: {},
+            ui: {},
         }),
     },
     initialUserRoles: {
@@ -337,6 +338,18 @@ const props = defineProps({
             payment_methods: [],
             add_ons: [],
         }),
+    },
+    brand: {
+        type: Object,
+        default: () => ({}),
+    },
+    currentUser: {
+        type: Object,
+        default: () => ({}),
+    },
+    uiConfig: {
+        type: Object,
+        default: () => ({}),
     },
     panelUrl: {
         type: String,
@@ -372,13 +385,18 @@ let reportDebounceTimer = null;
 let activeRequestController = null;
 let queueRefreshInterval = null;
 
-const filterTabs = [
-    { key: 'all', label: 'All' },
-    { key: 'pending', label: 'Pending' },
-    { key: 'booked', label: 'Booked' },
-    { key: 'used', label: 'Completed' },
-    { key: 'expired', label: 'Cancelled' },
-];
+const filterTabs = computed(() => {
+    const source = Array.isArray(props.uiConfig?.booking_filter_tabs)
+        ? props.uiConfig.booking_filter_tabs
+        : [];
+
+    return source
+        .map((item) => ({
+            key: String(item?.key || '').trim(),
+            label: String(item?.label || '').trim(),
+        }))
+        .filter((item) => item.key !== '' && item.label !== '');
+});
 
 const bookingStatusMap = {
     pending: { label: 'Pending', bg: '#FFFBEB', color: '#D97706' },
@@ -479,6 +497,30 @@ const initialsFromName = (name) => {
     return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
 };
 
+const sidebarBrandName = computed(() => {
+    const value = String(props.brand?.name || '').trim();
+
+    return value || 'Dashboard';
+});
+
+const sidebarDashboardLabel = computed(() => {
+    const value = String(props.brand?.dashboard_label || '').trim();
+
+    return value || 'Dashboard';
+});
+
+const sidebarCurrentUser = computed(() => {
+    const name = String(props.currentUser?.name || '').trim();
+    const roleLabel = String(props.currentUser?.role_label || '').trim();
+    const role = String(props.currentUser?.role || '').trim();
+
+    return {
+        name: name || 'User',
+        initials: initialsFromName(name || 'User'),
+        roleLabel: roleLabel || (role ? role.charAt(0).toUpperCase() + role.slice(1) : 'User'),
+    };
+});
+
 const panelBaseUrl = computed(() => {
     const value = String(props.panelUrl || '/admin').trim();
 
@@ -510,21 +552,52 @@ const toPathname = (value, fallback = '/admin') => {
     }
 };
 
-const panelBasePath = computed(() => toPathname(panelBaseUrl.value, '/admin'));
-
 const panelBookingsUrl = computed(() => `${panelBaseUrl.value}/bookings`);
 const panelTransactionsUrl = computed(() => `${panelBaseUrl.value}/transactions`);
-const panelActivitiesUrl = computed(() => `${panelBaseUrl.value}/activity-logs`);
-const panelReportsUrl = computed(() => `${panelBaseUrl.value}/reports`);
-const panelSettingsUrl = computed(() => `${panelBaseUrl.value}/settings`);
 
-const navGroups = [
-    { key: 'overview', label: 'Overview' },
-    { key: 'management', label: 'Management' },
-    { key: 'operations', label: 'Operations' },
-    { key: 'analytics', label: 'Analytics' },
-    { key: 'system', label: 'System' },
-];
+const navIconMap = {
+    dashboard: LayoutDashboard,
+    package: Package,
+    palette: Palette,
+    users: Users,
+    calendar: Calendar,
+    list: ListOrdered,
+    receipt: Receipt,
+    chart: BarChart3,
+    activity: Activity,
+    settings: Settings,
+};
+
+const resolveNavIcon = (iconKey) => {
+    const key = String(iconKey || '').trim().toLowerCase();
+
+    return navIconMap[key] || LayoutDashboard;
+};
+
+const resolveNavHref = (href) => {
+    const text = String(href || '').trim();
+
+    if (!text) {
+        return panelBaseUrl.value;
+    }
+
+    if (text.startsWith('/') || text.startsWith('http://') || text.startsWith('https://')) {
+        return text;
+    }
+
+    return `${panelBaseUrl.value}/${text.replace(/^\/+/, '')}`;
+};
+
+const navGroups = computed(() => {
+    const source = Array.isArray(props.uiConfig?.nav_groups) ? props.uiConfig.nav_groups : [];
+
+    return source
+        .map((item) => ({
+            key: String(item?.key || '').trim(),
+            label: String(item?.label || '').trim(),
+        }))
+        .filter((item) => item.key !== '' && item.label !== '');
+});
 
 const queueStats = computed(() => {
     const stats = queueLiveState.value?.stats || {};
@@ -553,30 +626,33 @@ const navBadgeFor = (itemId) => {
 };
 
 const navItems = computed(() => {
-    const items = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/admin', group: 'overview' },
-        { id: 'packages', label: 'Packages', icon: Package, href: `${panelBaseUrl.value}/packages`, group: 'management' },
-        { id: 'add-ons', label: 'Add-ons', icon: Package, href: `${panelBaseUrl.value}/add-ons`, group: 'management' },
-        { id: 'designs', label: 'Designs', icon: Palette, href: `${panelBaseUrl.value}/design-catalogs`, group: 'management' },
-        { id: 'branches', label: 'Branches', icon: Users, href: `${panelBaseUrl.value}/branches`, group: 'management' },
-        { id: 'time-slots', label: 'Time Slots', icon: Calendar, href: `${panelBaseUrl.value}/time-slots`, group: 'management' },
-        { id: 'blackout-dates', label: 'Blackout Dates', icon: Calendar, href: `${panelBaseUrl.value}/blackout-dates`, group: 'management' },
-        { id: 'users', label: 'Users', icon: Users, href: `${panelBaseUrl.value}/users`, group: 'management' },
-        { id: 'bookings', label: 'Bookings', icon: Calendar, href: panelBookingsUrl.value, group: 'operations' },
-        { id: 'queue', label: 'Queue', icon: ListOrdered, href: `${panelBaseUrl.value}/queue-tickets`, group: 'operations' },
-        { id: 'transactions', label: 'Transactions', icon: Receipt, href: panelTransactionsUrl.value, group: 'operations' },
-        { id: 'payments', label: 'Payments', icon: Receipt, href: `${panelBaseUrl.value}/payments`, group: 'operations' },
-        { id: 'reports', label: 'Reports', icon: BarChart3, href: panelReportsUrl.value, group: 'analytics' },
-        { id: 'activity-logs', label: 'Activity Logs', icon: Activity, href: panelActivitiesUrl.value, group: 'analytics' },
-        { id: 'printer-settings', label: 'Printer Settings', icon: Settings, href: `${panelBaseUrl.value}/printer-settings`, group: 'system' },
-        { id: 'app-settings', label: 'App Settings', icon: Settings, href: `${panelBaseUrl.value}/app-settings`, group: 'system' },
-        { id: 'settings', label: 'Settings', icon: Settings, href: panelSettingsUrl.value, group: 'system' },
-    ];
+    const source = Array.isArray(props.uiConfig?.nav_items) ? props.uiConfig.nav_items : [];
+    const validGroupSet = new Set(navGroups.value.map((group) => group.key));
+    const fallbackGroup = navGroups.value[0]?.key || 'overview';
 
-    return items.map((item) => ({
-        ...item,
-        badge: navBadgeFor(item.id),
-    }));
+    return source
+        .map((item, index) => {
+            const id = String(item?.id || '').trim();
+            const label = String(item?.label || '').trim();
+            const rawGroup = String(item?.group || '').trim();
+            const group = validGroupSet.has(rawGroup) ? rawGroup : fallbackGroup;
+
+            if (id === '' || label === '') {
+                return null;
+            }
+
+            return {
+                id,
+                label,
+                icon: resolveNavIcon(item?.icon),
+                href: resolveNavHref(item?.href),
+                group,
+                badge: navBadgeFor(id),
+                sort_order: Number(item?.sort_order || index),
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 });
 
 const currentPath = computed(() => {
@@ -598,61 +674,55 @@ const normalizedCurrentPath = computed(() => {
 });
 
 const activeModuleId = computed(() => {
-    const base = panelBasePath.value;
     const path = normalizedCurrentPath.value;
 
-    if (path === base) {
-        return 'dashboard';
-    }
+    const fallback = navItems.value.find((item) => item.id === 'dashboard')?.id
+        || navItems.value[0]?.id
+        || 'dashboard';
 
-    const map = [
-        { id: 'packages', path: `${base}/packages` },
-        { id: 'add-ons', path: `${base}/add-ons` },
-        { id: 'designs', path: `${base}/design-catalogs` },
-        { id: 'branches', path: `${base}/branches` },
-        { id: 'time-slots', path: `${base}/time-slots` },
-        { id: 'blackout-dates', path: `${base}/blackout-dates` },
-        { id: 'users', path: `${base}/users` },
-        { id: 'bookings', path: `${base}/bookings` },
-        { id: 'queue', path: `${base}/queue-tickets` },
-        { id: 'transactions', path: `${base}/transactions` },
-        { id: 'payments', path: `${base}/payments` },
-        { id: 'reports', path: `${base}/reports` },
-        { id: 'activity-logs', path: `${base}/activity-logs` },
-        { id: 'printer-settings', path: `${base}/printer-settings` },
-        { id: 'app-settings', path: `${base}/app-settings` },
-        { id: 'settings', path: `${base}/settings` },
-    ];
+    const candidates = navItems.value
+        .map((item) => ({
+            id: item.id,
+            path: toPathname(item.href, ''),
+        }))
+        .filter((item) => item.path !== '')
+        .sort((a, b) => b.path.length - a.path.length);
 
-    const matched = map.find((entry) => path === entry.path || path.startsWith(`${entry.path}/`));
+    const matched = candidates.find((item) => path === item.path || path.startsWith(`${item.path}/`));
 
-    return matched ? matched.id : 'dashboard';
+    return matched?.id || fallback;
 });
 
-const topbarMetaById = {
-    dashboard: { title: 'Dashboard', subtitle: 'Business overview and key metrics' },
-    packages: { title: 'Packages', subtitle: 'Manage your photobooth packages' },
-    'add-ons': { title: 'Add-ons', subtitle: 'Manage package add-ons and pricing' },
-    designs: { title: 'Designs', subtitle: 'Photo design templates and themes' },
-    branches: { title: 'Branches', subtitle: 'Manage operational branches' },
-    'time-slots': { title: 'Time Slots', subtitle: 'Manage slot availability and capacity' },
-    'blackout-dates': { title: 'Blackout Dates', subtitle: 'Control blocked booking dates' },
-    users: { title: 'Users', subtitle: 'Manage staff and customer accounts' },
-    bookings: { title: 'Bookings', subtitle: 'Track and manage all reservations' },
-    queue: { title: 'Queue', subtitle: 'Live session queue management' },
-    transactions: { title: 'Transactions', subtitle: 'Payment history and records' },
-    payments: { title: 'Payments', subtitle: 'Record and review payment entries' },
-    reports: { title: 'Reports', subtitle: 'Business analytics and insights' },
-    'activity-logs': { title: 'Activity Logs', subtitle: 'System activity and audit trail' },
-    'printer-settings': { title: 'Printer Settings', subtitle: 'Configure printer devices per branch' },
-    'app-settings': { title: 'App Settings', subtitle: 'Manage app-wide JSON configuration groups' },
-    settings: { title: 'Settings', subtitle: 'Configure your business preferences' },
-};
+const topbarMetaById = computed(() => {
+    const source = props.uiConfig?.topbar_meta;
+
+    if (!source || typeof source !== 'object') {
+        return {};
+    }
+
+    const rows = {};
+
+    Object.entries(source).forEach(([id, value]) => {
+        const key = String(id || '').trim();
+        const title = String(value?.title || '').trim();
+        const subtitle = String(value?.subtitle || '').trim();
+
+        if (key === '') {
+            return;
+        }
+
+        rows[key] = { title, subtitle };
+    });
+
+    return rows;
+});
 
 const topbarTitle = computed(() => {
     const id = String(activeModuleId.value || 'dashboard');
+    const title = String(topbarMetaById.value[id]?.title || '').trim();
+    const navLabel = String(navItems.value.find((item) => item.id === id)?.label || '').trim();
 
-    return topbarMetaById[id]?.title || 'Dashboard';
+    return title || navLabel || 'Dashboard';
 });
 
 const topbarDate = computed(() => {
@@ -799,7 +869,7 @@ const waitingQueue = computed(() => {
         branch_id: item.branch_id ? Number(item.branch_id) : null,
         queue_date: String(item.queue_date || ''),
         source_type: String(item.source_type || ''),
-        queue_code: String(item.queue_code || `Q${String(index + 1).padStart(3, '0')}`),
+        queue_code: String(item.queue_code || '-'),
         queue_number: Number(item.queue_number || index + 1),
         customer_name: String(item.customer_name || '-'),
         package_name: String(item.package_name || '-'),
@@ -1048,12 +1118,33 @@ const filteredActivityRows = computed(() => {
     });
 });
 
-const settingsTab = ref('branch');
-const settingsTabs = [
-    { id: 'branch', label: 'Branch Setting' },
-    { id: 'hours', label: 'Operating Hours' },
-    { id: 'security', label: 'Security' },
-];
+const settingsTabs = computed(() => {
+    const source = Array.isArray(props.uiConfig?.settings_tabs)
+        ? props.uiConfig.settings_tabs
+        : [];
+
+    return source
+        .map((item) => ({
+            id: String(item?.id || '').trim(),
+            label: String(item?.label || '').trim(),
+        }))
+        .filter((item) => item.id !== '' && item.label !== '');
+});
+const settingsTab = ref('');
+
+watch(
+    settingsTabs,
+    (tabs) => {
+        const rows = Array.isArray(tabs) ? tabs : [];
+
+        if (rows.some((tab) => tab.id === settingsTab.value)) {
+            return;
+        }
+
+        settingsTab.value = rows[0]?.id || 'branch';
+    },
+    { immediate: true },
+);
 
 const normalizeSettings = (source) => {
     const settingsSource = source && typeof source === 'object' ? source : {};
@@ -2910,6 +3001,9 @@ onBeforeUnmount(() => {
                 :active-module-id="activeModuleId"
                 :mobile-open="mobileOpen"
                 :sidebar-collapsed="sidebarCollapsed"
+                :brand-name="sidebarBrandName"
+                :dashboard-label="sidebarDashboardLabel"
+                :current-user="sidebarCurrentUser"
                 @toggle-mobile="mobileOpen = !mobileOpen"
                 @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
                 @logout="submitLogout"

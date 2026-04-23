@@ -8,6 +8,7 @@ const props = defineProps({
             general: {},
             booking: {},
             payment: {},
+            ui: {},
         }),
     },
     loading: { type: Boolean, default: false },
@@ -22,12 +23,14 @@ const editor = reactive({
     general: '{}',
     booking: '{}',
     payment: '{}',
+    ui: '{}',
 });
 
 const syncEditor = () => {
     editor.general = JSON.stringify(props.groups?.general || {}, null, 2);
     editor.booking = JSON.stringify(props.groups?.booking || {}, null, 2);
     editor.payment = JSON.stringify(props.groups?.payment || {}, null, 2);
+    editor.ui = JSON.stringify(props.groups?.ui || {}, null, 2);
 };
 
 const submitGroup = (group) => {
@@ -62,7 +65,7 @@ watch(
             <div class="relative flex items-start justify-between gap-4">
                 <div>
                     <h2 class="text-[1.35rem] font-bold text-white">App Settings</h2>
-                    <p class="text-sm" style="color: rgba(255,255,255,0.82);">Edit app-wide config groups: general, booking, and payment.</p>
+                    <p class="text-sm" style="color: rgba(255,255,255,0.82);">Edit app-wide config groups: general, booking, payment, and ui.</p>
                 </div>
                 <button type="button" class="rounded-xl border px-3 py-1.5 text-xs text-white" style="border-color: rgba(255,255,255,0.4);" :disabled="loading" @click="emit('refresh-app-settings')">
                     {{ loading ? 'Refreshing...' : 'Refresh' }}
@@ -77,7 +80,7 @@ watch(
             {{ successMessage }}
         </p>
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section class="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-4">
             <div class="rounded-2xl border p-4" style="border-color: #E2E8F0; background: #FFFFFF;">
                 <h3 class="text-sm font-semibold text-[#1F2937]">General</h3>
                 <textarea v-model="editor.general" rows="12" class="mt-2 w-full rounded-lg border px-3 py-2 text-xs font-mono" style="border-color: #CBD5E1;"></textarea>
@@ -101,7 +104,14 @@ watch(
                     {{ saving ? 'Saving...' : 'Save Payment' }}
                 </button>
             </div>
+
+            <div class="rounded-2xl border p-4" style="border-color: #E2E8F0; background: #FFFFFF;">
+                <h3 class="text-sm font-semibold text-[#1F2937]">UI</h3>
+                <textarea v-model="editor.ui" rows="12" class="mt-2 w-full rounded-lg border px-3 py-2 text-xs font-mono" style="border-color: #CBD5E1;"></textarea>
+                <button type="button" class="mt-2 rounded-xl bg-[#334155] px-3 py-1.5 text-xs text-white" :disabled="saving" @click="submitGroup('ui')">
+                    {{ saving ? 'Saving...' : 'Save UI' }}
+                </button>
+            </div>
         </section>
     </div>
 </template>
-

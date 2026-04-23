@@ -22,6 +22,22 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    brandName: {
+        type: String,
+        default: 'Dashboard',
+    },
+    dashboardLabel: {
+        type: String,
+        default: 'Dashboard',
+    },
+    currentUser: {
+        type: Object,
+        default: () => ({
+            name: 'User',
+            initials: 'US',
+            roleLabel: 'User',
+        }),
+    },
 });
 
 const emit = defineEmits(['toggle-mobile', 'toggle-collapse', 'logout']);
@@ -56,9 +72,9 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
 
                 <div v-if="!sidebarCollapsed" class="ml-3 min-w-0 flex-1 overflow-hidden">
                     <p class="whitespace-nowrap text-[0.875rem] font-bold tracking-[-0.01em]" style="font-family: Poppins, sans-serif; color: #1E3A8A;">
-                        Ready To Pict
+                        {{ brandName }}
                     </p>
-                    <span class="whitespace-nowrap text-xs font-medium" style="color: #60A5FA;">Owner Dashboard</span>
+                    <span class="whitespace-nowrap text-xs font-medium" style="color: #60A5FA;">{{ dashboardLabel }}</span>
                 </div>
 
                 <button
@@ -142,12 +158,12 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
                         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[0.7rem] font-bold text-white"
                         style="background: linear-gradient(135deg, #2563EB, #60A5FA);"
                     >
-                        AO
+                        {{ currentUser.initials || 'US' }}
                     </div>
 
                     <div v-if="!sidebarCollapsed" class="min-w-0 flex-1">
-                        <p class="truncate text-[0.8rem] font-semibold leading-tight" style="color: #1F2937;">Ahmad Owner</p>
-                        <p class="truncate text-[0.7rem]" style="color: #94A3B8;">Owner · Super Admin</p>
+                        <p class="truncate text-[0.8rem] font-semibold leading-tight" style="color: #1F2937;">{{ currentUser.name || 'User' }}</p>
+                        <p class="truncate text-[0.7rem]" style="color: #94A3B8;">{{ currentUser.roleLabel || 'User' }}</p>
                     </div>
 
                     <button

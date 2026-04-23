@@ -25,6 +25,8 @@ Dokumen ini merangkum arsitektur admin terbaru berbasis Vue (`AdminDashboardApp.
   - `resources/js/admin/composables/usePrinterSettingsModule.js`
   - `resources/js/admin/composables/useAppSettingsModule.js`
 - Bootstrap props dikirim dari `AdminDashboardController`, termasuk URL endpoint modul dan initial payload.
+- Bootstrap juga mengirim `uiConfig` (dari App Setting group `ui.admin`) untuk label/menu/sidebar/topbar agar frontend admin tidak hardcode label di Vue.
+- Profil sidebar (`currentUser`) dan branding (`brand`) juga dikirim dari backend agar tidak ada data contoh statis di komponen.
 - Legacy redirect kompatibilitas:
   - `/panel/* -> /admin` (jika `ADMIN_UI_LEGACY_REDIRECTS=true`)
   - `/admin/admin-dashboard -> /admin` (jika `ADMIN_UI_LEGACY_REDIRECTS=true`)
@@ -55,6 +57,7 @@ Dokumen ini merangkum arsitektur admin terbaru berbasis Vue (`AdminDashboardApp.
 - App settings:
   - `appSettingsDataUrl`
   - `appSettingBaseUrl`
+  - Group yang tersedia: `general`, `booking`, `payment`, `ui`
 
 ## Route Matrix (Vue Mode)
 
