@@ -1,32 +1,46 @@
+// presentation/widgets/package_section.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../application/order_notifier.dart';
+import '../../domain/order_state.dart';
 import 'package_card.dart';
 
-class PackageSection extends ConsumerWidget {
-  const PackageSection({super.key});
+class PackageSection extends StatelessWidget {
+  final List<Package> packages;
+  final String? selectedPackageId;
+  final ValueChanged<String> onPackageSelected;
+
+  const PackageSection({
+    super.key,
+    required this.packages,
+    required this.selectedPackageId,
+    required this.onPackageSelected,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final order = ref.watch(orderProvider);
-
-    return Row(
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        PackageCard(
-          title: "Basic",
-          price: 20000,
-          isSelected: order.selectedPackage == "Basic",
-          onTap: () {
-            ref.read(orderProvider.notifier).selectPackage("Basic", 20000);
-          },
+        const Text(
+          'Pilih Paket',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111827),
+          ),
         ),
-        PackageCard(
-          title: "Premium",
-          price: 50000,
-          isSelected: order.selectedPackage == "Premium",
-          onTap: () {
-            ref.read(orderProvider.notifier).selectPackage("Premium", 50000);
-          },
+        const SizedBox(height: 16),
+        Row(
+          children: packages.map((pkg) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: PackageCard(
+                package: pkg,
+                isSelected: selectedPackageId == pkg.id,
+                onTap: () => onPackageSelected(pkg.id),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
