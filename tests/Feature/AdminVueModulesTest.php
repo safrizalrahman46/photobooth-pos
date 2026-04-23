@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Branch;
 use App\Models\Booking;
 use App\Models\Package;
+use App\Models\TimeSlot;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -121,6 +122,67 @@ class AdminVueModulesTest extends TestCase
                 'end_time' => '10:30:00',
             ])
             ->assertStatus(422);
+    }
+
+    public function test_booking_availability_marks_slot_unavailable_after_one_active_booking(): void
+    {
+        $bookingDate = Carbon::now()->addDay()->toDateString();
+
+        $branch = Branch::query()->create([
+            'code' => 'BRANCH-SLOT-01',
+            'name' => 'Branch Slot',
+            'timezone' => 'Asia/Jakarta',
+            'is_active' => true,
+        ]);
+
+        $package = Package::query()->create([
+            'branch_id' => $branch->id,
+            'code' => 'PKG-SLOT-01',
+            'name' => 'Package Slot',
+            'duration_minutes' => 30,
+            'base_price' => 100000,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        TimeSlot::query()->create([
+            'branch_id' => $branch->id,
+            'slot_date' => $bookingDate,
+            'start_time' => '10:00:00',
+            'end_time' => '11:00:00',
+            'capacity' => 2,
+            'is_bookable' => true,
+        ]);
+
+        Booking::query()->create([
+            'booking_code' => 'BK-SLOT-001',
+            'branch_id' => $branch->id,
+            'package_id' => $package->id,
+            'customer_name' => 'Customer Slot',
+            'customer_phone' => '0812000100',
+            'booking_date' => $bookingDate,
+            'start_at' => $bookingDate.' 10:00:00',
+            'end_at' => $bookingDate.' 10:30:00',
+            'status' => 'confirmed',
+            'source' => 'web',
+            'payment_type' => 'onsite',
+            'total_amount' => 100000,
+            'paid_amount' => 0,
+            'deposit_amount' => 0,
+        ]);
+
+        $slots = collect(
+            $this->getJson('/booking/availability?branch_id='.$branch->id.'&package_id='.$package->id.'&date='.$bookingDate)
+                ->assertOk()
+                ->assertJsonPath('success', true)
+                ->json('data')
+        );
+
+        $slot = $slots->firstWhere('start_time', '10:00:00');
+
+        $this->assertNotNull($slot);
+        $this->assertFalse((bool) ($slot['is_available'] ?? true));
+        $this->assertSame(0, (int) ($slot['remaining_slots'] ?? -1));
     }
 
     public function test_app_setting_rejects_unknown_group(): void

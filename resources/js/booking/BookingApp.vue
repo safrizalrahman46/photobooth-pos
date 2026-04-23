@@ -133,6 +133,7 @@ const isMobile = ref(false);
 const activeMobileStep = ref(0);
 
 let slotAbortController = null;
+let slotRefreshIntervalId = null;
 
 const filteredPackages = computed(() => {
     if (!branchId.value) {
@@ -430,6 +431,24 @@ const loadAvailability = async () => {
     }
 };
 
+const startAutoRefreshAvailability = () => {
+    if (slotRefreshIntervalId) {
+        window.clearInterval(slotRefreshIntervalId);
+    }
+
+    slotRefreshIntervalId = window.setInterval(() => {
+        if (document.hidden) {
+            return;
+        }
+
+        if (!branchId.value || !packageId.value || !bookingDate.value) {
+            return;
+        }
+
+        loadAvailability();
+    }, 15000);
+};
+
 const choosePackage = (id) => {
     packageId.value = asString(id);
 };
@@ -565,6 +584,7 @@ onMounted(() => {
 
     updateMobileState();
     window.addEventListener('resize', updateMobileState);
+    startAutoRefreshAvailability();
 });
 
 onBeforeUnmount(() => {
@@ -572,6 +592,11 @@ onBeforeUnmount(() => {
 
     if (slotAbortController) {
         slotAbortController.abort();
+    }
+
+    if (slotRefreshIntervalId) {
+        window.clearInterval(slotRefreshIntervalId);
+        slotRefreshIntervalId = null;
     }
 });
 </script>
