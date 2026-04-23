@@ -40,13 +40,13 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
         ></div>
 
         <aside
-            class="fixed inset-y-0 left-0 z-30 flex w-[240px] flex-col border-r border-[#EEF2FF] bg-white shadow-[2px_0_16px_rgba(37,99,235,0.06)] transition-all duration-300 lg:relative"
+            class="fixed inset-y-0 left-0 z-30 flex h-[100dvh] max-h-[100dvh] w-[240px] flex-col overflow-hidden border-r border-[#EEF2FF] bg-white shadow-[2px_0_16px_rgba(37,99,235,0.06)] transition-all duration-300 lg:relative lg:h-screen lg:max-h-screen"
             :class="[
                 mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
                 sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[240px]',
             ]"
         >
-            <div class="relative flex items-center px-4 py-5" style="min-height: 72px;">
+            <div class="relative flex shrink-0 items-center px-4 py-5" style="min-height: 72px;">
                 <div
                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
                     style="background: linear-gradient(135deg, #2563EB 0%, #60A5FA 100%); box-shadow: 0 4px 12px rgba(37,99,235,0.3);"
@@ -80,9 +80,9 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
                 </button>
             </div>
 
-            <div class="relative mx-4 h-px bg-[#EEF2FF]"></div>
+            <div class="relative mx-4 h-px shrink-0 bg-[#EEF2FF]"></div>
 
-            <nav class="relative flex-1 overflow-y-auto px-3 py-4">
+            <nav class="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4" style="-webkit-overflow-scrolling: touch;">
                 <div v-for="group in navGroups" :key="`nav-group-${group.key}`" class="mb-1">
                     <p
                         v-if="!sidebarCollapsed"
@@ -136,7 +136,7 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
                 </div>
             </nav>
 
-            <div class="relative border-t border-[#EEF2FF] p-3">
+            <div class="relative shrink-0 border-t border-[#EEF2FF] p-3">
                 <div class="flex items-center" :class="sidebarCollapsed ? 'justify-center' : 'gap-2.5 rounded-xl border border-[#EEF2FF] bg-[#F8FAFC] p-2.5'">
                     <div
                         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[0.7rem] font-bold text-white"
