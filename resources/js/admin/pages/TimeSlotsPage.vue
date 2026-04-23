@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({
     timeSlotRows: { type: Array, default: () => [] },
@@ -39,6 +39,12 @@ const generateForm = reactive({
     interval_minutes: 30,
     capacity: 1,
     is_bookable: true,
+});
+const todayDate = new Date().toISOString().slice(0, 10);
+const listFilter = reactive({
+    branch_id: '',
+    slot_date: todayDate,
+    is_bookable: 'all',
 });
 
 const normalizeTime = (value) => {
@@ -162,17 +168,73 @@ const submitGenerate = () => {
 };
 
 const applyBulk = (isBookable) => {
-    if (!selectedSlotIds.value.length) {
+    const selectableIds = filteredRows.value.map((row) => row.id);
+    const selectedIds = selectedSlotIds.value.filter((id) => selectableIds.includes(id));
+
+    if (!selectedIds.length) {
         localError.value = 'Select at least one slot.';
         return;
     }
 
     localError.value = '';
     emit('bulk-bookable', {
-        slot_ids: selectedSlotIds.value,
+        slot_ids: selectedIds,
         is_bookable: Boolean(isBookable),
     });
     selectedSlotIds.value = [];
+};
+
+const filteredRows = computed(() => {
+    const branchId = Number(listFilter.branch_id || 0);
+    const slotDate = String(listFilter.slot_date || '').trim();
+    const status = String(listFilter.is_bookable || 'all');
+
+    return (props.timeSlotRows || [])
+        .filter((row) => {
+            if (branchId > 0 && Number(row.branch_id || 0) !== branchId) {
+                return false;
+            }
+
+            if (slotDate && String(row.slot_date || '') !== slotDate) {
+                return false;
+            }
+
+            if (status === 'bookable' && !Boolean(row.is_bookable)) {
+                return false;
+            }
+
+            if (status === 'blocked' && Boolean(row.is_bookable)) {
+                return false;
+            }
+
+            return true;
+        })
+        .sort((a, b) => {
+            const dateCompare = String(a.slot_date || '').localeCompare(String(b.slot_date || ''));
+
+            if (dateCompare !== 0) {
+                return dateCompare;
+            }
+
+            const branchCompare = String(a.branch_name || '').localeCompare(String(b.branch_name || ''));
+
+            if (branchCompare !== 0) {
+                return branchCompare;
+            }
+
+            return String(a.start_time || '').localeCompare(String(b.start_time || ''));
+        });
+});
+
+const resetListFilter = () => {
+    listFilter.branch_id = '';
+    listFilter.slot_date = '';
+    listFilter.is_bookable = 'all';
+    selectedSlotIds.value = [];
+};
+
+const applyTodayFilter = () => {
+    listFilter.slot_date = todayDate;
 };
 </script>
 
@@ -269,9 +331,35 @@ const applyBulk = (isBookable) => {
         </section>
 
         <section class="rounded-2xl border p-4" style="border-color: #E2E8F0; background: #FFFFFF;">
+            <div class="mb-3 grid grid-cols-1 gap-2 md:grid-cols-4">
+                <label class="text-xs text-[#64748B]">Filter Branch
+                    <select v-model="listFilter.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;">
+                        <option value="">All branches</option>
+                        <option v-for="branch in branchOptions" :key="`slot-filter-branch-${branch.id}`" :value="String(branch.id)">
+                            {{ branch.name }}
+                        </option>
+                    </select>
+                </label>
+                <label class="text-xs text-[#64748B]">Filter Date
+                    <input v-model="listFilter.slot_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;" >
+                </label>
+                <label class="text-xs text-[#64748B]">Filter Status
+                    <select v-model="listFilter.is_bookable" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;">
+                        <option value="all">All</option>
+                        <option value="bookable">Bookable</option>
+                        <option value="blocked">Blocked</option>
+                    </select>
+                </label>
+                <div class="flex items-end gap-2">
+                    <button type="button" class="rounded-lg border px-3 py-2 text-xs" style="border-color: #BFDBFE; color: #1D4ED8;" @click="applyTodayFilter">Today</button>
+                    <button type="button" class="rounded-lg border px-3 py-2 text-xs" style="border-color: #CBD5E1; color: #64748B;" @click="resetListFilter">Clear</button>
+                </div>
+            </div>
+
             <div class="mb-3 flex flex-wrap items-center gap-2">
                 <button type="button" class="rounded-lg border px-3 py-1.5 text-xs" style="border-color: #86EFAC; color: #166534;" :disabled="saving" @click="applyBulk(true)">Set Selected Bookable</button>
                 <button type="button" class="rounded-lg border px-3 py-1.5 text-xs" style="border-color: #FCA5A5; color: #B91C1C;" :disabled="saving" @click="applyBulk(false)">Set Selected Blocked</button>
+                <span class="text-xs text-[#94A3B8]">Showing {{ filteredRows.length }} of {{ timeSlotRows.length }} slots</span>
             </div>
 
             <div class="overflow-hidden rounded-xl border" style="border-color: #E2E8F0;">
@@ -286,7 +374,7 @@ const applyBulk = (isBookable) => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in timeSlotRows" :key="`time-slot-row-${row.id}`" style="border-bottom: 1px solid #F1F5F9;">
+                        <tr v-for="row in filteredRows" :key="`time-slot-row-${row.id}`" style="border-bottom: 1px solid #F1F5F9;">
                             <td class="px-3 py-2 align-top">
                                 <input type="checkbox" :checked="selectedSlotIds.includes(row.id)" @change="toggleSelected(row.id)" >
                             </td>
@@ -316,8 +404,8 @@ const applyBulk = (isBookable) => {
                                 </div>
                             </td>
                         </tr>
-                        <tr v-if="!timeSlotRows.length">
-                            <td colspan="5" class="px-4 py-10 text-center text-sm text-[#94A3B8]">No time slots found.</td>
+                        <tr v-if="!filteredRows.length">
+                            <td colspan="5" class="px-4 py-10 text-center text-sm text-[#94A3B8]">No time slots match the current filter.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -325,4 +413,3 @@ const applyBulk = (isBookable) => {
         </section>
     </div>
 </template>
-
