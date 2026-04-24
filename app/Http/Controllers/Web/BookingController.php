@@ -148,6 +148,8 @@ class BookingController extends Controller
                     'end_label' => substr((string) $slot['end_time'], 0, 5),
                     'remaining_slots' => $slot['remaining_slots'],
                     'is_available' => $slot['is_available'],
+                    'unavailable_reason' => $slot['unavailable_reason'] ?? null,
+                    'unavailable_reason_label' => $slot['unavailable_reason_label'] ?? null,
                 ];
             })
             ->values();

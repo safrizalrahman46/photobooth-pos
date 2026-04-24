@@ -20,6 +20,9 @@ class AddOn extends Model
         'description',
         'price',
         'max_qty',
+        'is_physical',
+        'available_stock',
+        'low_stock_threshold',
         'is_active',
         'sort_order',
     ];
@@ -29,6 +32,9 @@ class AddOn extends Model
         return [
             'price' => 'decimal:2',
             'max_qty' => 'integer',
+            'is_physical' => 'boolean',
+            'available_stock' => 'integer',
+            'low_stock_threshold' => 'integer',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];

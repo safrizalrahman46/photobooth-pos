@@ -308,6 +308,29 @@ const slotKey = (slot) => {
 };
 
 const slotStart = (slot) => normalizeTime(slot.start_time || slot.start_label);
+const slotUnavailableReasonLabel = (slot) => {
+    const directLabel = asString(slot?.unavailable_reason_label).trim();
+
+    if (directLabel) {
+        return directLabel;
+    }
+
+    const reason = asString(slot?.unavailable_reason).trim();
+
+    if (reason === 'past_time') {
+        return 'Lewat jam';
+    }
+
+    if (reason === 'duration_exceeds_slot') {
+        return 'Durasi paket tidak muat';
+    }
+
+    if (reason === 'full') {
+        return 'Penuh';
+    }
+
+    return '';
+};
 
 const updateMobileState = () => {
     isMobile.value = window.innerWidth < 1024;
@@ -360,7 +383,19 @@ const loadAvailability = async () => {
             return;
         }
 
-        const loadedSlots = Array.isArray(payload.data) ? payload.data : [];
+        const loadedSlots = Array.isArray(payload.data)
+            ? payload.data.map((slot) => {
+                const reasonLabel = slotUnavailableReasonLabel(slot);
+
+                return {
+                    ...slot,
+                    is_available: Boolean(slot?.is_available),
+                    remaining_slots: Number(slot?.remaining_slots || 0),
+                    unavailable_reason: asString(slot?.unavailable_reason).trim() || null,
+                    unavailable_reason_label: reasonLabel || null,
+                };
+            })
+            : [];
         slots.value = loadedSlots;
 
         if (!loadedSlots.length) {
@@ -798,7 +833,7 @@ onBeforeUnmount(() => {
                                             v-for="slot in slots"
                                             :key="slotKey(slot)"
                                             type="button"
-                                            class="min-h-[44px] rounded-lg border px-3 py-3 text-sm transition-all duration-200"
+                                            class="min-h-[44px] rounded-lg border px-3 py-3 text-center text-sm transition-all duration-200"
                                             :class="!slot.is_available
                                                 ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 opacity-60'
                                                 : bookingTime === slotStart(slot)
@@ -807,7 +842,13 @@ onBeforeUnmount(() => {
                                             :disabled="!slot.is_available"
                                             @click="chooseSlot(slot)"
                                         >
-                                            {{ slotStart(slot) }}
+                                            <span class="block leading-tight">{{ slotStart(slot) }}</span>
+                                            <span
+                                                v-if="!slot.is_available && slot.unavailable_reason_label"
+                                                class="mt-0.5 block text-[10px] leading-tight"
+                                            >
+                                                {{ slot.unavailable_reason_label }}
+                                            </span>
                                         </button>
                                     </div>
 

@@ -876,8 +876,8 @@ watch(
             </div>
         </div>
 
-        <div v-if="bookingModalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="w-full max-w-2xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+        <div v-if="bookingModalOpen" class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto p-4 sm:py-6" style="background: rgba(15,23,42,0.45);">
+            <div class="w-full max-w-2xl rounded-2xl border bg-white p-5" style="max-height: calc(100dvh - 2rem); overflow-y: auto; border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#0F172A]">{{ bookingModalMode === 'create' ? 'Create Booking' : 'Edit Booking' }}</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeBookingModal">Close</button>

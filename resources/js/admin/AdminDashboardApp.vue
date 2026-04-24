@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
     Activity,
     BarChart3,
@@ -92,6 +92,10 @@ const props = defineProps({
             total: 0,
             last_page: 1,
         }),
+    },
+    pendingBookingsCount: {
+        type: Number,
+        default: 0,
     },
     dataUrl: {
         type: String,
@@ -371,6 +375,7 @@ const mobileOpen = ref(false);
 const sidebarCollapsed = ref(false);
 const showTopSearch = ref(false);
 const topSearchValue = ref('');
+const routePath = ref(typeof window !== 'undefined' ? String(window.location.pathname || '/admin') : '/admin');
 
 const rows = ref(Array.isArray(props.initialRows) ? props.initialRows : []);
 const pagination = ref({
@@ -379,6 +384,7 @@ const pagination = ref({
     total: Number(props.initialPagination?.total || rows.value.length || 0),
     last_page: Number(props.initialPagination?.last_page || 1),
 });
+const pendingBookingsCount = ref(Math.max(0, Number(props.pendingBookingsCount || 0)));
 
 let debounceTimer = null;
 let reportDebounceTimer = null;
@@ -610,10 +616,26 @@ const queueStats = computed(() => {
     };
 });
 
-const navBadgeMap = computed(() => ({
-    bookings: Number(pagination.value.total || 0),
-    queue: Number(queueStats.value.waiting || 0),
-}));
+const pendingBookingBlinkDuration = computed(() => {
+    const pending = Math.max(0, Number(pendingBookingsCount.value || 0));
+
+    if (pending <= 0) {
+        return null;
+    }
+
+    const seconds = Math.max(0.45, 1.9 - (Math.min(pending, 20) * 0.07));
+
+    return `${seconds.toFixed(2)}s`;
+});
+
+const navBadgeMap = computed(() => {
+    const pending = Math.max(0, Number(pendingBookingsCount.value || 0));
+
+    return {
+        bookings: pending,
+        queue: pending,
+    };
+});
 
 const navBadgeFor = (itemId) => {
     const value = Number(navBadgeMap.value[itemId] || 0);
@@ -648,6 +670,8 @@ const navItems = computed(() => {
                 href: resolveNavHref(item?.href),
                 group,
                 badge: navBadgeFor(id),
+                blink: id === 'bookings' && Number(navBadgeMap.value.bookings || 0) > 0,
+                blink_duration: id === 'bookings' ? pendingBookingBlinkDuration.value : null,
                 sort_order: Number(item?.sort_order || index),
             };
         })
@@ -655,13 +679,7 @@ const navItems = computed(() => {
         .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 });
 
-const currentPath = computed(() => {
-    if (typeof window === 'undefined') {
-        return '/admin';
-    }
-
-    return String(window.location.pathname || '/admin');
-});
+const currentPath = computed(() => String(routePath.value || '/admin'));
 
 const normalizedCurrentPath = computed(() => {
     const path = String(currentPath.value || '/admin');
@@ -692,6 +710,32 @@ const activeModuleId = computed(() => {
 
     return matched?.id || fallback;
 });
+
+const syncRoutePathFromWindow = () => {
+    if (typeof window === 'undefined') {
+        routePath.value = '/admin';
+        return;
+    }
+
+    routePath.value = String(window.location.pathname || '/admin');
+};
+
+const navigateFromSidebar = (href) => {
+    const targetPath = toPathname(href, panelBaseUrl.value);
+
+    if (targetPath === normalizedCurrentPath.value) {
+        mobileOpen.value = false;
+        return;
+    }
+
+    if (typeof window !== 'undefined') {
+        const url = new URL(String(href || targetPath), window.location.origin);
+        window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+
+    routePath.value = targetPath;
+    mobileOpen.value = false;
+};
 
 const topbarMetaById = computed(() => {
     const source = props.uiConfig?.topbar_meta;
@@ -1348,6 +1392,7 @@ const scheduleReportFetch = () => {
 const reportSummaryCards = computed(() => {
     const revenue = reportData.value?.revenue_summary || {};
     const booking = reportData.value?.booking_summary || {};
+    const addOnSummary = reportData.value?.add_on_summary || {};
 
     return [
         {
@@ -1374,6 +1419,12 @@ const reportSummaryCards = computed(() => {
             helper: 'Paid + Done bookings',
             tone: defaultCardPalette[3],
         },
+        {
+            label: 'Available Add-ons',
+            value: String(Number(addOnSummary.available_count || 0)),
+            helper: `${Number(addOnSummary.global_count || 0)} global • ${Number(addOnSummary.package_specific_count || 0)} package-specific`,
+            tone: { accent: '#0284C7', light: '#F0F9FF', border: '#BAE6FD' },
+        },
     ];
 });
 
@@ -1393,6 +1444,10 @@ const reportPackageRows = computed(() => {
 
 const reportCashierRows = computed(() => {
     return Array.isArray(reportData.value?.cashier_performance) ? reportData.value.cashier_performance : [];
+});
+
+const reportAddOnRows = computed(() => {
+    return Array.isArray(reportData.value?.add_on_performance) ? reportData.value.add_on_performance : [];
 });
 
 const reportStatusRows = computed(() => {
@@ -2032,6 +2087,8 @@ const addOnRows = computed(() => {
         price: Number(item.price || 0),
         price_text: String(item.price_text || formatRupiah(Number(item.price || 0))),
         max_qty: Math.max(1, Number(item.max_qty || 1)),
+        is_physical: Boolean(item.is_physical),
+        type_label: String(item.type_label || (item.is_physical ? 'Physical' : 'Non-physical')),
         is_active: Boolean(item.is_active),
         sort_order: Number(item.sort_order || 0),
         updated_at: item.updated_at || null,
@@ -2762,6 +2819,7 @@ const fetchRows = async (page = 1) => {
             total: Number(incomingPagination.total || incomingRows.length),
             last_page: Number(incomingPagination.last_page || 1),
         };
+        pendingBookingsCount.value = Math.max(0, Number(data.pending_bookings_count || 0));
     } catch (error) {
         if (error?.name !== 'AbortError') {
             console.error('Failed to fetch dashboard rows:', error);
@@ -2975,6 +3033,14 @@ watch(activeModuleId, (nextValue) => {
     startQueueAutoRefresh();
 }, { immediate: true });
 
+onMounted(() => {
+    syncRoutePathFromWindow();
+
+    if (typeof window !== 'undefined') {
+        window.addEventListener('popstate', syncRoutePathFromWindow);
+    }
+});
+
 onBeforeUnmount(() => {
     if (debounceTimer) {
         clearTimeout(debounceTimer);
@@ -2986,6 +3052,10 @@ onBeforeUnmount(() => {
 
     if (activeRequestController) {
         activeRequestController.abort();
+    }
+
+    if (typeof window !== 'undefined') {
+        window.removeEventListener('popstate', syncRoutePathFromWindow);
     }
 
     stopQueueAutoRefresh();
@@ -3006,6 +3076,7 @@ onBeforeUnmount(() => {
                 :current-user="sidebarCurrentUser"
                 @toggle-mobile="mobileOpen = !mobileOpen"
                 @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
+                @navigate="navigateFromSidebar"
                 @logout="submitLogout"
             />
 
@@ -3230,6 +3301,7 @@ onBeforeUnmount(() => {
                             :report-status-rows="reportStatusRows"
                             :report-package-rows="reportPackageRows"
                             :report-cashier-rows="reportCashierRows"
+                            :report-add-on-rows="reportAddOnRows"
                         />
 
                         <ActivityLogsPage

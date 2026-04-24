@@ -40,10 +40,47 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['toggle-mobile', 'toggle-collapse', 'logout']);
+const emit = defineEmits(['toggle-mobile', 'toggle-collapse', 'logout', 'navigate']);
 
 const isActive = (itemId) => String(itemId || '') === String(props.activeModuleId || 'dashboard');
 const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group === groupKey);
+
+const shouldHandleClientNavigate = (event, href) => {
+    if (!event || event.defaultPrevented) {
+        return false;
+    }
+
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return false;
+    }
+
+    const rawHref = String(href || '').trim();
+
+    if (!rawHref) {
+        return false;
+    }
+
+    if (rawHref.startsWith('/admin')) {
+        return true;
+    }
+
+    try {
+        const url = new URL(rawHref, window.location.origin);
+
+        return url.origin === window.location.origin && url.pathname.startsWith('/admin');
+    } catch {
+        return false;
+    }
+};
+
+const handleNavClick = (event, item) => {
+    if (!shouldHandleClientNavigate(event, item?.href)) {
+        return;
+    }
+
+    event.preventDefault();
+    emit('navigate', String(item?.href || '/admin'));
+};
 </script>
 
 <template>
@@ -116,11 +153,16 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
                         :href="item.href"
                         :title="sidebarCollapsed ? item.label : undefined"
                         class="relative mb-[2px] flex w-full items-center rounded-xl transition-all duration-200"
-                        :class="sidebarCollapsed ? 'h-10 justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'"
+                        :class="[
+                            sidebarCollapsed ? 'h-10 justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
+                            item.blink ? 'rtp-item-blink' : '',
+                        ]"
                         :style="{
                             background: isActive(item.id) ? '#EFF6FF' : 'transparent',
                             color: isActive(item.id) ? '#2563EB' : '#64748B',
+                            animationDuration: item.blink_duration || undefined,
                         }"
+                        @click="handleNavClick($event, item)"
                     >
                         <span
                             v-if="isActive(item.id)"
@@ -148,6 +190,11 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
                         >
                             {{ item.badge }}
                         </span>
+
+                        <span
+                            v-if="sidebarCollapsed && item.blink"
+                            class="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#EF4444]"
+                        ></span>
                     </a>
                 </div>
             </nav>
@@ -180,3 +227,23 @@ const itemForGroup = (groupKey) => props.navItems.filter((item) => item.group ==
         </aside>
     </div>
 </template>
+
+<style scoped>
+.rtp-item-blink {
+    animation-name: rtp-item-blink;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+}
+
+@keyframes rtp-item-blink {
+    0%,
+    40%,
+    100% {
+        box-shadow: inset 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+
+    60% {
+        box-shadow: inset 0 0 0 999px rgba(239, 68, 68, 0.08);
+    }
+}
+</style>

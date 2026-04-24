@@ -128,7 +128,7 @@ class AdminDashboardDataService
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'package_id', 'code', 'name', 'price', 'max_qty'])
+                ->get(['id', 'package_id', 'code', 'name', 'price', 'max_qty', 'is_physical', 'available_stock', 'low_stock_threshold'])
                 ->map(function (AddOn $addOn): array {
                     $price = (float) $addOn->price;
 
@@ -139,6 +139,9 @@ class AdminDashboardDataService
                         'name' => (string) $addOn->name,
                         'price' => $price,
                         'max_qty' => max(1, (int) $addOn->max_qty),
+                        'is_physical' => (bool) $addOn->is_physical,
+                        'available_stock' => max(0, (int) $addOn->available_stock),
+                        'low_stock_threshold' => max(0, (int) $addOn->low_stock_threshold),
                         'price_text' => $this->formatRupiah($price),
                     ];
                 })
@@ -306,6 +309,9 @@ class AdminDashboardDataService
                 'description',
                 'price',
                 'max_qty',
+                'is_physical',
+                'available_stock',
+                'low_stock_threshold',
                 'is_active',
                 'sort_order',
                 'created_at',
@@ -324,6 +330,10 @@ class AdminDashboardDataService
                     'price' => $price,
                     'price_text' => $this->formatRupiah($price),
                     'max_qty' => max(1, (int) $addOn->max_qty),
+                    'is_physical' => (bool) $addOn->is_physical,
+                    'available_stock' => max(0, (int) $addOn->available_stock),
+                    'low_stock_threshold' => max(0, (int) $addOn->low_stock_threshold),
+                    'type_label' => $addOn->is_physical ? 'Physical' : 'Non-physical',
                     'is_active' => (bool) $addOn->is_active,
                     'sort_order' => (int) $addOn->sort_order,
                     'created_at' => $addOn->created_at?->toIso8601String(),
@@ -583,7 +593,15 @@ class AdminDashboardDataService
             'pagination' => $this->paginationMeta($paginator),
             'initialRows' => $paginator->items(),
             'initialPagination' => $this->paginationMeta($paginator),
+            'pendingBookingsCount' => $this->pendingBookingsCount(),
         ];
+    }
+
+    protected function pendingBookingsCount(): int
+    {
+        return Booking::query()
+            ->where('status', BookingStatus::Pending->value)
+            ->count();
     }
 
     public function summaryCards(): array
@@ -768,7 +786,7 @@ class AdminDashboardDataService
 
         $query = Booking::query()
             ->with([
-                'package:id,name',
+                'package:id,name,base_price',
                 'designCatalog:id,package_id,name',
                 'branch:id,name',
                 'addOns:id,code,name,price',
@@ -919,6 +937,69 @@ class AdminDashboardDataService
             ->values()
             ->all();
 
+        $addOnPerformance = AddOn::query()
+            ->join('booking_add_ons as booking_add_on', 'booking_add_on.add_on_id', '=', 'add_ons.id')
+            ->join('bookings as booking', 'booking.id', '=', 'booking_add_on.booking_id')
+            ->whereBetween('booking.booking_date', [$startDate, $endDate])
+            ->where('booking.status', '!=', BookingStatus::Cancelled->value)
+            ->when($packageId !== null, function (Builder $query) use ($packageId): void {
+                $query->where('booking.package_id', $packageId);
+            })
+            ->when($cashierId !== null, function (Builder $query) use ($cashierId): void {
+                $query->whereExists(function ($exists) use ($cashierId): void {
+                    $exists->selectRaw('1')
+                        ->from('transactions as transaction')
+                        ->whereColumn('transaction.booking_id', 'booking.id')
+                        ->where('transaction.cashier_id', $cashierId);
+                });
+            })
+            ->selectRaw('
+                add_ons.id as add_on_id,
+                add_ons.code as add_on_code,
+                add_ons.name as add_on_name,
+                COUNT(DISTINCT booking.id) as booking_count,
+                SUM(booking_add_on.qty) as total_qty,
+                SUM(booking_add_on.line_total) as total_revenue
+            ')
+            ->groupBy('add_ons.id', 'add_ons.code', 'add_ons.name')
+            ->orderByDesc('total_qty')
+            ->orderByDesc('total_revenue')
+            ->limit(20)
+            ->get()
+            ->map(function (AddOn $aggregate): array {
+                $revenue = (float) ($aggregate->total_revenue ?? 0);
+
+                return [
+                    'add_on_id' => (int) $aggregate->add_on_id,
+                    'add_on_code' => (string) ($aggregate->add_on_code ?? ''),
+                    'add_on_name' => (string) ($aggregate->add_on_name ?? '-'),
+                    'booking_count' => (int) ($aggregate->booking_count ?? 0),
+                    'total_qty' => (int) ($aggregate->total_qty ?? 0),
+                    'total_revenue' => $revenue,
+                    'total_revenue_text' => $this->formatRupiah($revenue),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $availableAddOnsQuery = AddOn::query()
+            ->where('is_active', true);
+
+        if ($packageId !== null) {
+            $availableAddOnsQuery->where(function (Builder $query) use ($packageId): void {
+                $query->whereNull('package_id')
+                    ->orWhere('package_id', $packageId);
+            });
+        }
+
+        $availableAddOnsCount = (int) (clone $availableAddOnsQuery)->count();
+        $availableGlobalAddOnsCount = (int) (clone $availableAddOnsQuery)
+            ->whereNull('package_id')
+            ->count();
+        $availablePackageSpecificAddOnsCount = (int) (clone $availableAddOnsQuery)
+            ->whereNotNull('package_id')
+            ->count();
+
         $dailyRevenueMap = (clone $transactionBase)
             ->selectRaw('DATE(created_at) as period, COUNT(*) as total_transactions, SUM(paid_amount) as total_revenue')
             ->groupBy('period')
@@ -991,8 +1072,17 @@ class AdminDashboardDataService
                 'conversion_rate_text' => number_format($conversionRate, 2) . '%',
                 'statuses' => $bookingStatuses,
             ],
+            'add_on_summary' => [
+                'available_count' => $availableAddOnsCount,
+                'available_count_text' => number_format($availableAddOnsCount),
+                'global_count' => $availableGlobalAddOnsCount,
+                'global_count_text' => number_format($availableGlobalAddOnsCount),
+                'package_specific_count' => $availablePackageSpecificAddOnsCount,
+                'package_specific_count_text' => number_format($availablePackageSpecificAddOnsCount),
+            ],
             'package_popularity' => $packagePopularity,
             'cashier_performance' => $cashierPerformance,
+            'add_on_performance' => $addOnPerformance,
             'daily_summary' => $dailySummary,
         ];
     }
@@ -1302,15 +1392,17 @@ class AdminDashboardDataService
 
         $addOns = $transactionAddOns->isNotEmpty() ? $transactionAddOns : $bookingAddOns;
 
-        $amount = (float) $booking->total_amount;
-        if ($amount <= 0) {
-            $amount = (float) $booking->paid_amount;
-        }
-
-        $totalAmount = (float) $booking->total_amount;
-        $paidAmount = (float) $booking->paid_amount;
-        $remainingAmount = max($totalAmount - $paidAmount, 0);
-        $paymentStatus = $this->resolveBookingPaymentStatus($booking);
+        $storedTotalAmount = (float) $booking->total_amount;
+        $storedPaidAmount = (float) $booking->paid_amount;
+        $transactionTotalAmount = (float) ($booking->transaction?->total_amount ?? 0);
+        $transactionPaidAmount = (float) ($booking->transaction?->paid_amount ?? 0);
+        $derivedTotalAmount = (float) (($booking->package?->base_price ?? 0) + (float) $addOns->sum('line_total'));
+        $effectiveTotalAmount = max($storedTotalAmount, $transactionTotalAmount, $derivedTotalAmount, 0);
+        $paidAmount = max($storedPaidAmount, $transactionPaidAmount, 0);
+        $remainingAmount = max($effectiveTotalAmount - $paidAmount, 0);
+        $paymentStatus = $this->resolveBookingPaymentStatus($booking, $effectiveTotalAmount, $paidAmount);
+        $paymentLabel = $this->paymentLabel($booking, $effectiveTotalAmount, $paidAmount);
+        $amount = $effectiveTotalAmount > 0 ? $effectiveTotalAmount : $paidAmount;
         $transferProofPath = $this->normalizePublicDiskPath((string) ($booking->transfer_proof_path ?? ''));
         $transferProofExists = $transferProofPath !== '' && Storage::disk('public')->exists($transferProofPath);
         $transferProofUrl = $transferProofExists
@@ -1324,8 +1416,15 @@ class AdminDashboardDataService
         ], true);
         $canConfirmBooking = ! $isClosedStatus
             && $booking->approved_at === null
+            && $paidAmount > 0
+            && $paymentStatus === TransactionStatus::Paid->value
             && $remainingAmount <= 0;
-        $canConfirmPayment = ! $isClosedStatus && $remainingAmount > 0;
+        $canConfirmPayment = ! $isClosedStatus
+            && $effectiveTotalAmount > 0
+            && in_array($paymentStatus, [
+                TransactionStatus::Unpaid->value,
+                TransactionStatus::Partial->value,
+            ], true);
 
         return [
             'record_id' => (int) $booking->id,
@@ -1344,13 +1443,13 @@ class AdminDashboardDataService
             'start_time' => $booking->start_at?->format('H:i') ?? '',
             'status' => $status,
             'status_raw' => $statusValue,
-            'payment' => $this->paymentLabel($booking),
+            'payment' => $paymentLabel,
             'payment_status' => $paymentStatus,
             'pkg' => (string) ($booking->package?->name ?? '-'),
             'design_name' => (string) ($booking->designCatalog?->name ?? '-'),
             'amount' => $amount,
             'amount_text' => $amount > 0 ? $this->formatRupiah($amount) : '-',
-            'total_amount' => $totalAmount,
+            'total_amount' => $effectiveTotalAmount,
             'paid_amount' => $paidAmount,
             'remaining_amount' => $remainingAmount,
             'notes' => (string) ($booking->notes ?? ''),
@@ -1378,10 +1477,20 @@ class AdminDashboardDataService
         };
     }
 
-    protected function paymentLabel(Booking $booking): string
+    protected function paymentLabel(Booking $booking, ?float $effectiveTotalAmount = null, ?float $effectivePaidAmount = null): string
     {
-        $total = (float) $booking->total_amount;
-        $paid = (float) $booking->paid_amount;
+        $total = max(
+            (float) ($effectiveTotalAmount ?? 0),
+            (float) $booking->total_amount,
+            (float) ($booking->transaction?->total_amount ?? 0),
+            0
+        );
+        $paid = max(
+            (float) ($effectivePaidAmount ?? 0),
+            (float) $booking->paid_amount,
+            (float) ($booking->transaction?->paid_amount ?? 0),
+            0
+        );
 
         if ($paid <= 0) {
             return '-';
@@ -1394,14 +1503,35 @@ class AdminDashboardDataService
         return 'DP';
     }
 
-    protected function resolveBookingPaymentStatus(Booking $booking): string
+    protected function resolveBookingPaymentStatus(Booking $booking, ?float $effectiveTotalAmount = null, ?float $effectivePaidAmount = null): string
     {
         if ($booking->transaction?->status?->value) {
-            return (string) $booking->transaction->status->value;
+            $transactionStatus = (string) $booking->transaction->status->value;
+
+            if ($transactionStatus === TransactionStatus::Paid->value && max(
+                (float) ($effectiveTotalAmount ?? 0),
+                (float) $booking->total_amount,
+                (float) ($booking->transaction?->total_amount ?? 0),
+                0
+            ) <= 0) {
+                return TransactionStatus::Unpaid->value;
+            }
+
+            return $transactionStatus;
         }
 
-        $total = (float) $booking->total_amount;
-        $paid = (float) $booking->paid_amount;
+        $total = max(
+            (float) ($effectiveTotalAmount ?? 0),
+            (float) $booking->total_amount,
+            (float) ($booking->transaction?->total_amount ?? 0),
+            0
+        );
+        $paid = max(
+            (float) ($effectivePaidAmount ?? 0),
+            (float) $booking->paid_amount,
+            (float) ($booking->transaction?->paid_amount ?? 0),
+            0
+        );
 
         if ($paid <= 0) {
             return TransactionStatus::Unpaid->value;

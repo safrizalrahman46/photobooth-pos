@@ -28,6 +28,9 @@ class AdminUpdateAddOnRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:500'],
             'price' => ['required', 'numeric', 'min:0'],
             'max_qty' => ['required', 'integer', 'min:1', 'max:99'],
+            'is_physical' => ['nullable', 'boolean'],
+            'available_stock' => ['nullable', 'integer', 'min:0', 'max:999999'],
+            'low_stock_threshold' => ['nullable', 'integer', 'min:0', 'max:999999'],
             'is_active' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
         ];

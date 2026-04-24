@@ -90,7 +90,12 @@ class AdminBookingManagementService
 
     public function confirm(Booking $booking, ?int $actorId = null, ?string $reason = null): Booking
     {
-        $booking->loadMissing(['transaction', 'queueTicket']);
+        $booking->loadMissing([
+            'transaction',
+            'queueTicket',
+            'package:id,base_price',
+            'addOns:id,price',
+        ]);
 
         $status = $booking->status instanceof BookingStatus
             ? $booking->status
@@ -103,6 +108,13 @@ class AdminBookingManagementService
         }
 
         $remainingAmount = $this->remainingAmountForVerification($booking);
+        $paidAmount = $this->paidAmountForVerification($booking);
+
+        if ($paidAmount <= 0) {
+            throw ValidationException::withMessages([
+                'booking' => 'Booking harus dibayar terlebih dahulu sebelum diverifikasi.',
+            ]);
+        }
 
         if ($remainingAmount > 0) {
             throw ValidationException::withMessages([
@@ -511,13 +523,42 @@ class AdminBookingManagementService
 
     private function remainingAmountForVerification(Booking $booking): float
     {
-        if ($booking->transaction) {
-            return max(
-                (float) $booking->transaction->total_amount - (float) $booking->transaction->paid_amount,
-                0
-            );
-        }
+        $effectiveTotalAmount = max(
+            (float) $booking->total_amount,
+            (float) ($booking->transaction?->total_amount ?? 0),
+            $this->derivedTotalFromBookingItems($booking),
+            0
+        );
 
-        return max((float) $booking->total_amount - (float) $booking->paid_amount, 0);
+        return max($effectiveTotalAmount - $this->paidAmountForVerification($booking), 0);
+    }
+
+    private function paidAmountForVerification(Booking $booking): float
+    {
+        return max(
+            (float) $booking->paid_amount,
+            (float) ($booking->transaction?->paid_amount ?? 0),
+            0
+        );
+    }
+
+    private function derivedTotalFromBookingItems(Booking $booking): float
+    {
+        $packageBasePrice = (float) ($booking->package?->base_price ?? 0);
+        $addOnTotal = (float) collect($booking->addOns ?? [])
+            ->sum(function (AddOn $addOn): float {
+                $lineTotal = (float) ($addOn->pivot?->line_total ?? 0);
+
+                if ($lineTotal > 0) {
+                    return $lineTotal;
+                }
+
+                $qty = max(0, (int) ($addOn->pivot?->qty ?? 0));
+                $unitPrice = (float) ($addOn->pivot?->unit_price ?? $addOn->price ?? 0);
+
+                return $qty * $unitPrice;
+            });
+
+        return max($packageBasePrice + $addOnTotal, 0);
     }
 }
