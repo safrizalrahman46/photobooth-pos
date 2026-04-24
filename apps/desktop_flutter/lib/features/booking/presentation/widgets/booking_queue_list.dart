@@ -15,8 +15,7 @@ class BookingQueueList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
       children: [
         // Search field
         Container(
@@ -40,6 +39,7 @@ class BookingQueueList extends StatelessWidget {
             ],
           ),
         ),
+        /*  */
         const SizedBox(height: 12),
         // Queue items
         ...queues.map((q) => _QueueCard(queue: q)),
