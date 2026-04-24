@@ -28,6 +28,8 @@ Route::redirect('/panel', '/admin');
 Route::get('/panel/{path}', fn () => redirect('/admin'))->where('path', '.*');
 
 Route::prefix('booking')->name('booking.')->group(function () {
+    Route::get('/data-pemesan', [BookingController::class, 'customer'])->name('customer');
+    Route::post('/data-pemesan', [BookingController::class, 'storeCustomer'])->name('customer.store');
     Route::get('/', [BookingController::class, 'create'])->name('create');
     Route::get('/availability', [BookingController::class, 'availability'])->name('availability');
     Route::get('/payment', [BookingController::class, 'payment'])->name('payment');
