@@ -10,7 +10,7 @@
                 <a href="#proses" class="hover:text-blue-700">Proses</a>
                 <a href="#galeri" class="hover:text-blue-700">Galeri</a>
             </div>
-            <a href="{{ route('booking.create') }}"
+            <a href="{{ route('booking.customer') }}"
                 class="rounded-full bg-[#005bb7] px-7 py-3 text-[11px] font-bold text-white shadow-lg uppercase transition hover:bg-blue-800">
                 Booking Sekarang
             </a>
@@ -31,8 +31,8 @@
                 tekanan—hanya kamu dan momen terbaikmu.
             </p>
             <div class="flex gap-4">
-                <button class="rounded-full bg-[#005bb7] px-8 py-4 text-xs font-bold text-white shadow-xl">Booking
-                    Sekarang</button>
+                <a href="{{ route('booking.customer') }}" class="rounded-full bg-[#005bb7] px-8 py-4 text-xs font-bold text-white shadow-xl">Booking
+                    Sekarang</a>
                 <button class="rounded-full bg-white border border-gray-200 px-8 py-4 text-xs font-bold text-gray-500">Lihat
                     Paket</button>
             </div>
@@ -98,9 +98,9 @@
             </div>
 
             <div class="text-center mt-12">
-                <button
-                    class="bg-[#005bb7] text-white px-10 py-3 rounded-xl font-bold text-xs shadow-xl shadow-blue-200">Booking
-                    Sekarang</button>
+                <a href="{{ route('booking.customer') }}"
+                    class="inline-flex items-center justify-center bg-[#005bb7] text-white px-10 py-3 rounded-xl font-bold text-xs shadow-xl shadow-blue-200">Booking
+                    Sekarang</a>
             </div>
         </div>
     </section>
@@ -188,8 +188,8 @@
             <p class="text-gray-400 text-xs uppercase tracking-widest max-w-sm mx-auto mb-10 leading-relaxed">
                 Kanvasmu sudah menanti. Booking sesimu sekarang dan ciptakan sesuatu yang tak terlupakan.
             </p>
-            <button class="bg-[#005bb7] text-white px-12 py-4 rounded-full font-bold text-xs uppercase shadow-2xl">Booking
-                Sekarang</button>
+            <a href="{{ route('booking.customer') }}" class="inline-flex items-center justify-center bg-[#005bb7] text-white px-12 py-4 rounded-full font-bold text-xs uppercase shadow-2xl">Booking
+                Sekarang</a>
         </div>
     </section>
 @endsection

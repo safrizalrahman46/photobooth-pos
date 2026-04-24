@@ -917,54 +917,6 @@ onBeforeUnmount(() => {
                                     Belum ada add-on aktif untuk paket ini.
                                 </p>
 
-                                <div class="space-y-4 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
-                                    <h3 class="text-[#1F2937]" style="font-size: 0.875rem; font-weight: 600;">Data Pemesan</h3>
-
-                                    <div class="grid gap-4 sm:grid-cols-2">
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Nama Pemesan</span>
-                                            <input
-                                                v-model="customerName"
-                                                required
-                                                maxlength="120"
-                                                type="text"
-                                                class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            >
-                                        </label>
-
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Nomor HP</span>
-                                            <input
-                                                v-model="customerPhone"
-                                                required
-                                                maxlength="30"
-                                                type="text"
-                                                class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            >
-                                        </label>
-                                    </div>
-
-                                    <div class="grid gap-4 sm:grid-cols-2">
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Email (opsional)</span>
-                                            <input
-                                                v-model="customerEmail"
-                                                type="email"
-                                                class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            >
-                                        </label>
-
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Catatan (opsional)</span>
-                                            <textarea
-                                                v-model="notes"
-                                                maxlength="1000"
-                                                rows="2"
-                                                class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            ></textarea>
-                                        </label>
-                                    </div>
-                                </div>
                             </div>
                         </section>
                     </div>

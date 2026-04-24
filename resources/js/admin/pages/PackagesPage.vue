@@ -4,6 +4,7 @@ import { Camera, Clock3, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-vue-next
 
 const props = defineProps({
     packageCards: { type: Array, default: () => [] },
+    branchOptions: { type: Array, default: () => [] },
     panelBaseUrl: { type: String, default: '/admin' },
     formatRupiah: { type: Function, required: true },
     loading: { type: Boolean, default: false },
@@ -63,6 +64,7 @@ const editingPackageId = ref(null);
 const localError = ref('');
 
 const form = reactive({
+    branch_id: '',
     name: '',
     description: '',
     duration_minutes: 30,
@@ -117,6 +119,7 @@ const stats = computed(() => {
 });
 
 const resetForm = () => {
+    form.branch_id = '';
     form.name = '';
     form.description = '';
     form.duration_minutes = 30;
@@ -136,6 +139,7 @@ const openCreateModal = () => {
 const openEditModal = (pkg) => {
     modalMode.value = 'edit';
     editingPackageId.value = Number(pkg.id || 0);
+    form.branch_id = pkg.branch_id ? String(pkg.branch_id) : '';
     form.name = String(pkg.name || '');
     form.description = String(pkg.description || '');
     form.duration_minutes = Number(pkg.duration_minutes || 30);
@@ -177,6 +181,7 @@ const submitForm = async () => {
     }
 
     const payload = {
+        branch_id: form.branch_id ? Number(form.branch_id) : null,
         name: String(form.name || '').trim(),
         description: String(form.description || '').trim(),
         duration_minutes: Number(form.duration_minutes || 0),
@@ -365,6 +370,16 @@ const requestDelete = async (pkg) => {
                 </p>
 
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label class="text-sm text-[#475569]">
+                        Branch
+                        <select v-model="form.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
+                            <option value="">All Branches</option>
+                            <option v-for="branch in branchOptions" :key="`pkg-branch-${branch.id}`" :value="String(branch.id)">
+                                {{ branch.name }}
+                            </option>
+                        </select>
+                    </label>
+
                     <label class="text-sm text-[#475569]">
                         Package Name
                         <input v-model="form.name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >

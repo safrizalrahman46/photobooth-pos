@@ -1070,6 +1070,7 @@ const packageCards = computed(() => {
 
         return {
             id: Number(item.id || 0),
+            branch_id: item.branch_id ? Number(item.branch_id) : null,
             code: String(item.code || ''),
             name: String(item.name || '-'),
             description: String(item.description || ''),
@@ -3114,6 +3115,7 @@ onBeforeUnmount(() => {
                         <PackagesPage
                             v-else-if="activeModuleId === 'packages'"
                             :package-cards="packageCards"
+                            :branch-options="branchOptionsForManagement"
                             :panel-base-url="panelBaseUrl"
                             :format-rupiah="formatRupiah"
                             :loading="packageLoading"

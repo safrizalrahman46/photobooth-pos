@@ -305,7 +305,7 @@ class AppSettingService
         return [
             'steps' => ['Paket', 'Tanggal', 'Waktu', 'Add-on'],
             'navigation' => [
-                ['key' => 'book', 'label' => 'Book', 'route' => 'booking.create'],
+                ['key' => 'book', 'label' => 'Book', 'route' => 'booking.customer'],
                 ['key' => 'admin', 'label' => 'Admin', 'route' => 'admin.login'],
                 ['key' => 'queue', 'label' => 'Queue', 'route' => 'queue.board'],
             ],
