@@ -22,6 +22,15 @@ class QueueService
     public function checkInBooking(Booking $booking): QueueTicket
     {
         return DB::transaction(function () use ($booking): QueueTicket {
+            $existingTicket = QueueTicket::query()
+                ->where('booking_id', (int) $booking->id)
+                ->orderByDesc('id')
+                ->first();
+
+            if ($existingTicket) {
+                return $existingTicket;
+            }
+
             $date = Carbon::parse($booking->booking_date);
 
             if ($date->toDateString() !== now()->toDateString()) {

@@ -57,7 +57,7 @@ const canSubmit = computed(() => {
 </script>
 
 <template>
-    <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
+    <div class="min-h-screen bg-[#F8FAFC]">
         <PublicBookingNavbar :routes="props.routes" :site="props.site" :navigation="props.navigation" />
 
         <main class="relative mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6">

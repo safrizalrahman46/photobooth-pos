@@ -19,11 +19,15 @@ use App\Http\Controllers\Web\AdminTimeSlotController;
 use App\Http\Controllers\Web\AdminUserController;
 use App\Http\Controllers\Web\BookingController;
 use App\Http\Controllers\Web\LandingController;
+use App\Http\Controllers\Web\PackageSamplePhotoController;
 use App\Http\Controllers\Web\QueueBoardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::get('/queue-board', [QueueBoardController::class, 'index'])->name('queue.board');
+Route::get('/media/package-samples/{path}', PackageSamplePhotoController::class)
+    ->where('path', '.*')
+    ->name('media.package-sample');
 Route::redirect('/panel', '/admin');
 Route::get('/panel/{path}', fn () => redirect('/admin'))->where('path', '.*');
 
@@ -84,6 +88,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/users-data', [AdminUserController::class, 'index'])->name('users.data');
         Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}', [AdminUserController::class, 'update']);
+        Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
 
         Route::get('/queue-data', [AdminQueueController::class, 'index'])->name('queue.data');
         Route::post('/queue/call-next', [AdminQueueController::class, 'callNext'])->name('queue.call-next');
@@ -131,6 +137,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('/bookings/{booking}', [AdminBookingController::class, 'destroy']);
         Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm']);
         Route::post('/bookings/{booking}/confirm-payment', [AdminBookingController::class, 'confirmPayment']);
+        Route::post('/bookings/{booking}/decline', [AdminBookingController::class, 'decline']);
         Route::get('/bookings/{booking}/transfer-proof', [AdminBookingController::class, 'transferProof'])->name('bookings.transfer-proof');
     });
 });

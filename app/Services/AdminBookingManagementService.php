@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
+use App\Enums\QueueStatus;
 use App\Enums\TransactionStatus;
 use App\Models\AddOn;
 use App\Models\Booking;
@@ -108,13 +109,6 @@ class AdminBookingManagementService
         }
 
         $remainingAmount = $this->remainingAmountForVerification($booking);
-        $paidAmount = $this->paidAmountForVerification($booking);
-
-        if ($paidAmount <= 0) {
-            throw ValidationException::withMessages([
-                'booking' => 'Booking harus dibayar terlebih dahulu sebelum diverifikasi.',
-            ]);
-        }
 
         if ($remainingAmount > 0) {
             throw ValidationException::withMessages([
@@ -198,7 +192,70 @@ class AdminBookingManagementService
             );
         }
 
-        return $updatedTransaction;
+        $booking = $booking->refresh();
+        $bookingStatusAfterPayment = $booking->status instanceof BookingStatus
+            ? $booking->status->value
+            : (string) $booking->status;
+
+        if (
+            $booking->approved_at === null
+            && ! in_array($bookingStatusAfterPayment, [BookingStatus::Cancelled->value, BookingStatus::Done->value], true)
+            && $this->remainingAmountForVerification($booking) <= 0
+        ) {
+            $this->confirm(
+                $booking,
+                $cashierId,
+                'Auto verified after payment confirmation from owner dashboard'
+            );
+        }
+
+        return $updatedTransaction->refresh();
+    }
+
+    public function decline(Booking $booking, ?int $actorId = null, ?string $reason = null): Booking
+    {
+        $booking->loadMissing(['queueTicket']);
+
+        $status = $booking->status instanceof BookingStatus
+            ? $booking->status
+            : BookingStatus::from((string) $booking->status);
+
+        if (in_array($status->value, [BookingStatus::Cancelled->value, BookingStatus::Done->value], true)) {
+            throw ValidationException::withMessages([
+                'status' => 'Booking with current status cannot be declined.',
+            ]);
+        }
+
+        if ($booking->approved_at !== null) {
+            throw ValidationException::withMessages([
+                'booking' => 'Booking yang sudah diverifikasi tidak dapat decline.',
+            ]);
+        }
+
+        $hasTransferProof = trim((string) ($booking->transfer_proof_path ?? '')) !== '';
+
+        if ($hasTransferProof) {
+            throw ValidationException::withMessages([
+                'booking' => 'Booking memiliki bukti pembayaran. Gunakan Verify atau proses pembayaran.',
+            ]);
+        }
+
+        if ($booking->queueTicket) {
+            try {
+                $this->queueService->transition($booking->queueTicket, QueueStatus::Cancelled);
+            } catch (\RuntimeException) {
+                // Keep decline flow successful even if queue transition is not possible.
+            }
+        }
+
+        $this->bookingService->updateStatus(
+            $booking,
+            BookingStatus::Cancelled,
+            $actorId,
+            $reason ?: 'Declined from booking detail due to missing payment proof'
+        );
+
+        return $booking->refresh();
     }
 
     private function buildBookingContext(array $payload): array

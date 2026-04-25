@@ -74,6 +74,11 @@ const shouldHandleClientNavigate = (event, href) => {
 };
 
 const handleNavClick = (event, item) => {
+    if (item?.disabled) {
+        event?.preventDefault();
+        return;
+    }
+
     if (!shouldHandleClientNavigate(event, item?.href)) {
         return;
     }
@@ -151,27 +156,31 @@ const handleNavClick = (event, item) => {
                         v-for="item in itemForGroup(group.key)"
                         :key="`nav-item-${item.id}`"
                         :href="item.href"
+                        :aria-disabled="item.disabled ? 'true' : 'false'"
+                        :tabindex="item.disabled ? -1 : undefined"
                         :title="sidebarCollapsed ? item.label : undefined"
                         class="relative mb-[2px] flex w-full items-center rounded-xl transition-all duration-200"
                         :class="[
                             sidebarCollapsed ? 'h-10 justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
                             item.blink ? 'rtp-item-blink' : '',
+                            item.disabled ? 'cursor-not-allowed' : '',
                         ]"
                         :style="{
-                            background: isActive(item.id) ? '#EFF6FF' : 'transparent',
-                            color: isActive(item.id) ? '#2563EB' : '#64748B',
+                            background: item.disabled ? 'transparent' : (isActive(item.id) ? '#EFF6FF' : 'transparent'),
+                            color: item.disabled ? '#94A3B8' : (isActive(item.id) ? '#2563EB' : '#64748B'),
                             animationDuration: item.blink_duration || undefined,
+                            opacity: item.disabled ? 0.58 : 1,
                         }"
                         @click="handleNavClick($event, item)"
                     >
                         <span
-                            v-if="isActive(item.id)"
+                            v-if="isActive(item.id) && !item.disabled"
                             class="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#2563EB]"
                         ></span>
 
                         <span
                             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                            :style="{ background: isActive(item.id) ? '#DBEAFE' : 'transparent' }"
+                            :style="{ background: item.disabled ? 'transparent' : (isActive(item.id) ? '#DBEAFE' : 'transparent') }"
                         >
                             <component :is="item.icon" class="h-4 w-4" />
                         </span>
@@ -179,20 +188,20 @@ const handleNavClick = (event, item) => {
                         <span
                             v-if="!sidebarCollapsed"
                             class="flex-1 whitespace-nowrap text-left text-[0.8125rem]"
-                            :style="{ fontFamily: 'Poppins, sans-serif', fontWeight: isActive(item.id) ? 600 : 400 }"
+                            :style="{ fontFamily: 'Poppins, sans-serif', fontWeight: (isActive(item.id) && !item.disabled) ? 600 : 400 }"
                         >
                             {{ item.label }}
                         </span>
 
                         <span
-                            v-if="!sidebarCollapsed && item.badge"
+                            v-if="!sidebarCollapsed && item.badge && !item.disabled"
                             class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FEE2E2] px-1 text-[0.65rem] font-bold text-[#EF4444]"
                         >
                             {{ item.badge }}
                         </span>
 
                         <span
-                            v-if="sidebarCollapsed && item.blink"
+                            v-if="sidebarCollapsed && item.blink && !item.disabled"
                             class="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#EF4444]"
                         ></span>
                     </a>

@@ -149,6 +149,10 @@ const props = defineProps({
         type: String,
         default: '',
     },
+    userBaseUrl: {
+        type: String,
+        default: '/admin/users',
+    },
     queueDataUrl: {
         type: String,
         default: '',
@@ -613,6 +617,7 @@ const queueStats = computed(() => {
         in_session: Number(stats.in_session || 0),
         waiting: Number(stats.waiting || 0),
         completed_today: Number(stats.completed_today || 0),
+        verified_waiting: Number(stats.verified_waiting || 0),
     };
 });
 
@@ -628,12 +633,35 @@ const pendingBookingBlinkDuration = computed(() => {
     return `${seconds.toFixed(2)}s`;
 });
 
+const verifiedQueueWaitingCount = computed(() => {
+    const fromStats = Math.max(0, Number(queueStats.value.verified_waiting || 0));
+
+    if (fromStats > 0) {
+        return fromStats;
+    }
+
+    return waitingQueue.value.filter((item) => String(item.source_type || '').toLowerCase() === 'booking').length;
+});
+
+const queueBlinkDuration = computed(() => {
+    const count = Math.max(0, Number(verifiedQueueWaitingCount.value || 0));
+
+    if (count <= 0) {
+        return null;
+    }
+
+    const seconds = Math.max(0.35, 1.7 - (Math.min(count, 20) * 0.06));
+
+    return `${seconds.toFixed(2)}s`;
+});
+
 const navBadgeMap = computed(() => {
     const pending = Math.max(0, Number(pendingBookingsCount.value || 0));
+    const queueWaiting = Math.max(0, Number(verifiedQueueWaitingCount.value || 0));
 
     return {
         bookings: pending,
-        queue: pending,
+        queue: queueWaiting,
     };
 });
 
@@ -646,6 +674,12 @@ const navBadgeFor = (itemId) => {
 
     return value > 99 ? '99+' : String(value);
 };
+
+const disabledSidebarItemIds = new Set([
+    'designs',
+    'settings',
+    'app-settings',
+]);
 
 const navItems = computed(() => {
     const source = Array.isArray(props.uiConfig?.nav_items) ? props.uiConfig.nav_items : [];
@@ -669,15 +703,23 @@ const navItems = computed(() => {
                 icon: resolveNavIcon(item?.icon),
                 href: resolveNavHref(item?.href),
                 group,
+                disabled: disabledSidebarItemIds.has(id),
                 badge: navBadgeFor(id),
-                blink: id === 'bookings' && Number(navBadgeMap.value.bookings || 0) > 0,
-                blink_duration: id === 'bookings' ? pendingBookingBlinkDuration.value : null,
+                blink: (
+                    (id === 'bookings' && Number(navBadgeMap.value.bookings || 0) > 0)
+                    || (id === 'queue' && Number(navBadgeMap.value.queue || 0) > 0)
+                ),
+                blink_duration: id === 'bookings'
+                    ? pendingBookingBlinkDuration.value
+                    : (id === 'queue' ? queueBlinkDuration.value : null),
                 sort_order: Number(item?.sort_order || index),
             };
         })
         .filter(Boolean)
         .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 });
+
+const canManageUsers = computed(() => String(props.currentUser?.role || '').toLowerCase() === 'owner');
 
 const currentPath = computed(() => String(routePath.value || '/admin'));
 
@@ -981,6 +1023,7 @@ const normalizedRows = computed(() => {
         transaction_id: row.transaction_id ? Number(row.transaction_id) : null,
         can_confirm_booking: Boolean(row.can_confirm_booking),
         can_confirm_payment: Boolean(row.can_confirm_payment),
+        can_decline_booking: Boolean(row.can_decline_booking),
         add_ons: Array.isArray(row.add_ons)
             ? row.add_ons.map((item) => ({
                 add_on_id: item.add_on_id ? Number(item.add_on_id) : null,
@@ -1074,6 +1117,9 @@ const packageCards = computed(() => {
             code: String(item.code || ''),
             name: String(item.name || '-'),
             description: String(item.description || ''),
+            sample_photos: Array.isArray(item.sample_photos)
+                ? item.sample_photos.map((photo) => String(photo || '').trim()).filter((photo) => photo !== '')
+                : [],
             duration_minutes: Number(item.duration_minutes || 0),
             base_price: Number(item.base_price || 0),
             is_active: Boolean(item.is_active),
@@ -1256,6 +1302,7 @@ const deletingDesignId = ref(null);
 const userLoading = ref(false);
 const userSaving = ref(false);
 const userError = ref('');
+const deletingUserId = ref(null);
 const bookingSaving = ref(false);
 const bookingError = ref('');
 const deletingBookingId = ref(null);
@@ -1854,17 +1901,23 @@ const createPackage = async (formPayload) => {
 
     packageSaving.value = true;
     packageError.value = '';
+    const isMultipart = formPayload instanceof FormData;
 
     try {
+        const headers = {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': getCsrfToken(),
+        };
+
+        if (!isMultipart) {
+            headers['Content-Type'] = 'application/json';
+        }
+
         const response = await fetch(props.packageStoreUrl, {
             method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': getCsrfToken(),
-            },
-            body: JSON.stringify(formPayload),
+            headers,
+            body: isMultipart ? formPayload : JSON.stringify(formPayload),
         });
 
         if (!response.ok) {
@@ -1888,17 +1941,25 @@ const updatePackage = async ({ id, payload }) => {
 
     packageSaving.value = true;
     packageError.value = '';
+    const isMultipart = payload instanceof FormData;
 
     try {
+        const headers = {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': getCsrfToken(),
+        };
+
+        if (!isMultipart) {
+            headers['Content-Type'] = 'application/json';
+        } else if (!payload.has('_method')) {
+            payload.append('_method', 'PUT');
+        }
+
         const response = await fetch(`${props.packageBaseUrl}/${id}`, {
-            method: 'PUT',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': getCsrfToken(),
-            },
-            body: JSON.stringify(payload),
+            method: isMultipart ? 'POST' : 'PUT',
+            headers,
+            body: isMultipart ? payload : JSON.stringify(payload),
         });
 
         if (!response.ok) {
@@ -2290,6 +2351,72 @@ const createUser = async (formPayload) => {
     }
 };
 
+const updateUser = async ({ id, payload }) => {
+    if (!id || !props.userBaseUrl) {
+        return;
+    }
+
+    userSaving.value = true;
+    userError.value = '';
+
+    try {
+        const response = await fetch(`${props.userBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyUsersPayload(result);
+    } catch (error) {
+        userError.value = error instanceof Error ? error.message : 'Failed to update user.';
+        throw error;
+    } finally {
+        userSaving.value = false;
+    }
+};
+
+const deleteUser = async (id) => {
+    if (!id || !props.userBaseUrl) {
+        return;
+    }
+
+    deletingUserId.value = Number(id);
+    userError.value = '';
+
+    try {
+        const response = await fetch(`${props.userBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyUsersPayload(result);
+    } catch (error) {
+        userError.value = error instanceof Error ? error.message : 'Failed to delete user.';
+        throw error;
+    } finally {
+        deletingUserId.value = null;
+    }
+};
+
 const {
     branchRows,
     branchLoading,
@@ -2565,8 +2692,43 @@ const confirmBookingPayment = async ({ id, payload }) => {
         }
 
         await refreshBookings(Number(pagination.value.current_page || 1));
+        await fetchQueueData({ silent: true });
     } catch (error) {
         bookingError.value = error instanceof Error ? error.message : 'Failed to confirm payment.';
+        throw error;
+    } finally {
+        processingBookingId.value = null;
+    }
+};
+
+const declineBooking = async ({ id, reason = '' }) => {
+    if (!id || !props.bookingBaseUrl) {
+        return;
+    }
+
+    processingBookingId.value = Number(id);
+    bookingError.value = '';
+
+    try {
+        const response = await fetch(`${props.bookingBaseUrl}/${id}/decline`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ reason }),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        await refreshBookings(Number(pagination.value.current_page || 1));
+        await fetchQueueData({ silent: true });
+    } catch (error) {
+        bookingError.value = error instanceof Error ? error.message : 'Failed to decline booking.';
         throw error;
     } finally {
         processingBookingId.value = null;
@@ -3207,11 +3369,16 @@ onBeforeUnmount(() => {
                             :initials-from-name="initialsFromName"
                             :panel-base-url="panelBaseUrl"
                             :role-options="userRoles"
+                            :can-manage="canManageUsers"
+                            :deleting-user-id="deletingUserId"
+                            :current-user-email="String(props.currentUser?.email || '')"
                             :loading="userLoading"
                             :saving="userSaving"
                             :error-message="userError"
                             @refresh-users="fetchUsersData"
                             @create-user="createUser"
+                            @update-user="updateUser"
+                            @delete-user="deleteUser"
                         />
 
                         <BookingsPage
@@ -3245,6 +3412,7 @@ onBeforeUnmount(() => {
                             @delete-booking="deleteBooking"
                             @confirm-booking="confirmBooking"
                             @confirm-booking-payment="confirmBookingPayment"
+                            @decline-booking="declineBooking"
                             @go-prev-page="goToPrevPage"
                             @go-next-page="goToNextPage"
                         />

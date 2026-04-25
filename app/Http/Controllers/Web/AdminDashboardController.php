@@ -63,6 +63,7 @@ class AdminDashboardController extends Controller
                 'designBaseUrl' => url('/admin/designs'),
                 'usersDataUrl' => route('admin.users.data'),
                 'userStoreUrl' => route('admin.users.store'),
+                'userBaseUrl' => url('/admin/users'),
                 'queueDataUrl' => route('admin.queue.data'),
                 'queueCallNextUrl' => route('admin.queue.call-next'),
                 'queueCheckInUrl' => route('admin.queue.check-in'),

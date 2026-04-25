@@ -90,7 +90,7 @@ class AdminDashboardDataService
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'branch_id', 'name', 'duration_minutes', 'base_price'])
+                ->get(['id', 'branch_id', 'name', 'duration_minutes', 'base_price', 'sample_photos'])
                 ->map(function (Package $package): array {
                     $price = (float) $package->base_price;
 
@@ -101,6 +101,7 @@ class AdminDashboardDataService
                         'duration_minutes' => (int) $package->duration_minutes,
                         'base_price' => $price,
                         'base_price_text' => $this->formatRupiah($price),
+                        'sample_photos' => $package->resolvedSamplePhotos(),
                     ];
                 })
                 ->values()
@@ -192,6 +193,7 @@ class AdminDashboardDataService
                 'code',
                 'name',
                 'description',
+                'sample_photos',
                 'duration_minutes',
                 'base_price',
                 'is_active',
@@ -226,6 +228,7 @@ class AdminDashboardDataService
                     'code' => (string) $package->code,
                     'name' => (string) $package->name,
                     'description' => (string) ($package->description ?? ''),
+                    'sample_photos' => $package->resolvedSamplePhotos(),
                     'duration_minutes' => (int) $package->duration_minutes,
                     'base_price' => (float) $package->base_price,
                     'base_price_text' => $this->formatRupiah((float) $package->base_price),
@@ -1416,15 +1419,20 @@ class AdminDashboardDataService
         ], true);
         $canConfirmBooking = ! $isClosedStatus
             && $booking->approved_at === null
-            && $paidAmount > 0
-            && $paymentStatus === TransactionStatus::Paid->value
-            && $remainingAmount <= 0;
+            && $remainingAmount <= 0
+            && (
+                $effectiveTotalAmount <= 0
+                || $paymentStatus === TransactionStatus::Paid->value
+            );
         $canConfirmPayment = ! $isClosedStatus
             && $effectiveTotalAmount > 0
             && in_array($paymentStatus, [
                 TransactionStatus::Unpaid->value,
                 TransactionStatus::Partial->value,
             ], true);
+        $canDeclineBooking = ! $isClosedStatus
+            && $booking->approved_at === null
+            && ! $transferProofExists;
 
         return [
             'record_id' => (int) $booking->id,
@@ -1461,6 +1469,7 @@ class AdminDashboardDataService
             'transaction_id' => $booking->transaction?->id ? (int) $booking->transaction->id : null,
             'can_confirm_booking' => $canConfirmBooking,
             'can_confirm_payment' => $canConfirmPayment,
+            'can_decline_booking' => $canDeclineBooking,
             'add_ons' => $addOns,
             'add_ons_count' => $addOns->count(),
             'add_ons_total' => (float) $addOns->sum('line_total'),

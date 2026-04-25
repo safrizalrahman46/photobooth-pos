@@ -3,12 +3,17 @@
 namespace App\Services;
 
 use App\Enums\BookingStatus;
+use App\Enums\QueueSourceType;
 use App\Enums\QueueStatus;
 use App\Models\Booking;
 use App\Models\QueueTicket;
 
 class AdminQueuePageService
 {
+    public function __construct(
+        private readonly QueueService $queueService,
+    ) {}
+
     public function payload(?string $queueDate = null): array
     {
         return [
@@ -20,6 +25,7 @@ class AdminQueuePageService
     public function live(?string $queueDate = null): array
     {
         $targetDate = $queueDate ?: now()->toDateString();
+        $this->syncVerifiedBookingsIntoQueue($targetDate);
 
         $currentTicket = QueueTicket::query()
             ->with(['booking.package:id,name,duration_minutes'])
@@ -148,6 +154,16 @@ class AdminQueuePageService
                 ->whereDate('queue_date', $targetDate)
                 ->where('status', QueueStatus::Finished->value)
                 ->count(),
+            'verified_waiting' => QueueTicket::query()
+                ->whereDate('queue_date', $targetDate)
+                ->where('source_type', QueueSourceType::Booking->value)
+                ->whereIn('status', [
+                    QueueStatus::Waiting->value,
+                    QueueStatus::Called->value,
+                    QueueStatus::CheckedIn->value,
+                    QueueStatus::Skipped->value,
+                ])
+                ->count(),
         ];
 
         return [
@@ -265,5 +281,31 @@ class AdminQueuePageService
     private function statusLabel(string $status): string
     {
         return ucwords(str_replace('_', ' ', $status));
+    }
+
+    private function syncVerifiedBookingsIntoQueue(string $targetDate): void
+    {
+        if ($targetDate !== now()->toDateString()) {
+            return;
+        }
+
+        Booking::query()
+            ->whereDate('booking_date', $targetDate)
+            ->whereNotNull('approved_at')
+            ->whereIn('status', [
+                BookingStatus::Confirmed->value,
+                BookingStatus::Paid->value,
+            ])
+            ->whereDoesntHave('queueTicket')
+            ->orderBy('start_at')
+            ->orderBy('id')
+            ->get(['id', 'branch_id', 'booking_date', 'status', 'customer_name', 'customer_phone'])
+            ->each(function (Booking $booking): void {
+                try {
+                    $this->queueService->checkInBooking($booking);
+                } catch (\RuntimeException) {
+                    // Keep queue panel available even when one booking cannot be auto-enqueued.
+                }
+            });
     }
 }

@@ -23,6 +23,8 @@ class UpdatePackageRequest extends FormRequest
             'code' => ['required', 'string', 'max:30', Rule::unique('packages', 'code')->ignore($package?->id)->whereNull('deleted_at')],
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:1000'],
+            'sample_photos' => ['nullable', 'array', 'max:12'],
+            'sample_photos.*' => ['nullable', 'string', 'max:2048'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'base_price' => ['required', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],

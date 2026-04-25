@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\AddOn;
 use App\Models\Package;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AdminPackageService
@@ -12,11 +14,14 @@ class AdminPackageService
     public function create(array $payload): Package
     {
         return DB::transaction(function () use ($payload): Package {
+            $samplePhotos = $this->resolveSamplePhotosForCreate($payload);
+
             $package = Package::query()->create([
                 'branch_id' => $payload['branch_id'] ?? null,
                 'code' => $this->nextCode(),
                 'name' => $payload['name'],
                 'description' => $payload['description'] ?? null,
+                'sample_photos' => $samplePhotos,
                 'duration_minutes' => $payload['duration_minutes'],
                 'base_price' => $payload['base_price'],
                 'is_active' => $payload['is_active'] ?? true,
@@ -34,10 +39,13 @@ class AdminPackageService
     public function update(Package $package, array $payload): Package
     {
         return DB::transaction(function () use ($package, $payload): Package {
+            $samplePhotos = $this->resolveSamplePhotosForUpdate($package, $payload);
+
             $package->update([
                 'branch_id' => array_key_exists('branch_id', $payload) ? $payload['branch_id'] : $package->branch_id,
                 'name' => $payload['name'],
                 'description' => $payload['description'] ?? null,
+                'sample_photos' => $samplePhotos,
                 'duration_minutes' => $payload['duration_minutes'],
                 'base_price' => $payload['base_price'],
                 'is_active' => $payload['is_active'] ?? $package->is_active,
@@ -146,5 +154,136 @@ class AdminPackageService
         } while ($exists);
 
         return $candidate;
+    }
+
+    private function resolveSamplePhotosForCreate(array $payload): array
+    {
+        $manualPhotos = $this->normalizeSamplePhotos($payload['sample_photos'] ?? []);
+        $keptPhotos = $this->normalizeSamplePhotos($payload['sample_photos_keep'] ?? []);
+
+        $basePhotos = collect([...$manualPhotos, ...$keptPhotos])
+            ->unique()
+            ->values()
+            ->take(12)
+            ->all();
+
+        $remainingLimit = max(0, 12 - count($basePhotos));
+        $uploadedPhotos = $this->storeUploadedSamplePhotos($payload['sample_photos_files'] ?? [], $remainingLimit);
+
+        return collect([...$basePhotos, ...$uploadedPhotos])
+            ->unique()
+            ->values()
+            ->take(12)
+            ->all();
+    }
+
+    private function resolveSamplePhotosForUpdate(Package $package, array $payload): array
+    {
+        $currentPhotos = $this->normalizeSamplePhotos($package->sample_photos ?? []);
+        $manualPhotos = $this->normalizeSamplePhotos($payload['sample_photos'] ?? []);
+        $keptPhotos = $this->normalizeSamplePhotos($payload['sample_photos_keep'] ?? []);
+        $keepFieldPresent = array_key_exists('sample_photos_keep', $payload)
+            || ((bool) ($payload['sample_photos_keep_present'] ?? false));
+
+        if ($keepFieldPresent || array_key_exists('sample_photos', $payload)) {
+            $basePhotos = collect([...$manualPhotos, ...$keptPhotos])
+                ->unique()
+                ->values()
+                ->take(12)
+                ->all();
+        } else {
+            $basePhotos = $currentPhotos;
+        }
+
+        $remainingLimit = max(0, 12 - count($basePhotos));
+        $uploadedPhotos = $this->storeUploadedSamplePhotos($payload['sample_photos_files'] ?? [], $remainingLimit);
+
+        $nextPhotos = collect([...$basePhotos, ...$uploadedPhotos])
+            ->unique()
+            ->values()
+            ->take(12)
+            ->all();
+
+        $this->deleteRemovedSamplePhotos($currentPhotos, $nextPhotos);
+
+        return $nextPhotos;
+    }
+
+    private function storeUploadedSamplePhotos(array|UploadedFile|null $rawFiles, int $limit = 12): array
+    {
+        if ($limit <= 0 || $rawFiles === null) {
+            return [];
+        }
+
+        $files = is_array($rawFiles) ? $rawFiles : [$rawFiles];
+        $storedPhotos = [];
+
+        foreach ($files as $file) {
+            if (! $file instanceof UploadedFile) {
+                continue;
+            }
+
+            if (count($storedPhotos) >= $limit) {
+                break;
+            }
+
+            $storedPath = $file->store('package-samples', 'public');
+            $storedPhotos[] = Package::resolveSamplePhotoUrl('/media/'.ltrim($storedPath, '/'));
+        }
+
+        return collect($storedPhotos)
+            ->filter(fn ($item): bool => is_string($item) && trim($item) !== '')
+            ->values()
+            ->all();
+    }
+
+    private function deleteRemovedSamplePhotos(array $currentPhotos, array $nextPhotos): void
+    {
+        $removedPhotos = array_values(array_diff($currentPhotos, $nextPhotos));
+
+        foreach ($removedPhotos as $photoUrl) {
+            $diskPath = $this->resolvePublicDiskPath($photoUrl);
+
+            if ($diskPath === null) {
+                continue;
+            }
+
+            Storage::disk('public')->delete($diskPath);
+        }
+    }
+
+    private function resolvePublicDiskPath(string $photoUrl): ?string
+    {
+        $urlPath = parse_url($photoUrl, PHP_URL_PATH);
+        $path = is_string($urlPath) && trim($urlPath) !== '' ? $urlPath : trim($photoUrl);
+
+        if ($path === '') {
+            return null;
+        }
+
+        $normalizedPath = '/'.ltrim($path, '/');
+
+        if (str_starts_with($normalizedPath, '/media/package-samples/')) {
+            return ltrim(substr($normalizedPath, strlen('/media/')), '/');
+        }
+
+        if (str_starts_with($normalizedPath, '/storage/package-samples/')) {
+            return ltrim(substr($normalizedPath, strlen('/storage/')), '/');
+        }
+
+        if (str_starts_with($normalizedPath, '/package-samples/')) {
+            return ltrim($normalizedPath, '/');
+        }
+
+        return null;
+    }
+
+    private function normalizeSamplePhotos(array|string|null $raw): array
+    {
+        return collect(Package::resolveSamplePhotoUrls($raw))
+            ->filter(fn (string $item): bool => mb_strlen($item) <= 2048)
+            ->values()
+            ->take(12)
+            ->all();
     }
 }

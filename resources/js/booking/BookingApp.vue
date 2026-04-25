@@ -137,12 +137,34 @@ const availableAddOns = computed(() => {
 });
 
 const selectedPackagePhotoSet = computed(() => {
-    return filteredDesignCatalogs.value
+    const packageSamples = (Array.isArray(selectedPackage.value?.sample_photos) ? selectedPackage.value.sample_photos : [])
+        .map((item) => asString(item).trim())
+        .filter((item) => item !== '')
+        .map((src, index) => ({
+            src,
+            label: `Contoh Paket ${index + 1}`,
+        }));
+
+    const designPreviews = filteredDesignCatalogs.value
         .filter((item) => asString(item.preview_url).trim() !== '')
         .map((item) => ({
             src: asString(item.preview_url),
             label: asString(item.name || 'Design Preview'),
         }));
+
+    const merged = [...packageSamples, ...designPreviews];
+    const seen = new Set();
+
+    return merged.filter((item) => {
+        const key = asString(item.src).trim();
+
+        if (!key || seen.has(key)) {
+            return false;
+        }
+
+        seen.add(key);
+        return true;
+    });
 });
 
 const selectedBookingDateObject = computed({
@@ -1039,7 +1061,7 @@ onBeforeUnmount(() => {
                                     </div>
                                 </template>
                                 <p v-else class="px-4 py-6 text-center text-xs text-[#94A3B8]">
-                                    Belum ada preview desain aktif untuk paket ini.
+                                    Belum ada foto contoh aktif untuk paket ini.
                                 </p>
                             </div>
                         </div>

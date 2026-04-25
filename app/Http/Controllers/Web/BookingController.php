@@ -97,7 +97,18 @@ class BookingController extends Controller
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'name', 'description', 'duration_minutes', 'base_price', 'branch_id']);
+                ->get(['id', 'name', 'description', 'sample_photos', 'duration_minutes', 'base_price', 'branch_id'])
+                ->map(function (Package $package): array {
+                    return [
+                        'id' => (int) $package->id,
+                        'name' => (string) $package->name,
+                        'description' => (string) ($package->description ?? ''),
+                        'sample_photos' => $package->resolvedSamplePhotos(),
+                        'duration_minutes' => (int) $package->duration_minutes,
+                        'base_price' => (float) $package->base_price,
+                        'branch_id' => $package->branch_id ? (int) $package->branch_id : null,
+                    ];
+                });
 
             $designCatalogs = DesignCatalog::query()
                 ->where('is_active', true)

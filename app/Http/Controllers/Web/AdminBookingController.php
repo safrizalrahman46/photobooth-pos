@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AdminDeclineBookingRequest;
 use App\Http\Requests\AdminConfirmBookingPaymentRequest;
 use App\Http\Requests\AdminConfirmBookingRequest;
 use App\Http\Requests\AdminStoreBookingRequest;
@@ -86,6 +87,25 @@ class AdminBookingController extends Controller
                 'paid_amount' => (float) $updatedTransaction->paid_amount,
                 'total_amount' => (float) $updatedTransaction->total_amount,
             ],
+        ]);
+    }
+
+    public function decline(
+        AdminDeclineBookingRequest $request,
+        Booking $booking,
+        AdminBookingManagementService $service,
+    ): JsonResponse {
+        $actorId = (int) ($request->user()?->id ?? 0);
+
+        $service->decline(
+            $booking,
+            $actorId > 0 ? $actorId : null,
+            (string) ($request->validated('reason') ?? ''),
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Booking declined and cancelled successfully.',
         ]);
     }
 
