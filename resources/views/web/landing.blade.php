@@ -2,7 +2,6 @@
 $navItems = [
     ['label' => 'Home', 'href' => '#home'],
     ['label' => 'About', 'href' => '#about'],
-    ['label' => 'Steps', 'href' => '#steps'],
     ['label' => 'Pricelist', 'href' => '#pricelist'],
     ['label' => 'Contact', 'href' => '#contact'],
     ['label' => 'Booking', 'href' => '#pricelist'],
@@ -59,12 +58,6 @@ $addons = [
     ['label' => '+5 Menit Durasi Foto', 'price' => '20k'],
     ['label' => 'Sewa 1 Kostum', 'price' => '10k'],
 ];
-
-$steps = [
-    ['n' => '1', 'title' => 'Booking', 'color' => 'bg-memphis-blue text-white', 'desc' => 'Pesan slotmu online dan pilih konsep favoritmu.'],
-    ['n' => '2', 'title' => 'Potret', 'color' => 'bg-memphis-yellow text-memphis-ink', 'desc' => 'Datang ke studio dan kendalikan kamera dengan remote.'],
-    ['n' => '3', 'title' => 'Cetak', 'color' => 'bg-memphis-orange text-white', 'desc' => 'Terima semua soft file & cetak hasil terbaikmu.'],
-];
 @endphp
 
 <!DOCTYPE html>
@@ -100,43 +93,37 @@ $steps = [
             font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
         }
 
-        .bg-background { background-color: var(--background); }
-        .text-foreground { color: var(--foreground); }
-        .text-muted-foreground { color: var(--muted-foreground); }
-        .text-primary-foreground { color: var(--primary-foreground); }
-        .bg-card { background-color: var(--card); }
-        .border-border { border-color: var(--border); }
-
-        .bg-memphis-yellow { background-color: var(--memphis-yellow); }
-        .text-memphis-yellow { color: var(--memphis-yellow); }
-        .bg-memphis-blue { background-color: var(--memphis-blue); }
-        .text-memphis-blue { color: var(--memphis-blue); }
-        .bg-memphis-blue-soft { background-color: var(--memphis-blue-soft); }
-        .bg-memphis-orange { background-color: var(--memphis-orange); }
-        .text-memphis-orange { color: var(--memphis-orange); }
-        .bg-memphis-ink { background-color: var(--memphis-ink); }
-        .text-memphis-ink { color: var(--memphis-ink); }
-        .bg-memphis-cream { background-color: var(--memphis-cream); }
-
-        .border-memphis-yellow { border-color: var(--memphis-yellow); }
-
-        .hover\:bg-memphis-orange:hover { background-color: var(--memphis-orange); }
-        .hover\:bg-memphis-blue:hover { background-color: var(--memphis-blue); }
-        .hover\:text-primary-foreground:hover { color: var(--primary-foreground); }
-        .hover\:text-memphis-blue:hover { color: var(--memphis-blue); }
+        .bg-memphis-yellow { background-color: var(--memphis-yellow) !important; }
+        .text-memphis-yellow { color: var(--memphis-yellow) !important; }
+        .bg-memphis-blue { background-color: var(--memphis-blue) !important; }
+        .text-memphis-blue { color: var(--memphis-blue) !important; }
+        .bg-memphis-blue-soft { background-color: var(--memphis-blue-soft) !important; }
+        .bg-memphis-orange { background-color: var(--memphis-orange) !important; }
+        .text-memphis-orange { color: var(--memphis-orange) !important; }
+        .bg-memphis-ink { background-color: var(--memphis-ink) !important; }
+        .text-memphis-ink { color: var(--memphis-ink) !important; }
+        .bg-memphis-cream { background-color: var(--memphis-cream) !important; }
+        .border-memphis-blue { border-color: var(--memphis-blue) !important; }
+        .border-memphis-yellow { border-color: var(--memphis-yellow) !important; }
 
         .font-display { font-family: ui-sans-serif, system-ui, sans-serif; }
         
-        .animate-marquee-left { animation: marquee-left 30s linear infinite; }
-        .animate-marquee-right { animation: marquee-right 30s linear infinite; }
+        .animate-marquee-left { 
+            animation: marquee-left 30s linear infinite; 
+            will-change: transform;
+        }
+        .animate-marquee-right { 
+            animation: marquee-right 30s linear infinite; 
+            will-change: transform;
+        }
         
         @keyframes marquee-left {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-50%, 0, 0); }
         }
         @keyframes marquee-right {
-            0% { transform: translateX(-50%); }
-            100% { transform: translateX(0); }
+            0% { transform: translate3d(-50%, 0, 0); }
+            100% { transform: translate3d(0, 0, 0); }
         }
 
         .bg-memphis-ink\/95 {
@@ -147,7 +134,7 @@ $steps = [
 <body class="min-h-screen bg-background text-foreground overflow-x-hidden">
     
     <!-- HEADER -->
-    <header class="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-border/60">
+    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-border/60 shadow-sm">
         <div class="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12 py-4 md:py-6">
             <a href="#home" class="flex items-center gap-2 md:gap-3">
                 <img src="{{ asset('images/logo/logo.png') }}" alt="Ready to Pict" class="h-8 md:h-12 w-auto" />
@@ -161,10 +148,10 @@ $steps = [
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>
             </button>
 
-            <nav id="nav-menu" class="hidden md:flex items-center gap-8 text-[15px] font-medium text-memphis-ink absolute md:static top-16 left-0 w-full md:w-auto bg-background md:bg-transparent border-b md:border-none border-border px-6 py-8 md:p-0 flex-col md:flex-row shadow-xl md:shadow-none transition-all duration-300 z-[60]">
+            <nav id="nav-menu" class="hidden md:flex items-center gap-8 text-[15px] font-medium text-memphis-ink absolute md:relative top-16 md:top-0 left-0 w-full md:w-auto bg-white md:bg-transparent border-b md:border-none border-border md:border-transparent px-6 py-8 md:p-0 flex-col md:flex-row shadow-xl md:shadow-none transition-all duration-300 z-[60]">
                 @foreach($navItems as $item)
                     @if($item['label'] === 'Booking')
-                        <a href="{{ $item['href'] }}" class="w-full md:w-auto text-center bg-memphis-yellow text-memphis-ink px-5 py-2.5 rounded-full font-bold shadow-md hover:bg-memphis-orange hover:text-primary-foreground hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        <a href="{{ $item['href'] }}" class="w-full md:w-auto text-center bg-memphis-yellow text-memphis-ink px-6 py-2.5 rounded-full font-bold shadow-md hover:bg-memphis-orange hover:text-white hover:shadow-xl hover:-translate-y-1 hover:scale-105 ring-offset-background transition-all duration-300 active:scale-95">
                             {{ $item['label'] }}
                         </a>
                     @else
@@ -184,7 +171,7 @@ $steps = [
             <div class="flex w-max animate-marquee-left gap-4">
                 @foreach(array_merge($marqueeRowA, $marqueeRowA) as $i => $item)
                     <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
-                        <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
                 @endforeach
             </div>
@@ -195,7 +182,7 @@ $steps = [
             <div class="flex w-max animate-marquee-right gap-4">
                 @foreach(array_merge($marqueeRowB, $marqueeRowB) as $i => $item)
                     <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
-                        <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
                 @endforeach
             </div>
@@ -206,7 +193,7 @@ $steps = [
             <div class="flex w-max animate-marquee-left gap-4">
                 @foreach(array_merge($marqueeRowC, $marqueeRowC) as $i => $item)
                     <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
-                        <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
                 @endforeach
             </div>
@@ -250,35 +237,7 @@ $steps = [
         </div>
     </section>
 
-    <!-- HOW IT WORKS -->
-    <section id="steps" class="bg-background py-16 md:py-24 scroll-mt-24 border-t border-border overflow-hidden">
-        <div class="max-w-7xl mx-auto px-6 md:px-12">
-            <div class="text-center mb-12 md:mb-16">
-                <span class="inline-block bg-memphis-blue/10 text-memphis-blue px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4">
-                    Cara Mainnya
-                </span>
-                <h2 class="font-display text-3xl md:text-5xl tracking-tight text-memphis-ink leading-tight">
-                    Gampang Banget! <span class="text-memphis-orange text-2xl md:text-5xl block md:inline">Cuman 3 Langkah.</span>
-                </h2>
-            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-                @foreach($steps as $step)
-                    <div class="flex flex-col items-center text-center space-y-6 group">
-                        <div class="h-20 w-20 {{ $step['color'] }} rounded-3xl flex items-center justify-center text-4xl font-bold rotate-3 group-hover:rotate-0 transition-transform duration-300 shadow-lg">
-                            {{ $step['n'] }}
-                        </div>
-                        <div class="space-y-3">
-                            <h3 class="text-2xl font-bold text-memphis-ink">{{ $step['title'] }}</h3>
-                            <p class="text-muted-foreground leading-relaxed max-w-xs mx-auto">
-                                {{ $step['desc'] }}
-                            </p>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
 
     <!-- PRICELIST -->
     <section id="pricelist" class="bg-memphis-blue-soft/60 py-16 md:py-24 scroll-mt-24">
@@ -322,7 +281,7 @@ $steps = [
                                 </li>
                             @endforeach
                         </ul>
-                        <button class="mt-8 w-full bg-memphis-ink text-primary-foreground py-3 rounded-full text-sm font-semibold hover:bg-memphis-blue transition-colors">
+                        <button class="mt-8 w-full bg-memphis-ink text-white py-3 rounded-full text-sm font-bold hover:bg-memphis-blue hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 active:scale-95">
                             Pilih Paket
                         </button>
                     </div>
@@ -442,7 +401,6 @@ $steps = [
             <div class="flex flex-wrap items-start justify-center md:justify-end gap-x-6 gap-y-2 text-sm font-medium text-foreground/70">
                 <a href="#home" class="hover:text-memphis-blue">Home</a>
                 <a href="#about" class="hover:text-memphis-blue">About</a>
-                <a href="#steps" class="hover:text-memphis-blue">Steps</a>
                 <a href="#pricelist" class="hover:text-memphis-blue">Pricelist</a>
                 <a href="#contact" class="hover:text-memphis-blue">Contact</a>
             </div>
