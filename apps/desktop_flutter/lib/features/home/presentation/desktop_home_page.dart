@@ -1,16 +1,94 @@
 import 'package:flutter/material.dart';
-import '../../booking/presentation/pages/booking_page.dart';
+import 'package:provider/provider.dart';
 
-class DesktopHomePage extends StatelessWidget {
+import '../../../shared/layout/sidebar/sidebar.dart';
+import '../../../shared/layout/header/app_header.dart';
+
+// Pages
+import '../../booking/presentation/pages/booking_page.dart';
+import '../../history/presentation/pages/history_page.dart';
+import '../../laporan/presentation/pages/laporan_page.dart';
+import '../../paket/presentation/pages/paket_page.dart';
+import '../../addon/presentation/pages/addon_page.dart';
+import '../../antrian/presentation/pages/antrian_page.dart';
+
+// Injector
+import '../../antrian/antrian_injector.dart';
+
+// ╔═╗╦ ╦╔═╗╔═╗╔═╗  ╦╔═╔═╗╔╗╔╔╦╗╔═╗╦
+// ╚═╗║ ║║  ╠═╣╠═╝  ╠╩╗║ ║║║║ ║ ║ ║║
+// ╚═╝╚═╝╚═╝╩ ╩╩    ╩ ╩╚═╝╝╚╝ ╩ ╚═╝╩═╝
+
+class DesktopHomePage extends StatefulWidget {
   final dynamic session;
   final VoidCallback? onLogout;
 
   const DesktopHomePage({super.key, this.session, this.onLogout});
 
   @override
+  State<DesktopHomePage> createState() => _DesktopHomePageState();
+}
+
+class _DesktopHomePageState extends State<DesktopHomePage> {
+  int _selectedIndex = 0;
+
+  /// 🔥 BUILDER (WAJIB - bukan List statis)
+  Widget _buildPage(int index) {
+    switch (index) {
+      case 0:
+        return const BookingPage();
+
+      case 1:
+        return ChangeNotifierProvider(
+          create: (_) => AntrianInjector.create(),
+          child: const AntrianPage(),
+        );
+
+      case 2:
+        return const HistoryPage();
+
+      case 3:
+        return const LaporanPage();
+
+      case 4:
+        return const PaketPage();
+
+      case 5:
+        return const AddOnPage();
+
+      default:
+        return const Center(child: Text("Page not found"));
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: BookingPage(), // 🔥 tetap test booking
+    return Scaffold(
+      body: Row(
+        children: [
+          // ── Sidebar ─────────────────────────────
+          Sidebar(
+            selectedIndex: _selectedIndex,
+            onItemTapped: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+          ),
+
+          // ── Content ─────────────────────────────
+          Expanded(
+            child: Column(
+              children: [
+                const AppHeader(),
+
+                /// 🔥 PAKAI BUILDER
+                Expanded(child: _buildPage(_selectedIndex)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
