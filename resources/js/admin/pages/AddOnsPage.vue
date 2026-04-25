@@ -26,6 +26,7 @@ const form = reactive({
     description: '',
     price: 0,
     max_qty: 1,
+    is_physical: false,
     is_active: true,
     sort_order: 0,
 });
@@ -35,14 +36,41 @@ const stats = computed(() => {
     const active = props.addOnRows.filter((item) => Boolean(item.is_active)).length;
     const global = props.addOnRows.filter((item) => !item.package_id).length;
     const packageSpecific = total - global;
+    const physical = props.addOnRows.filter((item) => Boolean(item.is_physical)).length;
+    const nonPhysical = total - physical;
 
     return {
         total,
         active,
         global,
         packageSpecific,
+        physical,
+        nonPhysical,
     };
 });
+
+const physicalAddOnRows = computed(() => {
+    return props.addOnRows.filter((item) => Boolean(item.is_physical));
+});
+
+const nonPhysicalAddOnRows = computed(() => {
+    return props.addOnRows.filter((item) => !Boolean(item.is_physical));
+});
+
+const addOnSections = computed(() => ([
+    {
+        key: 'physical',
+        title: 'Physical Add-ons',
+        description: 'Items with stock movement (inventory).',
+        rows: physicalAddOnRows.value,
+    },
+    {
+        key: 'non-physical',
+        title: 'Non-physical Add-ons',
+        description: 'Service/benefit add-ons without physical stock.',
+        rows: nonPhysicalAddOnRows.value,
+    },
+]));
 
 const resetForm = () => {
     form.package_id = '';
@@ -51,6 +79,7 @@ const resetForm = () => {
     form.description = '';
     form.price = 0;
     form.max_qty = 1;
+    form.is_physical = false;
     form.is_active = true;
     form.sort_order = 0;
     editingAddOnId.value = null;
@@ -72,6 +101,7 @@ const openEditModal = (addOn) => {
     form.description = String(addOn.description || '');
     form.price = Number(addOn.price || 0);
     form.max_qty = Math.max(1, Number(addOn.max_qty || 1));
+    form.is_physical = Boolean(addOn.is_physical);
     form.is_active = Boolean(addOn.is_active);
     form.sort_order = Number(addOn.sort_order || 0);
     localError.value = '';
@@ -120,6 +150,7 @@ const submitForm = async () => {
         description: String(form.description || '').trim(),
         price: Number(form.price || 0),
         max_qty: Math.max(1, Number(form.max_qty || 1)),
+        is_physical: Boolean(form.is_physical),
         is_active: Boolean(form.is_active),
         sort_order: Math.max(0, Number(form.sort_order || 0)),
     };
@@ -195,7 +226,7 @@ const requestDelete = async (addOn) => {
             {{ errorMessage }}
         </p>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
             <article class="rounded-2xl border px-4 py-3.5" style="border-color: #E6EBF4; background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,0.06);">
                 <p class="text-sm text-[#94A3B8]">Total Add-ons</p>
                 <p class="mt-0.5 text-[2rem] font-bold text-[#2563EB]">{{ stats.total }}</p>
@@ -212,73 +243,101 @@ const requestDelete = async (addOn) => {
                 <p class="text-sm text-[#94A3B8]">Package Specific</p>
                 <p class="mt-0.5 text-[2rem] font-bold text-[#D97706]">{{ stats.packageSpecific }}</p>
             </article>
+            <article class="rounded-2xl border px-4 py-3.5" style="border-color: #E6EBF4; background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,0.06);">
+                <p class="text-sm text-[#94A3B8]">Physical</p>
+                <p class="mt-0.5 text-[2rem] font-bold text-[#0F766E]">{{ stats.physical }}</p>
+            </article>
+            <article class="rounded-2xl border px-4 py-3.5" style="border-color: #E6EBF4; background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,0.06);">
+                <p class="text-sm text-[#94A3B8]">Non-physical</p>
+                <p class="mt-0.5 text-[2rem] font-bold text-[#7C3AED]">{{ stats.nonPhysical }}</p>
+            </article>
         </div>
 
         <div v-if="loading" class="rounded-2xl border p-10 text-center text-sm text-[#94A3B8]" style="border-color: #E2E8F0; background: #FFFFFF;">
             Loading add-on data...
         </div>
 
-        <div v-else class="overflow-hidden rounded-2xl border" style="border-color: #DBEAFE; background: #FFFFFF; box-shadow: 0 1px 3px rgba(37,99,235,0.08), 0 6px 18px rgba(37,99,235,0.08);">
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead style="background: #EFF6FF; color: #334155;">
-                        <tr>
-                            <th class="px-3 py-2 text-left font-semibold">Code</th>
-                            <th class="px-3 py-2 text-left font-semibold">Name</th>
-                            <th class="px-3 py-2 text-left font-semibold">Package</th>
-                            <th class="px-3 py-2 text-right font-semibold">Price</th>
-                            <th class="px-3 py-2 text-center font-semibold">Max</th>
-                            <th class="px-3 py-2 text-center font-semibold">Status</th>
-                            <th class="px-3 py-2 text-center font-semibold">Sort</th>
-                            <th class="px-3 py-2 text-right font-semibold">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="row in addOnRows" :key="`addon-row-${row.id}`" class="border-t" style="border-color: #E2E8F0;">
-                            <td class="px-3 py-2 text-[#475569]">{{ row.code }}</td>
-                            <td class="px-3 py-2">
-                                <p class="font-semibold text-[#1E293B]">{{ row.name }}</p>
-                                <p v-if="row.description" class="text-xs text-[#64748B]">{{ row.description }}</p>
-                            </td>
-                            <td class="px-3 py-2 text-[#334155]">{{ row.package_name || 'Global' }}</td>
-                            <td class="px-3 py-2 text-right font-semibold text-[#2563EB]">{{ row.price_text || formatRupiah(row.price) }}</td>
-                            <td class="px-3 py-2 text-center text-[#334155]">{{ row.max_qty }}</td>
-                            <td class="px-3 py-2 text-center">
-                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold" :style="row.is_active ? { background: '#ECFDF5', color: '#059669' } : { background: '#F8FAFC', color: '#64748B' }">
-                                    {{ row.is_active ? 'active' : 'inactive' }}
-                                </span>
-                            </td>
-                            <td class="px-3 py-2 text-center text-[#334155]">{{ row.sort_order }}</td>
-                            <td class="px-3 py-2">
-                                <div class="flex items-center justify-end gap-2">
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold"
-                                        style="border-color: #2563EB; color: #2563EB;"
-                                        @click="openEditModal(row)"
-                                    >
-                                        <Pencil class="h-3.5 w-3.5" />
-                                        Edit
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold"
-                                        style="border-color: #FECACA; color: #EF4444;"
-                                        :disabled="Number(deletingAddOnId || 0) === Number(row.id)"
-                                        @click="requestDelete(row)"
-                                    >
-                                        <Trash2 class="h-3.5 w-3.5" />
-                                        Delete
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr v-if="!addOnRows.length">
-                            <td colspan="8" class="px-4 py-8 text-center text-sm text-[#94A3B8]">No add-on data available.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+        <div v-else class="space-y-4">
+            <section
+                v-for="section in addOnSections"
+                :key="`addon-section-${section.key}`"
+                class="overflow-hidden rounded-2xl border"
+                style="border-color: #DBEAFE; background: #FFFFFF; box-shadow: 0 1px 3px rgba(37,99,235,0.08), 0 6px 18px rgba(37,99,235,0.08);"
+            >
+                <header class="border-b px-4 py-3" style="border-color: #E2E8F0; background: #F8FAFC;">
+                    <h3 class="text-sm font-semibold text-[#1E293B]">{{ section.title }}</h3>
+                    <p class="text-xs text-[#64748B]">{{ section.description }}</p>
+                </header>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead style="background: #EFF6FF; color: #334155;">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-semibold">Code</th>
+                                <th class="px-3 py-2 text-left font-semibold">Name</th>
+                                <th class="px-3 py-2 text-left font-semibold">Package</th>
+                                <th class="px-3 py-2 text-center font-semibold">Type</th>
+                                <th class="px-3 py-2 text-right font-semibold">Price</th>
+                                <th class="px-3 py-2 text-center font-semibold">Max</th>
+                                <th class="px-3 py-2 text-center font-semibold">Status</th>
+                                <th class="px-3 py-2 text-center font-semibold">Sort</th>
+                                <th class="px-3 py-2 text-right font-semibold">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in section.rows" :key="`addon-row-${section.key}-${row.id}`" class="border-t" style="border-color: #E2E8F0;">
+                                <td class="px-3 py-2 text-[#475569]">{{ row.code }}</td>
+                                <td class="px-3 py-2">
+                                    <p class="font-semibold text-[#1E293B]">{{ row.name }}</p>
+                                    <p v-if="row.description" class="text-xs text-[#64748B]">{{ row.description }}</p>
+                                </td>
+                                <td class="px-3 py-2 text-[#334155]">{{ row.package_name || 'Global' }}</td>
+                                <td class="px-3 py-2 text-center">
+                                    <span class="rounded-full px-2 py-0.5 text-xs font-semibold" :style="row.is_physical ? { background: '#ECFEFF', color: '#0E7490' } : { background: '#F5F3FF', color: '#7C3AED' }">
+                                        {{ row.is_physical ? 'Physical' : 'Non-physical' }}
+                                    </span>
+                                </td>
+                                <td class="px-3 py-2 text-right font-semibold text-[#2563EB]">{{ row.price_text || formatRupiah(row.price) }}</td>
+                                <td class="px-3 py-2 text-center text-[#334155]">{{ row.max_qty }}</td>
+                                <td class="px-3 py-2 text-center">
+                                    <span class="rounded-full px-2 py-0.5 text-xs font-semibold" :style="row.is_active ? { background: '#ECFDF5', color: '#059669' } : { background: '#F8FAFC', color: '#64748B' }">
+                                        {{ row.is_active ? 'active' : 'inactive' }}
+                                    </span>
+                                </td>
+                                <td class="px-3 py-2 text-center text-[#334155]">{{ row.sort_order }}</td>
+                                <td class="px-3 py-2">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold"
+                                            style="border-color: #2563EB; color: #2563EB;"
+                                            @click="openEditModal(row)"
+                                        >
+                                            <Pencil class="h-3.5 w-3.5" />
+                                            Edit
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold"
+                                            style="border-color: #FECACA; color: #EF4444;"
+                                            :disabled="Number(deletingAddOnId || 0) === Number(row.id)"
+                                            @click="requestDelete(row)"
+                                        >
+                                            <Trash2 class="h-3.5 w-3.5" />
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-if="!section.rows.length">
+                                <td colspan="9" class="px-4 py-8 text-center text-sm text-[#94A3B8]">
+                                    No {{ section.title.toLowerCase() }} data available.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </div>
 
         <div v-if="modalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
@@ -340,6 +399,15 @@ const requestDelete = async (addOn) => {
                                 <td class="px-3 py-2 text-[#334155]">Max Qty</td>
                                 <td class="px-3 py-2">
                                     <input v-model.number="form.max_qty" type="number" min="1" class="w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                                </td>
+                            </tr>
+                            <tr class="border-t" style="border-color: #E2E8F0;">
+                                <td class="px-3 py-2 text-[#334155]">Type</td>
+                                <td class="px-3 py-2">
+                                    <select v-model="form.is_physical" class="w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
+                                        <option :value="false">Non-physical</option>
+                                        <option :value="true">Physical</option>
+                                    </select>
                                 </td>
                             </tr>
                             <tr class="border-t" style="border-color: #E2E8F0;">

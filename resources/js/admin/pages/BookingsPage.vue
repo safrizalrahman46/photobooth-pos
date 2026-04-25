@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
-import { CheckCircle2, Eye, Pencil, Plus, RefreshCw, Search, Trash2, Wallet } from 'lucide-vue-next';
+import { CheckCircle2, Eye, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps({
     search: { type: String, default: '' },
@@ -45,6 +45,7 @@ const emit = defineEmits([
     'delete-booking',
     'confirm-booking',
     'confirm-booking-payment',
+    'decline-booking',
 ]);
 
 const bookingModalOpen = ref(false);
@@ -104,16 +105,23 @@ const resolvedDefaultBranchId = computed(() => {
     return fromOptions > 0 ? fromOptions : null;
 });
 
-const selectedBranchName = computed(() => {
-    const selectedId = Number(bookingForm.branch_id || 0);
+const hasBranchOptions = computed(() => branchOptions.value.length > 0);
+const filteredPackageOptions = computed(() => {
+    const selectedBranchId = Number(bookingForm.branch_id || 0);
 
-    if (!selectedId) {
-        return '-';
-    }
+    return packageOptions.value.filter((pkg) => {
+        const packageBranchId = pkg?.branch_id ? Number(pkg.branch_id) : null;
 
-    const branch = branchOptions.value.find((item) => Number(item?.id || 0) === selectedId);
+        if (packageBranchId === null) {
+            return true;
+        }
 
-    return String(branch?.name || '-');
+        if (!selectedBranchId) {
+            return false;
+        }
+
+        return packageBranchId === selectedBranchId;
+    });
 });
 
 const formatCurrency = (value) => `Rp ${Number(value || 0).toLocaleString('id-ID')}`;
@@ -173,6 +181,18 @@ const bookingDetailProofIsImage = computed(() => {
 
     return /\.(jpg|jpeg|png|webp|gif)$/i.test(candidate);
 });
+const bookingDetailCanConfirmPayment = computed(() => Boolean(bookingDetail.value?.can_confirm_payment));
+const bookingDetailCanConfirmBooking = computed(() => Boolean(bookingDetail.value?.can_confirm_booking));
+const bookingDetailCanDecline = computed(() => Boolean(bookingDetail.value?.can_decline_booking));
+const bookingDetailIsProcessing = computed(
+    () => Number(props.processingBookingId || 0) === Number(bookingDetail.value?.record_id || 0),
+);
+const bookingDetailShowVerify = computed(
+    () => bookingDetailCanConfirmBooking.value || bookingDetailCanConfirmPayment.value,
+);
+const bookingDetailVerifyDisabled = computed(
+    () => bookingDetailIsProcessing.value || (!bookingDetailCanConfirmBooking.value && !bookingDetailCanConfirmPayment.value),
+);
 
 const toHourMinute = (value) => String(value || '').slice(0, 5);
 
@@ -499,6 +519,11 @@ const requestDeleteBooking = async (row) => {
 };
 
 const requestConfirmBooking = async (row) => {
+    if (Boolean(row?.can_confirm_payment)) {
+        openPaymentFromDetail(row);
+        return;
+    }
+
     const confirmed = window.confirm(`Verify booking ${row.booking_code}?`);
 
     if (!confirmed) {
@@ -510,6 +535,30 @@ const requestConfirmBooking = async (row) => {
             id: Number(row.record_id || 0),
             reason: 'Confirmed from booking page',
         });
+        closeBookingDetailModal();
+    } catch {
+        // Parent handles server error message.
+    }
+};
+
+const openPaymentFromDetail = (row) => {
+    closeBookingDetailModal();
+    openPaymentModal(row);
+};
+
+const requestDeclineBooking = async (row) => {
+    const confirmed = window.confirm(`Decline booking ${row.booking_code}? Status akan berubah menjadi Canceled.`);
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        await emit('decline-booking', {
+            id: Number(row.record_id || 0),
+            reason: 'Declined from booking detail due to missing payment proof',
+        });
+        closeBookingDetailModal();
     } catch {
         // Parent handles server error message.
     }
@@ -595,6 +644,25 @@ watch(
         });
     },
     { deep: true },
+);
+
+watch(
+    () => bookingForm.branch_id,
+    () => {
+        const selectedPackageId = Number(bookingForm.package_id || 0);
+
+        if (!selectedPackageId) {
+            return;
+        }
+
+        const stillAvailable = filteredPackageOptions.value.some((pkg) => Number(pkg.id || 0) === selectedPackageId);
+
+        if (!stillAvailable) {
+            bookingForm.package_id = '';
+            bookingForm.design_catalog_id = '';
+            bookingForm.add_ons = [];
+        }
+    },
 );
 
 watch(
@@ -806,28 +874,6 @@ watch(
                                         Edit
                                     </button>
                                     <button
-                                        v-if="row.can_confirm_booking"
-                                        type="button"
-                                        class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold"
-                                        style="border-color: #A7F3D0; color: #059669;"
-                                        :disabled="Number(processingBookingId || 0) === Number(row.record_id)"
-                                        @click="requestConfirmBooking(row)"
-                                    >
-                                        <CheckCircle2 class="h-3 w-3" />
-                                        Verify
-                                    </button>
-                                    <button
-                                        v-if="row.can_confirm_payment && !row.can_confirm_booking"
-                                        type="button"
-                                        class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold"
-                                        style="border-color: #FDE68A; color: #D97706;"
-                                        :disabled="Number(processingBookingId || 0) === Number(row.record_id)"
-                                        @click="openPaymentModal(row)"
-                                    >
-                                        <Wallet class="h-3 w-3" />
-                                        Pay
-                                    </button>
-                                    <button
                                         type="button"
                                         class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold"
                                         style="border-color: #FECACA; color: #EF4444;"
@@ -876,8 +922,8 @@ watch(
             </div>
         </div>
 
-        <div v-if="bookingModalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="w-full max-w-2xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+        <div v-if="bookingModalOpen" class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto p-4 sm:py-6" style="background: rgba(15,23,42,0.45);">
+            <div class="w-full max-w-2xl rounded-2xl border bg-white p-5" style="max-height: calc(100dvh - 2rem); overflow-y: auto; border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#0F172A]">{{ bookingModalMode === 'create' ? 'Create Booking' : 'Edit Booking' }}</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeBookingModal">Close</button>
@@ -888,19 +934,21 @@ watch(
                 </p>
 
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div class="text-sm text-[#475569]">
+                    <label v-if="hasBranchOptions" class="text-sm text-[#475569]">
                         Branch
-                        <div class="mt-1 rounded-lg border px-3 py-2" style="border-color: #E2E8F0; background: #F8FAFC;">
-                            <p class="text-sm text-[#0F172A]">{{ selectedBranchName }}</p>
-                            <p class="text-xs text-[#64748B]">Managed from Settings page.</p>
-                        </div>
-                    </div>
+                        <select v-model="bookingForm.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
+                            <option value="">Select branch</option>
+                            <option v-for="branch in branchOptions" :key="`booking-branch-${branch.id}`" :value="String(branch.id)">
+                                {{ branch.name }}
+                            </option>
+                        </select>
+                    </label>
 
                     <label class="text-sm text-[#475569]">
                         Package
                         <select v-model="bookingForm.package_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
                             <option value="">Select package</option>
-                            <option v-for="pkg in packageOptions" :key="`booking-package-${pkg.id}`" :value="String(pkg.id)">{{ pkg.name }}</option>
+                            <option v-for="pkg in filteredPackageOptions" :key="`booking-package-${pkg.id}`" :value="String(pkg.id)">{{ pkg.name }}</option>
                         </select>
                     </label>
 
@@ -1158,7 +1206,40 @@ watch(
                     </div>
                 </div>
 
-                <div class="mt-5 flex items-center justify-end gap-2">
+                <div class="mt-4 rounded-xl border px-4 py-3 text-xs" style="border-color: #E2E8F0; background: #F8FAFC; color: #64748B;">
+                    <p v-if="bookingDetailCanConfirmPayment">
+                        Booking masih <span class="font-semibold text-[#B45309]">UNPAID / PARTIAL</span>. Klik <span class="font-semibold">Verify</span> untuk membuka konfirmasi pembayaran.
+                    </p>
+                    <p v-else-if="bookingDetailCanConfirmBooking">
+                        Booking sudah memenuhi syarat verifikasi. Klik <span class="font-semibold text-[#059669]">Verify</span> untuk melanjutkan.
+                    </p>
+                    <p v-else>
+                        Aksi pembayaran / verifikasi tidak tersedia untuk status booking saat ini.
+                    </p>
+                </div>
+
+                <div class="mt-5 flex flex-wrap items-center justify-end gap-2">
+                    <button
+                        v-if="bookingDetailCanDecline"
+                        type="button"
+                        class="rounded-xl border px-4 py-2 text-sm font-semibold"
+                        style="border-color: #FECACA; color: #DC2626;"
+                        :disabled="bookingDetailIsProcessing"
+                        @click="requestDeclineBooking(bookingDetail)"
+                    >
+                        Decline
+                    </button>
+                    <button
+                        v-if="bookingDetailShowVerify"
+                        type="button"
+                        class="inline-flex items-center gap-1 rounded-xl border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                        style="border-color: #A7F3D0; color: #059669;"
+                        :disabled="bookingDetailVerifyDisabled"
+                        @click="requestConfirmBooking(bookingDetail)"
+                    >
+                        <CheckCircle2 class="h-3.5 w-3.5" />
+                        Verify
+                    </button>
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeBookingDetailModal">Close</button>
                 </div>
             </div>

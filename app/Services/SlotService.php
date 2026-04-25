@@ -14,6 +14,9 @@ use Illuminate\Support\Collection;
 class SlotService
 {
     private const MAX_ACTIVE_BOOKINGS_PER_SLOT = 1;
+    private const REASON_PAST_TIME = 'past_time';
+    private const REASON_DURATION_EXCEEDS_SLOT = 'duration_exceeds_slot';
+    private const REASON_FULL = 'full';
 
     public function getAvailability(string $date, int $packageId, int $branchId): Collection
     {
@@ -63,6 +66,8 @@ class SlotService
                     'end_time' => $slot->end_time,
                     'remaining_slots' => 0,
                     'is_available' => false,
+                    'unavailable_reason' => self::REASON_PAST_TIME,
+                    'unavailable_reason_label' => 'Lewat jam',
                 ];
             }
 
@@ -73,6 +78,8 @@ class SlotService
                     'end_time' => $slot->end_time,
                     'remaining_slots' => 0,
                     'is_available' => false,
+                    'unavailable_reason' => self::REASON_DURATION_EXCEEDS_SLOT,
+                    'unavailable_reason_label' => 'Durasi paket tidak muat',
                 ];
             }
 
@@ -94,6 +101,8 @@ class SlotService
                 'end_time' => $slot->end_time,
                 'remaining_slots' => $remaining,
                 'is_available' => $remaining > 0,
+                'unavailable_reason' => $remaining > 0 ? null : self::REASON_FULL,
+                'unavailable_reason_label' => $remaining > 0 ? null : 'Penuh',
             ];
         });
     }

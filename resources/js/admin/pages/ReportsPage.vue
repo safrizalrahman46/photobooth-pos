@@ -9,6 +9,7 @@ defineProps({
     reportStatusRows: { type: Array, default: () => [] },
     reportPackageRows: { type: Array, default: () => [] },
     reportCashierRows: { type: Array, default: () => [] },
+    reportAddOnRows: { type: Array, default: () => [] },
 });
 </script>
 
@@ -109,7 +110,7 @@ defineProps({
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div class="rounded-2xl border p-5" style="border-color: #DCFCE7; background: #FFFFFF; box-shadow: 0 1px 3px rgba(21,128,61,0.08), 0 8px 20px rgba(21,128,61,0.08);">
                 <h3 class="mb-3 text-sm font-semibold text-[#1F2937]">Package Popularity</h3>
                 <div class="space-y-2">
@@ -135,6 +136,20 @@ defineProps({
                         <span class="text-xs font-semibold text-[#2563EB]">{{ cashier.revenue_text }}</span>
                     </div>
                     <p v-if="!reportCashierRows.length" class="text-xs text-[#94A3B8]">No cashier report in range.</p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border p-5" style="border-color: #DCFCE7; background: #FFFFFF; box-shadow: 0 1px 3px rgba(21,128,61,0.08), 0 8px 20px rgba(21,128,61,0.08);">
+                <h3 class="mb-3 text-sm font-semibold text-[#1F2937]">Add-on Usage</h3>
+                <div class="space-y-2">
+                    <div v-for="addOn in reportAddOnRows" :key="`report-addon-row-${addOn.add_on_id}`" class="flex items-center justify-between rounded-lg px-3 py-2" style="background: #F8FAFC;">
+                        <div>
+                            <p class="text-xs text-[#1F2937]">{{ addOn.add_on_name }}</p>
+                            <p class="text-xs text-[#94A3B8]">{{ addOn.total_qty }} qty · {{ addOn.booking_count }} bookings</p>
+                        </div>
+                        <span class="text-xs font-semibold text-[#0F766E]">{{ addOn.total_revenue_text }}</span>
+                    </div>
+                    <p v-if="!reportAddOnRows.length" class="text-xs text-[#94A3B8]">No add-on usage in range.</p>
                 </div>
             </div>
         </div>

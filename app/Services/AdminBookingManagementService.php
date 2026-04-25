@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\BookingSource;
 use App\Enums\BookingStatus;
+use App\Enums\QueueStatus;
 use App\Enums\TransactionStatus;
 use App\Models\AddOn;
 use App\Models\Booking;
@@ -90,7 +91,12 @@ class AdminBookingManagementService
 
     public function confirm(Booking $booking, ?int $actorId = null, ?string $reason = null): Booking
     {
-        $booking->loadMissing(['transaction', 'queueTicket']);
+        $booking->loadMissing([
+            'transaction',
+            'queueTicket',
+            'package:id,base_price',
+            'addOns:id,price',
+        ]);
 
         $status = $booking->status instanceof BookingStatus
             ? $booking->status
@@ -186,7 +192,70 @@ class AdminBookingManagementService
             );
         }
 
-        return $updatedTransaction;
+        $booking = $booking->refresh();
+        $bookingStatusAfterPayment = $booking->status instanceof BookingStatus
+            ? $booking->status->value
+            : (string) $booking->status;
+
+        if (
+            $booking->approved_at === null
+            && ! in_array($bookingStatusAfterPayment, [BookingStatus::Cancelled->value, BookingStatus::Done->value], true)
+            && $this->remainingAmountForVerification($booking) <= 0
+        ) {
+            $this->confirm(
+                $booking,
+                $cashierId,
+                'Auto verified after payment confirmation from owner dashboard'
+            );
+        }
+
+        return $updatedTransaction->refresh();
+    }
+
+    public function decline(Booking $booking, ?int $actorId = null, ?string $reason = null): Booking
+    {
+        $booking->loadMissing(['queueTicket']);
+
+        $status = $booking->status instanceof BookingStatus
+            ? $booking->status
+            : BookingStatus::from((string) $booking->status);
+
+        if (in_array($status->value, [BookingStatus::Cancelled->value, BookingStatus::Done->value], true)) {
+            throw ValidationException::withMessages([
+                'status' => 'Booking with current status cannot be declined.',
+            ]);
+        }
+
+        if ($booking->approved_at !== null) {
+            throw ValidationException::withMessages([
+                'booking' => 'Booking yang sudah diverifikasi tidak dapat decline.',
+            ]);
+        }
+
+        $hasTransferProof = trim((string) ($booking->transfer_proof_path ?? '')) !== '';
+
+        if ($hasTransferProof) {
+            throw ValidationException::withMessages([
+                'booking' => 'Booking memiliki bukti pembayaran. Gunakan Verify atau proses pembayaran.',
+            ]);
+        }
+
+        if ($booking->queueTicket) {
+            try {
+                $this->queueService->transition($booking->queueTicket, QueueStatus::Cancelled);
+            } catch (\RuntimeException) {
+                // Keep decline flow successful even if queue transition is not possible.
+            }
+        }
+
+        $this->bookingService->updateStatus(
+            $booking,
+            BookingStatus::Cancelled,
+            $actorId,
+            $reason ?: 'Declined from booking detail due to missing payment proof'
+        );
+
+        return $booking->refresh();
     }
 
     private function buildBookingContext(array $payload): array
@@ -511,13 +580,42 @@ class AdminBookingManagementService
 
     private function remainingAmountForVerification(Booking $booking): float
     {
-        if ($booking->transaction) {
-            return max(
-                (float) $booking->transaction->total_amount - (float) $booking->transaction->paid_amount,
-                0
-            );
-        }
+        $effectiveTotalAmount = max(
+            (float) $booking->total_amount,
+            (float) ($booking->transaction?->total_amount ?? 0),
+            $this->derivedTotalFromBookingItems($booking),
+            0
+        );
 
-        return max((float) $booking->total_amount - (float) $booking->paid_amount, 0);
+        return max($effectiveTotalAmount - $this->paidAmountForVerification($booking), 0);
+    }
+
+    private function paidAmountForVerification(Booking $booking): float
+    {
+        return max(
+            (float) $booking->paid_amount,
+            (float) ($booking->transaction?->paid_amount ?? 0),
+            0
+        );
+    }
+
+    private function derivedTotalFromBookingItems(Booking $booking): float
+    {
+        $packageBasePrice = (float) ($booking->package?->base_price ?? 0);
+        $addOnTotal = (float) collect($booking->addOns ?? [])
+            ->sum(function (AddOn $addOn): float {
+                $lineTotal = (float) ($addOn->pivot?->line_total ?? 0);
+
+                if ($lineTotal > 0) {
+                    return $lineTotal;
+                }
+
+                $qty = max(0, (int) ($addOn->pivot?->qty ?? 0));
+                $unitPrice = (float) ($addOn->pivot?->unit_price ?? $addOn->price ?? 0);
+
+                return $qty * $unitPrice;
+            });
+
+        return max($packageBasePrice + $addOnTotal, 0);
     }
 }

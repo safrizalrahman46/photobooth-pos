@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref } from 'vue';
-import { Plus, RefreshCw, Shield, UserRound, UsersRound } from 'lucide-vue-next';
+import { Pencil, Plus, RefreshCw, Shield, Trash2, UserRound, UsersRound } from 'lucide-vue-next';
 
 const props = defineProps({
     userRows: { type: Array, default: () => [] },
@@ -9,16 +9,21 @@ const props = defineProps({
     roleOptions: { type: Array, default: () => [] },
     loading: { type: Boolean, default: false },
     saving: { type: Boolean, default: false },
+    deletingUserId: { type: [Number, String, null], default: null },
+    canManage: { type: Boolean, default: false },
+    currentUserEmail: { type: String, default: '' },
     errorMessage: { type: String, default: '' },
 });
 
-const emit = defineEmits(['refresh-users', 'create-user']);
+const emit = defineEmits(['refresh-users', 'create-user', 'update-user', 'delete-user']);
 
 const ownerCount = computed(() => props.userRows.filter((item) => String(item.role || '').toLowerCase() === 'owner').length);
 const cashierCount = computed(() => props.userRows.filter((item) => String(item.role || '').toLowerCase() === 'cashier').length);
 const activeCount = computed(() => props.userRows.filter((item) => String(item.status || '').toLowerCase() === 'active').length);
 
 const modalOpen = ref(false);
+const modalMode = ref('create');
+const editingUserId = ref(null);
 const localError = ref('');
 const form = reactive({
     name: '',
@@ -54,12 +59,36 @@ const resetForm = () => {
     form.password = '';
     form.role = '';
     form.is_active = true;
+    modalMode.value = 'create';
+    editingUserId.value = null;
     localError.value = '';
 };
 
 const openAddModal = () => {
     resetForm();
+    modalMode.value = 'create';
+    editingUserId.value = null;
     modalOpen.value = true;
+};
+
+const openEditModal = (user) => {
+    modalMode.value = 'edit';
+    editingUserId.value = Number(user.id || 0);
+    form.name = String(user.name || '');
+    form.email = String(user.email || '');
+    form.phone = String(user.phone || '');
+    form.password = '';
+    form.role = String(user.role_key || '').trim();
+    form.is_active = Boolean(user.is_active);
+    localError.value = '';
+    modalOpen.value = true;
+};
+
+const isSelfUser = (user) => {
+    const currentEmail = String(props.currentUserEmail || '').trim().toLowerCase();
+    const targetEmail = String(user?.email || '').trim().toLowerCase();
+
+    return currentEmail !== '' && targetEmail !== '' && currentEmail === targetEmail;
 };
 
 const closeModal = () => {
@@ -78,8 +107,15 @@ const validateForm = () => {
         return false;
     }
 
-    if (!String(form.password || '').trim() || String(form.password || '').trim().length < 8) {
+    const password = String(form.password || '').trim();
+
+    if (modalMode.value === 'create' && password.length < 8) {
         localError.value = 'Password must be at least 8 characters.';
+        return false;
+    }
+
+    if (modalMode.value === 'edit' && password.length > 0 && password.length < 8) {
+        localError.value = 'If filled, password must be at least 8 characters.';
         return false;
     }
 
@@ -96,14 +132,41 @@ const submitForm = async () => {
         name: String(form.name || '').trim(),
         email: String(form.email || '').trim(),
         phone: String(form.phone || '').trim(),
-        password: String(form.password || ''),
         role: String(form.role || '').trim() || null,
         is_active: Boolean(form.is_active),
+        ...(String(form.password || '').trim() !== '' ? { password: String(form.password || '') } : {}),
     };
 
     try {
-        await emit('create-user', payload);
+        if (modalMode.value === 'create') {
+            await emit('create-user', payload);
+        } else {
+            await emit('update-user', {
+                id: editingUserId.value,
+                payload,
+            });
+        }
+
         modalOpen.value = false;
+    } catch {
+        // Parent component handles server error messages.
+    }
+};
+
+const requestDelete = async (user) => {
+    if (isSelfUser(user)) {
+        localError.value = 'Akun sendiri tidak bisa dihapus.';
+        return;
+    }
+
+    const confirmed = window.confirm(`Hapus user ${String(user.name || 'ini')}?`);
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        await emit('delete-user', Number(user.id || 0));
     } catch {
         // Parent component handles server error messages.
     }
@@ -133,7 +196,13 @@ const submitForm = async () => {
                         <RefreshCw class="mr-1.5 h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
                         Refresh
                     </button>
-                    <button type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #0F172A;" @click="openAddModal">
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="rounded-xl bg-white px-4 py-2 text-sm font-semibold"
+                        style="color: #0F172A;"
+                        @click="openAddModal"
+                    >
                         <Plus class="mr-1 inline h-3.5 w-3.5" />
                         Add User
                     </button>
@@ -173,6 +242,7 @@ const submitForm = async () => {
                         <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Role</th>
                         <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Status</th>
                         <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Source</th>
+                        <th v-if="canManage" class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -198,10 +268,33 @@ const submitForm = async () => {
                             <span class="rounded-full px-2 py-0.5 text-xs" :style="String(user.status || '').toLowerCase() === 'active' ? { background: '#ECFDF5', color: '#059669' } : { background: '#F8FAFC', color: '#64748B' }">{{ user.status }}</span>
                         </td>
                         <td class="px-5 py-3.5 text-xs text-[#94A3B8]">{{ user.source }}</td>
+                        <td v-if="canManage" class="px-5 py-3.5">
+                            <div class="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium"
+                                    style="border-color: #BFDBFE; color: #1D4ED8; background: #EFF6FF;"
+                                    @click="openEditModal(user)"
+                                >
+                                    <Pencil class="h-3 w-3" />
+                                    Edit
+                                </button>
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium"
+                                    style="border-color: #FECACA; color: #DC2626; background: #FEF2F2;"
+                                    :disabled="Number(deletingUserId || 0) === Number(user.id || 0) || isSelfUser(user)"
+                                    @click="requestDelete(user)"
+                                >
+                                    <Trash2 class="h-3 w-3" />
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
                     </tr>
 
                     <tr v-if="!userRows.length">
-                        <td colspan="5" class="px-5 py-10 text-center text-sm text-[#94A3B8]">No user data found.</td>
+                        <td :colspan="canManage ? 6 : 5" class="px-5 py-10 text-center text-sm text-[#94A3B8]">No user data found.</td>
                     </tr>
                 </tbody>
             </table>
@@ -210,7 +303,7 @@ const submitForm = async () => {
         <div v-if="modalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
             <div class="w-full max-w-xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-[#0F172A]">Add User</h3>
+                    <h3 class="text-lg font-semibold text-[#0F172A]">{{ modalMode === 'create' ? 'Add User' : 'Edit User' }}</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeModal">Close</button>
                 </div>
 
@@ -235,7 +328,7 @@ const submitForm = async () => {
                     </label>
 
                     <label class="text-sm text-[#475569]">
-                        Password
+                        Password {{ modalMode === 'edit' ? '(optional)' : '' }}
                         <input v-model="form.password" type="password" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
                     </label>
 
@@ -264,7 +357,7 @@ const submitForm = async () => {
                         :disabled="saving"
                         @click="submitForm"
                     >
-                        {{ saving ? 'Saving...' : 'Create User' }}
+                        {{ saving ? 'Saving...' : (modalMode === 'create' ? 'Create User' : 'Save Changes') }}
                     </button>
                 </div>
             </div>

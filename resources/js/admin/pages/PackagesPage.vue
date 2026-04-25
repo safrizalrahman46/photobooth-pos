@@ -1,9 +1,10 @@
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import { Camera, Clock3, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps({
     packageCards: { type: Array, default: () => [] },
+    branchOptions: { type: Array, default: () => [] },
     panelBaseUrl: { type: String, default: '/admin' },
     formatRupiah: { type: Function, required: true },
     loading: { type: Boolean, default: false },
@@ -63,6 +64,7 @@ const editingPackageId = ref(null);
 const localError = ref('');
 
 const form = reactive({
+    branch_id: '',
     name: '',
     description: '',
     duration_minutes: 30,
@@ -70,6 +72,11 @@ const form = reactive({
     is_active: true,
     sort_order: 0,
 });
+
+const existingSamplePhotos = ref([]);
+const newSamplePhotoFiles = ref([]);
+const newSamplePhotoPreviewList = ref([]);
+const samplePhotoInputKey = ref(0);
 
 const toFeatureList = (description) => {
     const raw = String(description || '')
@@ -116,13 +123,69 @@ const stats = computed(() => {
     };
 });
 
+const revokeNewSamplePhotoPreviewUrls = () => {
+    newSamplePhotoPreviewList.value.forEach((item) => {
+        if (item?.preview_url) {
+            URL.revokeObjectURL(item.preview_url);
+        }
+    });
+};
+
+const resetNewSamplePhotoState = () => {
+    revokeNewSamplePhotoPreviewUrls();
+    newSamplePhotoFiles.value = [];
+    newSamplePhotoPreviewList.value = [];
+    samplePhotoInputKey.value += 1;
+};
+
+const handleSamplePhotoFileChange = (event) => {
+    const incomingFiles = Array.from(event?.target?.files || []).filter((file) => file instanceof File);
+    const availableSlots = Math.max(0, 12 - existingSamplePhotos.value.length);
+
+    resetNewSamplePhotoState();
+
+    if (!incomingFiles.length) {
+        return;
+    }
+
+    const acceptedFiles = incomingFiles.slice(0, availableSlots);
+
+    newSamplePhotoFiles.value = acceptedFiles;
+    newSamplePhotoPreviewList.value = acceptedFiles.map((file) => ({
+        file_name: file.name,
+        preview_url: URL.createObjectURL(file),
+    }));
+
+    if (incomingFiles.length > acceptedFiles.length) {
+        localError.value = 'Maksimal 12 foto contoh per paket.';
+    }
+};
+
+const removeExistingSamplePhoto = (index) => {
+    existingSamplePhotos.value.splice(index, 1);
+};
+
+const removeNewSamplePhoto = (index) => {
+    const target = newSamplePhotoPreviewList.value[index];
+
+    if (target?.preview_url) {
+        URL.revokeObjectURL(target.preview_url);
+    }
+
+    newSamplePhotoPreviewList.value.splice(index, 1);
+    newSamplePhotoFiles.value.splice(index, 1);
+};
+
 const resetForm = () => {
+    form.branch_id = '';
     form.name = '';
     form.description = '';
     form.duration_minutes = 30;
     form.base_price = 0;
     form.is_active = true;
     form.sort_order = 0;
+    existingSamplePhotos.value = [];
+    resetNewSamplePhotoState();
     editingPackageId.value = null;
     localError.value = '';
 };
@@ -136,8 +199,13 @@ const openCreateModal = () => {
 const openEditModal = (pkg) => {
     modalMode.value = 'edit';
     editingPackageId.value = Number(pkg.id || 0);
+    form.branch_id = pkg.branch_id ? String(pkg.branch_id) : '';
     form.name = String(pkg.name || '');
     form.description = String(pkg.description || '');
+    existingSamplePhotos.value = Array.isArray(pkg.sample_photos)
+        ? pkg.sample_photos.map((photo) => String(photo || '').trim()).filter((photo) => photo !== '')
+        : [];
+    resetNewSamplePhotoState();
     form.duration_minutes = Number(pkg.duration_minutes || 30);
     form.base_price = Number(pkg.base_price || 0);
     form.is_active = Boolean(pkg.is_active);
@@ -148,6 +216,7 @@ const openEditModal = (pkg) => {
 
 const closeModal = () => {
     modalOpen.value = false;
+    resetNewSamplePhotoState();
     localError.value = '';
 };
 
@@ -167,6 +236,11 @@ const validateForm = () => {
         return false;
     }
 
+    if ((existingSamplePhotos.value.length + newSamplePhotoFiles.value.length) > 12) {
+        localError.value = 'Maksimal 12 foto contoh per paket.';
+        return false;
+    }
+
     localError.value = '';
     return true;
 };
@@ -176,14 +250,23 @@ const submitForm = async () => {
         return;
     }
 
-    const payload = {
-        name: String(form.name || '').trim(),
-        description: String(form.description || '').trim(),
-        duration_minutes: Number(form.duration_minutes || 0),
-        base_price: Number(form.base_price || 0),
-        is_active: Boolean(form.is_active),
-        sort_order: Number(form.sort_order || 0),
-    };
+    const payload = new FormData();
+    payload.append('branch_id', form.branch_id ? String(form.branch_id) : '');
+    payload.append('name', String(form.name || '').trim());
+    payload.append('description', String(form.description || '').trim());
+    payload.append('duration_minutes', String(Number(form.duration_minutes || 0)));
+    payload.append('base_price', String(Number(form.base_price || 0)));
+    payload.append('is_active', form.is_active ? '1' : '0');
+    payload.append('sort_order', String(Number(form.sort_order || 0)));
+    payload.append('sample_photos_keep_present', '1');
+
+    existingSamplePhotos.value.forEach((photoUrl) => {
+        payload.append('sample_photos_keep[]', String(photoUrl || '').trim());
+    });
+
+    newSamplePhotoFiles.value.forEach((photoFile) => {
+        payload.append('sample_photos_files[]', photoFile);
+    });
 
     try {
         if (modalMode.value === 'create') {
@@ -200,6 +283,10 @@ const submitForm = async () => {
         // Error message is handled by parent and shown in-page.
     }
 };
+
+onBeforeUnmount(() => {
+    revokeNewSamplePhotoPreviewUrls();
+});
 
 const requestDelete = async (pkg) => {
     const packageName = String(pkg.name || 'this package');
@@ -366,6 +453,16 @@ const requestDelete = async (pkg) => {
 
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <label class="text-sm text-[#475569]">
+                        Branch
+                        <select v-model="form.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
+                            <option value="">All Branches</option>
+                            <option v-for="branch in branchOptions" :key="`pkg-branch-${branch.id}`" :value="String(branch.id)">
+                                {{ branch.name }}
+                            </option>
+                        </select>
+                    </label>
+
+                    <label class="text-sm text-[#475569]">
                         Package Name
                         <input v-model="form.name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
                     </label>
@@ -390,6 +487,66 @@ const requestDelete = async (pkg) => {
                     Description / Features (one feature per line)
                     <textarea v-model="form.description" rows="5" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></textarea>
                 </label>
+
+                <label class="mt-3 block text-sm text-[#475569]">
+                    Foto Contoh Hasil (Upload Gambar)
+                    <input
+                        :key="samplePhotoInputKey"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                        style="border-color: #E2E8F0;"
+                        @change="handleSamplePhotoFileChange"
+                    >
+                    <p class="mt-1 text-xs text-[#64748B]">
+                        Maksimal 12 foto contoh per paket. Slot tersisa: {{ Math.max(0, 12 - existingSamplePhotos.length) }}.
+                    </p>
+                </label>
+
+                <div v-if="existingSamplePhotos.length" class="mt-3">
+                    <p class="text-xs text-[#64748B]">Foto Tersimpan</p>
+                    <div class="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
+                        <div
+                            v-for="(photoUrl, index) in existingSamplePhotos"
+                            :key="`pkg-existing-photo-${index}`"
+                            class="overflow-hidden rounded-lg border"
+                            style="border-color: #E2E8F0; background: #F8FAFC;"
+                        >
+                            <img :src="photoUrl" :alt="`Saved sample ${index + 1}`" class="h-20 w-full object-cover">
+                            <button
+                                type="button"
+                                class="w-full border-t px-2 py-1 text-xs font-medium text-[#DC2626]"
+                                style="border-color: #E2E8F0;"
+                                @click="removeExistingSamplePhoto(index)"
+                            >
+                                Hapus
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="newSamplePhotoPreviewList.length" class="mt-3">
+                    <p class="text-xs text-[#64748B]">Foto Baru (Belum Disimpan)</p>
+                    <div class="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
+                        <div
+                            v-for="(item, index) in newSamplePhotoPreviewList"
+                            :key="`pkg-new-photo-${index}`"
+                            class="overflow-hidden rounded-lg border"
+                            style="border-color: #E2E8F0; background: #F8FAFC;"
+                        >
+                            <img :src="item.preview_url" :alt="`New sample ${index + 1}`" class="h-20 w-full object-cover">
+                            <button
+                                type="button"
+                                class="w-full border-t px-2 py-1 text-xs font-medium text-[#DC2626]"
+                                style="border-color: #E2E8F0;"
+                                @click="removeNewSamplePhoto(index)"
+                            >
+                                Hapus
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <label class="mt-3 inline-flex items-center gap-2 text-sm text-[#475569]">
                     <input v-model="form.is_active" type="checkbox" >

@@ -15,6 +15,7 @@ use App\Services\BookingService;
 use App\Services\SlotService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -27,8 +28,60 @@ class BookingController extends Controller
         private readonly SlotService $slotService,
     ) {}
 
-    public function create(): View
+    public function customer(Request $request): View
     {
+        $prefill = $request->session()->get('booking.prefill_customer', []);
+
+        if (! is_array($prefill)) {
+            $prefill = [];
+        }
+
+        return view('web.booking-customer', [
+            'oldValues' => [
+                'customer_name' => old('customer_name', (string) ($prefill['customer_name'] ?? '')),
+                'customer_phone' => old('customer_phone', (string) ($prefill['customer_phone'] ?? '')),
+                'customer_email' => old('customer_email', (string) ($prefill['customer_email'] ?? '')),
+                'notes' => old('notes', (string) ($prefill['notes'] ?? '')),
+                'terms_accepted' => old('terms_accepted', 0),
+            ],
+        ]);
+    }
+
+    public function storeCustomer(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'customer_name' => ['required', 'string', 'max:120'],
+            'customer_phone' => ['required', 'string', 'max:30', 'regex:/^[0-9]+$/'],
+            'customer_email' => ['nullable', 'email', 'max:120'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'terms_accepted' => ['accepted'],
+        ]);
+
+        $request->session()->put('booking.prefill_customer', [
+            'customer_name' => trim((string) ($validated['customer_name'] ?? '')),
+            'customer_phone' => preg_replace('/\D+/', '', (string) ($validated['customer_phone'] ?? '')),
+            'customer_email' => trim((string) ($validated['customer_email'] ?? '')),
+            'notes' => trim((string) ($validated['notes'] ?? '')),
+        ]);
+
+        return redirect()->route('booking.create');
+    }
+
+    public function create(Request $request): View|RedirectResponse
+    {
+        $prefill = $request->session()->get('booking.prefill_customer', []);
+
+        if (! is_array($prefill)) {
+            $prefill = [];
+        }
+
+        $hasPrefillCustomer = filled($prefill['customer_name'] ?? null) && filled($prefill['customer_phone'] ?? null);
+        $hasOldCustomer = filled(old('customer_name')) && filled(old('customer_phone'));
+
+        if (! $hasPrefillCustomer && ! $hasOldCustomer) {
+            return redirect()->route('booking.customer');
+        }
+
         $branches = collect();
         $packages = collect();
         $designCatalogs = collect();
@@ -44,7 +97,18 @@ class BookingController extends Controller
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'name', 'description', 'duration_minutes', 'base_price', 'branch_id']);
+                ->get(['id', 'name', 'description', 'sample_photos', 'duration_minutes', 'base_price', 'branch_id'])
+                ->map(function (Package $package): array {
+                    return [
+                        'id' => (int) $package->id,
+                        'name' => (string) $package->name,
+                        'description' => (string) ($package->description ?? ''),
+                        'sample_photos' => $package->resolvedSamplePhotos(),
+                        'duration_minutes' => (int) $package->duration_minutes,
+                        'base_price' => (float) $package->base_price,
+                        'branch_id' => $package->branch_id ? (int) $package->branch_id : null,
+                    ];
+                });
 
             $designCatalogs = DesignCatalog::query()
                 ->where('is_active', true)
@@ -65,6 +129,7 @@ class BookingController extends Controller
             'packages' => $packages,
             'designCatalogs' => $designCatalogs,
             'addOns' => $addOns,
+            'prefillCustomer' => $prefill,
         ]);
     }
 
@@ -94,6 +159,8 @@ class BookingController extends Controller
                     'end_label' => substr((string) $slot['end_time'], 0, 5),
                     'remaining_slots' => $slot['remaining_slots'],
                     'is_available' => $slot['is_available'],
+                    'unavailable_reason' => $slot['unavailable_reason'] ?? null,
+                    'unavailable_reason_label' => $slot['unavailable_reason_label'] ?? null,
                 ];
             })
             ->values();

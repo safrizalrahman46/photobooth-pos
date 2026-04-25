@@ -97,6 +97,39 @@ const toggleSelected = (slotId) => {
     selectedSlotIds.value = [...selectedSlotIds.value, id];
 };
 
+const filteredSlotIds = computed(() => {
+    return filteredRows.value
+        .map((row) => Number(row.id || 0))
+        .filter((id) => id > 0);
+});
+
+const allFilteredSelected = computed(() => {
+    if (!filteredSlotIds.value.length) {
+        return false;
+    }
+
+    return filteredSlotIds.value.every((id) => selectedSlotIds.value.includes(id));
+});
+
+const selectAllFiltered = () => {
+    if (!filteredSlotIds.value.length) {
+        return;
+    }
+
+    selectedSlotIds.value = Array.from(new Set([
+        ...selectedSlotIds.value,
+        ...filteredSlotIds.value,
+    ]));
+};
+
+const clearFilteredSelection = () => {
+    if (!filteredSlotIds.value.length) {
+        return;
+    }
+
+    selectedSlotIds.value = selectedSlotIds.value.filter((id) => !filteredSlotIds.value.includes(id));
+};
+
 const submitCreate = () => {
     const branchId = Number(createForm.branch_id || 0);
 
@@ -357,9 +390,28 @@ const applyTodayFilter = () => {
             </div>
 
             <div class="mb-3 flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    class="rounded-lg border px-3 py-1.5 text-xs"
+                    style="border-color: #BFDBFE; color: #1D4ED8;"
+                    :disabled="!filteredRows.length || allFilteredSelected"
+                    @click="selectAllFiltered"
+                >
+                    Select All
+                </button>
+                <button
+                    type="button"
+                    class="rounded-lg border px-3 py-1.5 text-xs"
+                    style="border-color: #CBD5E1; color: #64748B;"
+                    :disabled="!filteredRows.length"
+                    @click="clearFilteredSelection"
+                >
+                    Clear Selection
+                </button>
                 <button type="button" class="rounded-lg border px-3 py-1.5 text-xs" style="border-color: #86EFAC; color: #166534;" :disabled="saving" @click="applyBulk(true)">Set Selected Bookable</button>
                 <button type="button" class="rounded-lg border px-3 py-1.5 text-xs" style="border-color: #FCA5A5; color: #B91C1C;" :disabled="saving" @click="applyBulk(false)">Set Selected Blocked</button>
                 <span class="text-xs text-[#94A3B8]">Showing {{ filteredRows.length }} of {{ timeSlotRows.length }} slots</span>
+                <span class="text-xs text-[#94A3B8]">Selected {{ selectedSlotIds.length }} slot(s)</span>
             </div>
 
             <div class="overflow-hidden rounded-xl border" style="border-color: #E2E8F0;">

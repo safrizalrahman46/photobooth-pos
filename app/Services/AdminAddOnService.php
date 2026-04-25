@@ -15,6 +15,9 @@ class AdminAddOnService
             'description' => $payload['description'] ?? null,
             'price' => $payload['price'],
             'max_qty' => $payload['max_qty'],
+            'is_physical' => $payload['is_physical'] ?? false,
+            'available_stock' => max(0, (int) ($payload['available_stock'] ?? 0)),
+            'low_stock_threshold' => max(0, (int) ($payload['low_stock_threshold'] ?? 0)),
             'is_active' => $payload['is_active'] ?? true,
             'sort_order' => $payload['sort_order'] ?? 0,
         ]);
@@ -31,6 +34,13 @@ class AdminAddOnService
             'description' => $payload['description'] ?? null,
             'price' => $payload['price'],
             'max_qty' => $payload['max_qty'],
+            'is_physical' => $payload['is_physical'] ?? $addOn->is_physical,
+            'available_stock' => array_key_exists('available_stock', $payload)
+                ? max(0, (int) $payload['available_stock'])
+                : (int) $addOn->available_stock,
+            'low_stock_threshold' => array_key_exists('low_stock_threshold', $payload)
+                ? max(0, (int) $payload['low_stock_threshold'])
+                : (int) $addOn->low_stock_threshold,
             'is_active' => $payload['is_active'] ?? $addOn->is_active,
             'sort_order' => $payload['sort_order'] ?? $addOn->sort_order,
         ]);

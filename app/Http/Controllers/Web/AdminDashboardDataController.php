@@ -32,6 +32,7 @@ class AdminDashboardDataController extends Controller
             'data' => [
                 'rows' => $rowsPayload['rows'],
                 'pagination' => $rowsPayload['pagination'],
+                'pending_bookings_count' => (int) ($rowsPayload['pendingBookingsCount'] ?? 0),
             ],
         ]);
     }

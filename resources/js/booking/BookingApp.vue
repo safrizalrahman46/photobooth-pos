@@ -137,12 +137,34 @@ const availableAddOns = computed(() => {
 });
 
 const selectedPackagePhotoSet = computed(() => {
-    return filteredDesignCatalogs.value
+    const packageSamples = (Array.isArray(selectedPackage.value?.sample_photos) ? selectedPackage.value.sample_photos : [])
+        .map((item) => asString(item).trim())
+        .filter((item) => item !== '')
+        .map((src, index) => ({
+            src,
+            label: `Contoh Paket ${index + 1}`,
+        }));
+
+    const designPreviews = filteredDesignCatalogs.value
         .filter((item) => asString(item.preview_url).trim() !== '')
         .map((item) => ({
             src: asString(item.preview_url),
             label: asString(item.name || 'Design Preview'),
         }));
+
+    const merged = [...packageSamples, ...designPreviews];
+    const seen = new Set();
+
+    return merged.filter((item) => {
+        const key = asString(item.src).trim();
+
+        if (!key || seen.has(key)) {
+            return false;
+        }
+
+        seen.add(key);
+        return true;
+    });
 });
 
 const selectedBookingDateObject = computed({
@@ -308,6 +330,29 @@ const slotKey = (slot) => {
 };
 
 const slotStart = (slot) => normalizeTime(slot.start_time || slot.start_label);
+const slotUnavailableReasonLabel = (slot) => {
+    const directLabel = asString(slot?.unavailable_reason_label).trim();
+
+    if (directLabel) {
+        return directLabel;
+    }
+
+    const reason = asString(slot?.unavailable_reason).trim();
+
+    if (reason === 'past_time') {
+        return 'Lewat jam';
+    }
+
+    if (reason === 'duration_exceeds_slot') {
+        return 'Durasi paket tidak muat';
+    }
+
+    if (reason === 'full') {
+        return 'Penuh';
+    }
+
+    return '';
+};
 
 const updateMobileState = () => {
     isMobile.value = window.innerWidth < 1024;
@@ -360,7 +405,19 @@ const loadAvailability = async () => {
             return;
         }
 
-        const loadedSlots = Array.isArray(payload.data) ? payload.data : [];
+        const loadedSlots = Array.isArray(payload.data)
+            ? payload.data.map((slot) => {
+                const reasonLabel = slotUnavailableReasonLabel(slot);
+
+                return {
+                    ...slot,
+                    is_available: Boolean(slot?.is_available),
+                    remaining_slots: Number(slot?.remaining_slots || 0),
+                    unavailable_reason: asString(slot?.unavailable_reason).trim() || null,
+                    unavailable_reason_label: reasonLabel || null,
+                };
+            })
+            : [];
         slots.value = loadedSlots;
 
         if (!loadedSlots.length) {
@@ -798,7 +855,7 @@ onBeforeUnmount(() => {
                                             v-for="slot in slots"
                                             :key="slotKey(slot)"
                                             type="button"
-                                            class="min-h-[44px] rounded-lg border px-3 py-3 text-sm transition-all duration-200"
+                                            class="min-h-[44px] rounded-lg border px-3 py-3 text-center text-sm transition-all duration-200"
                                             :class="!slot.is_available
                                                 ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 opacity-60'
                                                 : bookingTime === slotStart(slot)
@@ -807,7 +864,13 @@ onBeforeUnmount(() => {
                                             :disabled="!slot.is_available"
                                             @click="chooseSlot(slot)"
                                         >
-                                            {{ slotStart(slot) }}
+                                            <span class="block leading-tight">{{ slotStart(slot) }}</span>
+                                            <span
+                                                v-if="!slot.is_available && slot.unavailable_reason_label"
+                                                class="mt-0.5 block text-[10px] leading-tight"
+                                            >
+                                                {{ slot.unavailable_reason_label }}
+                                            </span>
                                         </button>
                                     </div>
 
@@ -876,54 +939,6 @@ onBeforeUnmount(() => {
                                     Belum ada add-on aktif untuk paket ini.
                                 </p>
 
-                                <div class="space-y-4 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
-                                    <h3 class="text-[#1F2937]" style="font-size: 0.875rem; font-weight: 600;">Data Pemesan</h3>
-
-                                    <div class="grid gap-4 sm:grid-cols-2">
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Nama Pemesan</span>
-                                            <input
-                                                v-model="customerName"
-                                                required
-                                                maxlength="120"
-                                                type="text"
-                                                class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            >
-                                        </label>
-
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Nomor HP</span>
-                                            <input
-                                                v-model="customerPhone"
-                                                required
-                                                maxlength="30"
-                                                type="text"
-                                                class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            >
-                                        </label>
-                                    </div>
-
-                                    <div class="grid gap-4 sm:grid-cols-2">
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Email (opsional)</span>
-                                            <input
-                                                v-model="customerEmail"
-                                                type="email"
-                                                class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            >
-                                        </label>
-
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Catatan (opsional)</span>
-                                            <textarea
-                                                v-model="notes"
-                                                maxlength="1000"
-                                                rows="2"
-                                                class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            ></textarea>
-                                        </label>
-                                    </div>
-                                </div>
                             </div>
                         </section>
                     </div>
@@ -1046,7 +1061,7 @@ onBeforeUnmount(() => {
                                     </div>
                                 </template>
                                 <p v-else class="px-4 py-6 text-center text-xs text-[#94A3B8]">
-                                    Belum ada preview desain aktif untuk paket ini.
+                                    Belum ada foto contoh aktif untuk paket ini.
                                 </p>
                             </div>
                         </div>

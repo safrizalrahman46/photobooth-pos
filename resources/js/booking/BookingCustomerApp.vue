@@ -15,6 +15,14 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    site: {
+        type: Object,
+        default: () => ({}),
+    },
+    navigation: {
+        type: Array,
+        default: () => [],
+    },
     csrfToken: {
         type: String,
         required: true,
@@ -49,8 +57,8 @@ const canSubmit = computed(() => {
 </script>
 
 <template>
-    <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
-        <PublicBookingNavbar :routes="props.routes" />
+    <div class="min-h-screen bg-[#F8FAFC]">
+        <PublicBookingNavbar :routes="props.routes" :site="props.site" :navigation="props.navigation" />
 
         <main class="relative mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6">
             <div class="mb-8">

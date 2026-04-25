@@ -22,6 +22,7 @@
             ];
         })
         ->values();
+    $prefillCustomer = is_array($prefillCustomer ?? null) ? $prefillCustomer : [];
     $prefillPackage = old('package_id') ?: (request()->integer('package') ?: null);
 
     $oldValues = [
@@ -30,10 +31,10 @@
         'design_catalog_id' => old('design_catalog_id'),
         'booking_date' => old('booking_date'),
         'booking_time' => old('booking_time'),
-        'customer_name' => old('customer_name'),
-        'customer_phone' => old('customer_phone'),
-        'customer_email' => old('customer_email'),
-        'notes' => old('notes'),
+        'customer_name' => old('customer_name', (string) ($prefillCustomer['customer_name'] ?? '')),
+        'customer_phone' => old('customer_phone', (string) ($prefillCustomer['customer_phone'] ?? '')),
+        'customer_email' => old('customer_email', (string) ($prefillCustomer['customer_email'] ?? '')),
+        'notes' => old('notes', (string) ($prefillCustomer['notes'] ?? '')),
     ];
 
     $bootstrap = [
