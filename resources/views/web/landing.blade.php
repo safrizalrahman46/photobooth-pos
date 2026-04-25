@@ -144,25 +144,31 @@ $steps = [
         }
     </style>
 </head>
-<body class="min-h-screen min-w-[1280px]">
+<body class="min-h-screen bg-background text-foreground overflow-x-hidden">
     
     <!-- HEADER -->
     <header class="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-border/60">
-        <div class="flex items-center justify-between px-12 py-6">
-            <a href="#home" class="flex items-center gap-3">
-                <img src="{{ asset('images/logo/logo.png') }}" alt="Ready to Pict" class="h-12 w-auto" />
-                <span class="font-display text-2xl font-semibold tracking-tight text-memphis-blue">
+        <div class="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12 py-4 md:py-6">
+            <a href="#home" class="flex items-center gap-2 md:gap-3">
+                <img src="{{ asset('images/logo/logo.png') }}" alt="Ready to Pict" class="h-8 md:h-12 w-auto" />
+                <span class="font-display text-lg md:text-2xl font-semibold tracking-tight text-memphis-blue">
                     Ready to Pict
                 </span>
             </a>
-            <nav class="flex items-center gap-8 text-[15px] font-medium text-memphis-ink">
+            
+            <!-- Mobile Menu Toggle -->
+            <button id="mobile-menu-btn" class="md:hidden text-memphis-ink focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>
+            </button>
+
+            <nav id="nav-menu" class="hidden md:flex items-center gap-8 text-[15px] font-medium text-memphis-ink absolute md:static top-16 left-0 w-full md:w-auto bg-background md:bg-transparent border-b md:border-none border-border px-6 py-8 md:p-0 flex-col md:flex-row shadow-xl md:shadow-none transition-all duration-300 z-[60]">
                 @foreach($navItems as $item)
                     @if($item['label'] === 'Booking')
-                        <a href="{{ $item['href'] }}" class="bg-memphis-yellow text-memphis-ink px-5 py-2.5 rounded-full font-bold shadow-md hover:bg-memphis-orange hover:text-primary-foreground hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        <a href="{{ $item['href'] }}" class="w-full md:w-auto text-center bg-memphis-yellow text-memphis-ink px-5 py-2.5 rounded-full font-bold shadow-md hover:bg-memphis-orange hover:text-primary-foreground hover:shadow-lg hover:-translate-y-0.5 transition-all">
                             {{ $item['label'] }}
                         </a>
                     @else
-                        <a href="{{ $item['href'] }}" class="hover:text-memphis-blue transition-colors">
+                        <a href="{{ $item['href'] }}" class="w-full md:w-auto text-center hover:text-memphis-blue transition-colors py-2 md:py-0">
                             {{ $item['label'] }}
                         </a>
                     @endif
@@ -177,7 +183,7 @@ $steps = [
         <div class="relative overflow-hidden">
             <div class="flex w-max animate-marquee-left gap-4">
                 @foreach(array_merge($marqueeRowA, $marqueeRowA) as $i => $item)
-                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[28rem] w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
+                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
                         <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
                 @endforeach
@@ -188,7 +194,7 @@ $steps = [
         <div class="relative overflow-hidden">
             <div class="flex w-max animate-marquee-right gap-4">
                 @foreach(array_merge($marqueeRowB, $marqueeRowB) as $i => $item)
-                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[28rem] w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
+                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
                         <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
                 @endforeach
@@ -199,7 +205,7 @@ $steps = [
         <div class="relative overflow-hidden">
             <div class="flex w-max animate-marquee-left gap-4">
                 @foreach(array_merge($marqueeRowC, $marqueeRowC) as $i => $item)
-                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[28rem] w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
+                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
                         <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
                 @endforeach
@@ -208,9 +214,9 @@ $steps = [
     </section>
 
     <!-- ABOUT US -->
-    <section id="about" class="bg-background py-24 scroll-mt-24 border-t border-border">
-        <div class="max-w-7xl mx-auto px-12">
-            <div class="bg-memphis-cream border-2 border-dashed border-memphis-blue rounded-3xl p-12 relative overflow-hidden flex flex-col items-center text-center">
+    <section id="about" class="bg-background py-16 md:py-24 scroll-mt-24 border-t border-border">
+        <div class="max-w-7xl mx-auto px-6 md:px-12">
+            <div class="bg-memphis-cream border-2 border-dashed border-memphis-blue rounded-3xl p-8 md:p-12 relative overflow-hidden flex flex-col items-center text-center">
                 <!-- Decorative element -->
                 <div class="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-memphis-yellow mix-blend-multiply opacity-50"></div>
                 <div class="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-memphis-blue mix-blend-multiply opacity-30"></div>
@@ -219,10 +225,10 @@ $steps = [
                     <span class="inline-block bg-memphis-orange text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">
                         Kenalan Yuk!
                     </span>
-                    <h2 class="font-display text-5xl tracking-tight text-memphis-ink leading-tight">
+                    <h2 class="font-display text-3xl md:text-5xl tracking-tight text-memphis-ink leading-tight">
                         Kamu yang jadi <span class="text-memphis-blue">Sutradara.</span>
                     </h2>
-                    <p class="text-lg text-muted-foreground leading-relaxed">
+                    <p class="text-base md:text-lg text-muted-foreground leading-relaxed">
                         Ready to Pict adalah studio foto self-portrait premium di mana kamu bebas berekspresi tanpa rasa canggung. Nggak ada fotografer yang ngarahin gaya—kamu yang pegang remote, atur timing, dan ciptakan karya terbaik versimu sendiri.
                     </p>
                     <div class="flex flex-wrap items-center justify-center gap-6 pt-6">
@@ -245,18 +251,18 @@ $steps = [
     </section>
 
     <!-- HOW IT WORKS -->
-    <section id="steps" class="bg-background py-24 scroll-mt-24 border-t border-border overflow-hidden">
-        <div class="max-w-7xl mx-auto px-12">
-            <div class="text-center mb-16">
+    <section id="steps" class="bg-background py-16 md:py-24 scroll-mt-24 border-t border-border overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 md:px-12">
+            <div class="text-center mb-12 md:mb-16">
                 <span class="inline-block bg-memphis-blue/10 text-memphis-blue px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4">
                     Cara Mainnya
                 </span>
-                <h2 class="font-display text-5xl tracking-tight text-memphis-ink leading-tight">
-                    Gampang Banget! <span class="text-memphis-orange">Cuman 3 Langkah.</span>
+                <h2 class="font-display text-3xl md:text-5xl tracking-tight text-memphis-ink leading-tight">
+                    Gampang Banget! <span class="text-memphis-orange text-2xl md:text-5xl block md:inline">Cuman 3 Langkah.</span>
                 </h2>
             </div>
 
-            <div class="grid grid-cols-3 gap-12">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
                 @foreach($steps as $step)
                     <div class="flex flex-col items-center text-center space-y-6 group">
                         <div class="h-20 w-20 {{ $step['color'] }} rounded-3xl flex items-center justify-center text-4xl font-bold rotate-3 group-hover:rotate-0 transition-transform duration-300 shadow-lg">
@@ -275,10 +281,10 @@ $steps = [
     </section>
 
     <!-- PRICELIST -->
-    <section id="pricelist" class="bg-memphis-blue-soft/60 py-24 scroll-mt-24">
-        <div class="max-w-7xl mx-auto px-12">
-            <div class="text-center mb-14">
-                <h2 class="font-display text-5xl tracking-tight">
+    <section id="pricelist" class="bg-memphis-blue-soft/60 py-16 md:py-24 scroll-mt-24">
+        <div class="max-w-7xl mx-auto px-6 md:px-12">
+            <div class="text-center mb-10 md:mb-14">
+                <h2 class="font-display text-3xl md:text-5xl tracking-tight">
                     <span class="text-memphis-blue font-bold">PRICELIST</span>
                     <span class="text-memphis-orange font-bold">READY TO PICT</span>
                 </h2>
@@ -287,7 +293,7 @@ $steps = [
                 </p>
             </div>
 
-            <div class="grid grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 @foreach($pricing as $tier)
                     <div class="relative bg-card rounded-2xl p-8 shadow-lg border border-border/50 overflow-hidden transition-all duration-300 ease-out hover:scale-[1.06] hover:shadow-2xl hover:border-memphis-blue/40 hover:z-10">
                         <div class="absolute -top-6 -right-6 h-20 w-20 rounded-full {{ $tier['accent'] }}"></div>
@@ -328,13 +334,13 @@ $steps = [
                 <p class="text-center text-sm font-bold uppercase tracking-widest text-memphis-blue mb-5">
                     Add On (Tambahan)
                 </p>
-                <div class="grid grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     @foreach($addons as $a)
-                        <div class="flex items-center justify-between bg-background rounded-full px-5 py-3 shadow-sm">
-                            <span class="text-xs font-medium text-foreground/80">
+                        <div class="flex items-center justify-between bg-background rounded-full px-4 md:px-5 py-3 shadow-sm">
+                            <span class="text-[10px] md:text-xs font-medium text-foreground/80 leading-tight">
                                 {{ $a['label'] }}
                             </span>
-                            <span class="text-sm font-bold text-memphis-blue">
+                            <span class="text-xs md:text-sm font-bold text-memphis-blue shrink-0">
                                 {{ $a['price'] }}
                             </span>
                         </div>
@@ -345,56 +351,56 @@ $steps = [
     </section>
 
     <!-- CONTACT -->
-    <section id="contact" class="bg-background py-24 scroll-mt-24">
-        <div class="max-w-7xl mx-auto px-12 grid grid-cols-2 gap-16">
-            <div class="space-y-6">
+    <section id="contact" class="bg-background py-16 md:py-24 scroll-mt-24">
+        <div class="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16">
+            <div class="space-y-6 text-center md:text-left">
                 <span class="inline-block bg-memphis-yellow text-memphis-ink px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">
                     Hubungi Kami
                 </span>
-                <h2 class="font-display text-5xl tracking-tight text-memphis-ink leading-tight">
-                    Punya pertanyaan? <span class="text-memphis-blue">Yuk ngobrol.</span>
+                <h2 class="font-display text-3xl md:text-5xl tracking-tight text-memphis-ink leading-tight">
+                    Punya pertanyaan? <span class="text-memphis-blue block md:inline">Yuk ngobrol.</span>
                 </h2>
                 <p class="text-base text-muted-foreground leading-relaxed max-w-md">
                     Tim kami siap menjawab pertanyaanmu seputar paket, konsep, ataupun jadwal booking. Hubungi kami lewat kanal di bawah ini.
                 </p>
-                <div class="space-y-4 pt-4">
-                    <div class="flex items-center gap-4">
-                        <div class="h-12 w-12 rounded-full bg-memphis-blue text-primary-foreground flex items-center justify-center font-bold">📍</div>
+                <div class="flex flex-col items-center md:items-start gap-4 pt-4">
+                    <div class="flex items-center gap-4 text-left">
+                        <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-memphis-blue text-white flex items-center justify-center font-bold shrink-0">📍</div>
                         <div>
-                            <p class="text-xs uppercase tracking-widest text-muted-foreground">Lokasi</p>
+                            <p class="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Lokasi</p>
                             <p class="text-sm font-semibold text-memphis-ink">Jl. Studio Foto No. 12, Jakarta</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="h-12 w-12 rounded-full bg-memphis-yellow text-memphis-ink flex items-center justify-center font-bold">📱</div>
+                    <div class="flex items-center gap-4 text-left">
+                        <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-memphis-yellow text-memphis-ink flex items-center justify-center font-bold shrink-0">📱</div>
                         <div>
-                            <p class="text-xs uppercase tracking-widest text-muted-foreground">WhatsApp</p>
+                            <p class="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">WhatsApp</p>
                             <p class="text-sm font-semibold text-memphis-ink">+62 812 3456 7890</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="h-12 w-12 rounded-full bg-memphis-orange text-primary-foreground flex items-center justify-center font-bold">✉️</div>
+                    <div class="flex items-center gap-4 text-left">
+                        <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-memphis-orange text-white flex items-center justify-center font-bold shrink-0">✉️</div>
                         <div>
-                            <p class="text-xs uppercase tracking-widest text-muted-foreground">Email</p>
-                            <p class="text-sm font-semibold text-memphis-ink">hello@readytopict.com</p>
+                            <p class="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Email</p>
+                            <p class="text-sm font-semibold text-memphis-ink text-wrap break-all">hello@readytopict.com</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-memphis-blue-soft/60 rounded-3xl p-10 border border-border/40 flex flex-col items-center justify-center text-center space-y-6">
-                <div class="h-20 w-20 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-xl shadow-[#25D366]/30">
-                    <svg viewBox="0 0 24 24" fill="currentColor" class="h-10 w-10" aria-hidden="true">
+            <div class="bg-memphis-blue-soft/60 rounded-3xl p-6 md:p-10 border border-border/40 flex flex-col items-center justify-center text-center space-y-6">
+                <div class="h-16 w-16 md:h-20 md:w-20 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-lg shadow-[#25D366]/30">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="h-8 w-8 md:h-10 md:w-10" aria-hidden="true">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                     </svg>
                 </div>
-                <div class="space-y-2">
-                    <h3 class="font-display text-3xl text-memphis-ink">Chat via WhatsApp</h3>
+                <div class="space-y-2 px-2">
+                    <h3 class="font-display text-2xl md:text-3xl text-memphis-ink">Chat via WhatsApp</h3>
                     <p class="text-sm text-muted-foreground max-w-xs mx-auto">
                         Klik tombol di bawah buat langsung ngobrol sama admin kami. Cepet, gampang, no ribet.
                     </p>
                 </div>
-                <a href="https://wa.me/6281234567890?text=Halo%20admin%20Ready%20to%20Pict%2C%20saya%20mau%20tanya-tanya%20soal%20paket%20foto." target="_blank" rel="noopener noreferrer" class="w-full bg-[#25D366] text-white py-4 rounded-full text-sm font-bold hover:bg-[#1ebe57] transition-all shadow-xl shadow-[#25D366]/30 hover:-translate-y-0.5 flex items-center justify-center gap-3">
+                <a href="https://wa.me/6281234567890?text=Halo%20admin%20Ready%20to%20Pict%2C%20saya%20mau%20tanya-tanya%20soal%20paket%20foto." target="_blank" rel="noopener noreferrer" class="w-[90%] md:w-full bg-[#25D366] text-white py-3 md:py-4 rounded-full text-sm font-bold hover:bg-[#1ebe57] transition-all shadow-xl shadow-[#25D366]/30 hover:-translate-y-0.5 flex items-center justify-center gap-3 mx-auto">
                     <svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5" aria-hidden="true">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                     </svg>
@@ -433,8 +439,10 @@ $steps = [
                     Foto self portrait mandiri, di mana kamu adalah sang sutradara, aktor, sekaligus penontonnya.
                 </p>
             </div>
-            <div class="flex items-start justify-end gap-8 text-sm font-medium text-foreground/70">
+            <div class="flex flex-wrap items-start justify-center md:justify-end gap-x-6 gap-y-2 text-sm font-medium text-foreground/70">
                 <a href="#home" class="hover:text-memphis-blue">Home</a>
+                <a href="#about" class="hover:text-memphis-blue">About</a>
+                <a href="#steps" class="hover:text-memphis-blue">Steps</a>
                 <a href="#pricelist" class="hover:text-memphis-blue">Pricelist</a>
                 <a href="#contact" class="hover:text-memphis-blue">Contact</a>
             </div>
@@ -445,6 +453,28 @@ $steps = [
     </footer>
 
     <script>
+        // Mobile Menu Toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const navMenu = document.getElementById('nav-menu');
+        
+        if (mobileMenuBtn && navMenu) {
+            mobileMenuBtn.addEventListener('click', () => {
+                navMenu.classList.toggle('hidden');
+                navMenu.classList.toggle('flex');
+            });
+
+            // Close menu when a link is clicked
+            const navLinks = navMenu.querySelectorAll('a');
+            navLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth < 768) {
+                        navMenu.classList.add('hidden');
+                        navMenu.classList.remove('flex');
+                    }
+                });
+            });
+        }
+
         function openLightbox(src, pkg, price) {
             document.getElementById('lightbox-img').src = src;
             document.getElementById('lightbox-package').textContent = pkg;
