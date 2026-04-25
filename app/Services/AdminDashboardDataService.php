@@ -1419,13 +1419,14 @@ class AdminDashboardDataService
         ], true);
         $canConfirmBooking = ! $isClosedStatus
             && $booking->approved_at === null
-            && $remainingAmount <= 0
             && (
                 $effectiveTotalAmount <= 0
-                || $paymentStatus === TransactionStatus::Paid->value
+                || $paidAmount > 0
             );
         $canConfirmPayment = ! $isClosedStatus
+            && $booking->approved_at === null
             && $effectiveTotalAmount > 0
+            && $paidAmount <= 0
             && in_array($paymentStatus, [
                 TransactionStatus::Unpaid->value,
                 TransactionStatus::Partial->value,

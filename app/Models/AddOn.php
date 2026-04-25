@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AddOn extends Model
 {
@@ -50,5 +51,10 @@ class AddOn extends Model
         return $this->belongsToMany(Booking::class, 'booking_add_ons')
             ->withPivot(['qty', 'unit_price', 'line_total'])
             ->withTimestamps();
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(AddOnStockMovement::class);
     }
 }

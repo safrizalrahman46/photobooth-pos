@@ -28,9 +28,10 @@ const props = defineProps({
     branchOptions: { type: Array, default: () => [] },
     bookingOptions: { type: Array, default: () => [] },
     defaultBranchId: { type: Number, default: null },
+    viewBranchId: { type: [Number, String], default: null },
 });
 
-const emit = defineEmits(['refresh-queue', 'call-next', 'transition-ticket', 'add-booking', 'add-walk-in']);
+const emit = defineEmits(['refresh-queue', 'set-view-branch', 'call-next', 'transition-ticket', 'add-booking', 'add-walk-in']);
 
 const addModalOpen = ref(false);
 const localError = ref('');
@@ -48,16 +49,71 @@ const walkInForm = reactive({
 });
 
 const todayIso = () => {
-    return new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
 };
+
+const selectedViewBranchId = computed(() => {
+    const id = Number(props.viewBranchId || 0);
+
+    return id > 0 ? id : null;
+});
 
 const activeBranchId = computed(() => {
     const fromForm = Number(walkInForm.branch_id || 0);
+    const fromView = Number(selectedViewBranchId.value || 0);
     const fromDefault = Number(props.defaultBranchId || 0);
     const fromOptions = Number(props.branchOptions?.[0]?.id || 0);
 
-    return fromForm || fromDefault || fromOptions || null;
+    return fromForm || fromView || fromDefault || fromOptions || null;
 });
+
+const branchNameMap = computed(() => {
+    const map = new Map();
+
+    (props.branchOptions || []).forEach((branch) => {
+        const id = Number(branch?.id || 0);
+        const name = String(branch?.name || '').trim();
+
+        if (id > 0 && name) {
+            map.set(id, name);
+        }
+    });
+
+    return map;
+});
+
+const resolveBranchName = (branchId) => {
+    const id = Number(branchId || 0);
+
+    if (!id) {
+        return '-';
+    }
+
+    return branchNameMap.value.get(id) || `Branch #${id}`;
+};
+
+const activeBranchName = computed(() => {
+    return resolveBranchName(activeBranchId.value);
+});
+
+const onViewBranchChange = (event) => {
+    const rawValue = String(event?.target?.value || '').trim();
+    const parsed = Number(rawValue || 0);
+    const normalized = parsed > 0 ? parsed : null;
+
+    emit('set-view-branch', normalized);
+};
+
+const refreshQueue = () => {
+    emit('refresh-queue', {
+        branch_id: selectedViewBranchId.value,
+    });
+};
 
 const hasBookingOptions = computed(() => {
     return Array.isArray(props.bookingOptions) && props.bookingOptions.length > 0;
@@ -356,6 +412,7 @@ const submitQueue = async () => {
                         <p class="mt-2 text-xl font-medium text-white">{{ currentQueue.customer_name }}</p>
                         <div class="mt-2 flex items-center gap-2">
                             <span class="rounded-full px-2.5 py-1 text-xs" style="background: rgba(255,255,255,0.22); color: #FFFFFF;">{{ currentQueue.package_name }}</span>
+                            <span class="rounded-full px-2.5 py-1 text-xs" style="background: rgba(15,23,42,0.25); color: #FFFFFF;">{{ resolveBranchName(currentQueue.branch_id) }}</span>
                             <span class="rounded-full px-2.5 py-1 text-xs" style="background: rgba(15,23,42,0.25); color: #FFFFFF;">{{ currentQueue.status_label }}</span>
                         </div>
                     </template>
@@ -409,7 +466,7 @@ const submitQueue = async () => {
                         class="inline-flex w-full items-center justify-center gap-1 rounded-xl border px-3 py-2.5 text-sm font-semibold"
                         style="border-color: #CBD5E1; background: #F8FAFC; color: #64748B;"
                         :disabled="queueLoading || queueActionLoading"
-                        @click="emit('refresh-queue')"
+                        @click="refreshQueue"
                     >
                         <RotateCcw class="h-4 w-4" />
                         Reset Timer
@@ -424,12 +481,27 @@ const submitQueue = async () => {
                         <p class="mt-1 text-sm text-[#64748B]">{{ waitingQueue.length }} in queue</p>
                     </div>
                     <div class="flex items-center gap-2">
+                        <label class="text-sm text-[#64748B]">
+                            <span class="sr-only">Filter branch</span>
+                            <select
+                                :value="selectedViewBranchId || ''"
+                                class="rounded-xl border px-3 py-2 text-sm"
+                                style="border-color: #DBEAFE; background: #FFFFFF; color: #1E293B;"
+                                :disabled="queueLoading || queueActionLoading"
+                                @change="onViewBranchChange"
+                            >
+                                <option value="">Semua Cabang</option>
+                                <option v-for="branch in branchOptions" :key="`queue-filter-branch-${branch.id}`" :value="String(branch.id)">
+                                    {{ branch.name }}
+                                </option>
+                            </select>
+                        </label>
                         <button
                             type="button"
                             class="inline-flex items-center justify-center gap-1 rounded-xl border px-3 py-2 text-sm font-semibold"
                             style="border-color: #DBEAFE; background: #EFF6FF; color: #1D4ED8;"
                             :disabled="queueLoading || queueActionLoading"
-                            @click="emit('refresh-queue')"
+                            @click="refreshQueue"
                         >
                             <RefreshCw class="h-4 w-4" :class="queueLoading ? 'animate-spin' : ''" />
                             Refresh
@@ -460,6 +532,7 @@ const submitQueue = async () => {
                             <div class="min-w-0">
                                 <p class="text-lg font-semibold leading-tight text-[#1E293B]">{{ ticket.queue_code }}</p>
                                 <p class="truncate text-[1.05rem] text-[#334155]">{{ ticket.customer_name }}</p>
+                                <p class="text-sm text-[#64748B]">{{ resolveBranchName(ticket.branch_id) }}</p>
                                 <p class="text-sm text-[#94A3B8]">Added at {{ ticket.added_at || '-' }}</p>
                             </div>
                         </div>
@@ -525,7 +598,7 @@ const submitQueue = async () => {
                 <BellRing class="h-4 w-4" />
                 Panggil Antrean Berikutnya
             </button>
-            <span class="text-xs text-[#94A3B8]">Branch: {{ activeBranchId || '-' }}</span>
+            <span class="text-xs text-[#94A3B8]">Branch: {{ activeBranchName }}</span>
         </div>
 
         <div v-if="addModalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">

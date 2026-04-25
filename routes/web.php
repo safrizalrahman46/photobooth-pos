@@ -80,6 +80,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/add-ons', [AdminAddOnController::class, 'store'])->name('add-ons.store');
         Route::put('/add-ons/{addOn}', [AdminAddOnController::class, 'update']);
         Route::delete('/add-ons/{addOn}', [AdminAddOnController::class, 'destroy']);
+        Route::post('/add-ons/{addOn}/stock-movement', [AdminAddOnController::class, 'stockMovement'])->name('add-ons.stock-movement');
 
         Route::get('/designs-data', [AdminDesignController::class, 'index'])->name('designs.data');
         Route::post('/designs', [AdminDesignController::class, 'store'])->name('designs.store');

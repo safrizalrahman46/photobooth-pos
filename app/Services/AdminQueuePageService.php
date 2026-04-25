@@ -14,22 +14,24 @@ class AdminQueuePageService
         private readonly QueueService $queueService,
     ) {}
 
-    public function payload(?string $queueDate = null): array
+    public function payload(?string $queueDate = null, ?int $branchId = null): array
     {
         return [
-            'queue_live' => $this->live($queueDate),
-            'queue_booking_options' => $this->bookingOptions($queueDate),
+            'queue_live' => $this->live($queueDate, $branchId),
+            'queue_booking_options' => $this->bookingOptions($queueDate, $branchId),
         ];
     }
 
-    public function live(?string $queueDate = null): array
+    public function live(?string $queueDate = null, ?int $branchId = null): array
     {
-        $targetDate = $queueDate ?: now()->toDateString();
-        $this->syncVerifiedBookingsIntoQueue($targetDate);
+        $targetDate = $queueDate ?: $this->queueTodayDate();
+        $resolvedBranchId = $branchId && $branchId > 0 ? (int) $branchId : null;
+        $this->syncVerifiedBookingsIntoQueue($targetDate, $resolvedBranchId);
 
         $currentTicket = QueueTicket::query()
-            ->with(['booking.package:id,name,duration_minutes'])
+            ->with(['booking.package:id,name,duration_minutes', 'branch:id,name'])
             ->whereDate('queue_date', $targetDate)
+            ->when($resolvedBranchId, fn ($query) => $query->where('branch_id', $resolvedBranchId))
             ->where('status', QueueStatus::InSession->value)
             ->latest('started_at')
             ->first([
@@ -49,8 +51,9 @@ class AdminQueuePageService
 
         if (! $currentTicket) {
             $currentTicket = QueueTicket::query()
-                ->with(['booking.package:id,name,duration_minutes'])
+                ->with(['booking.package:id,name,duration_minutes', 'branch:id,name'])
                 ->whereDate('queue_date', $targetDate)
+                ->when($resolvedBranchId, fn ($query) => $query->where('branch_id', $resolvedBranchId))
                 ->whereIn('status', [QueueStatus::Called->value, QueueStatus::CheckedIn->value])
                 ->orderBy('queue_number')
                 ->first([
@@ -85,8 +88,9 @@ class AdminQueuePageService
             : 0;
 
         $waitingTickets = QueueTicket::query()
-            ->with(['booking.package:id,name'])
+            ->with(['booking.package:id,name', 'branch:id,name'])
             ->whereDate('queue_date', $targetDate)
+            ->when($resolvedBranchId, fn ($query) => $query->where('branch_id', $resolvedBranchId))
             ->whereIn('status', [
                 QueueStatus::Waiting->value,
                 QueueStatus::Called->value,
@@ -114,6 +118,7 @@ class AdminQueuePageService
                     'ticket_id' => (int) $ticket->id,
                     'booking_id' => $ticket->booking_id ? (int) $ticket->booking_id : null,
                     'branch_id' => (int) $ticket->branch_id,
+                    'branch_name' => (string) ($ticket->branch?->name ?? '-'),
                     'queue_date' => $ticket->queue_date?->toDateString() ?? $targetDate,
                     'source_type' => (string) ($ticket->source_type?->value ?? $ticket->source_type),
                     'queue_code' => (string) $ticket->queue_code,
@@ -134,6 +139,7 @@ class AdminQueuePageService
         $queueStats = [
             'in_queue' => QueueTicket::query()
                 ->whereDate('queue_date', $targetDate)
+                ->when($resolvedBranchId, fn ($query) => $query->where('branch_id', $resolvedBranchId))
                 ->whereIn('status', [
                     QueueStatus::Waiting->value,
                     QueueStatus::Called->value,
@@ -144,18 +150,22 @@ class AdminQueuePageService
                 ->count(),
             'in_session' => QueueTicket::query()
                 ->whereDate('queue_date', $targetDate)
+                ->when($resolvedBranchId, fn ($query) => $query->where('branch_id', $resolvedBranchId))
                 ->where('status', QueueStatus::InSession->value)
                 ->count(),
             'waiting' => QueueTicket::query()
                 ->whereDate('queue_date', $targetDate)
+                ->when($resolvedBranchId, fn ($query) => $query->where('branch_id', $resolvedBranchId))
                 ->where('status', QueueStatus::Waiting->value)
                 ->count(),
             'completed_today' => QueueTicket::query()
                 ->whereDate('queue_date', $targetDate)
+                ->when($resolvedBranchId, fn ($query) => $query->where('branch_id', $resolvedBranchId))
                 ->where('status', QueueStatus::Finished->value)
                 ->count(),
             'verified_waiting' => QueueTicket::query()
                 ->whereDate('queue_date', $targetDate)
+                ->when($resolvedBranchId, fn ($query) => $query->where('branch_id', $resolvedBranchId))
                 ->where('source_type', QueueSourceType::Booking->value)
                 ->whereIn('status', [
                     QueueStatus::Waiting->value,
@@ -172,6 +182,7 @@ class AdminQueuePageService
                 'ticket_id' => (int) $currentTicket->id,
                 'booking_id' => $currentTicket->booking_id ? (int) $currentTicket->booking_id : null,
                 'branch_id' => (int) $currentTicket->branch_id,
+                'branch_name' => (string) ($currentTicket->branch?->name ?? '-'),
                 'queue_date' => $currentTicket->queue_date?->toDateString() ?? $targetDate,
                 'source_type' => (string) ($currentTicket->source_type?->value ?? $currentTicket->source_type),
                 'queue_code' => (string) $currentTicket->queue_code,
@@ -200,13 +211,15 @@ class AdminQueuePageService
         ];
     }
 
-    public function bookingOptions(?string $queueDate = null): array
+    public function bookingOptions(?string $queueDate = null, ?int $branchId = null): array
     {
-        $targetDate = $queueDate ?: now()->toDateString();
+        $targetDate = $queueDate ?: $this->queueTodayDate();
+        $resolvedBranchId = $branchId && $branchId > 0 ? (int) $branchId : null;
 
         return Booking::query()
             ->with(['branch:id,name', 'package:id,name'])
             ->whereDate('booking_date', $targetDate)
+            ->when($resolvedBranchId, fn ($query) => $query->where('branch_id', $resolvedBranchId))
             ->whereIn('status', [
                 BookingStatus::Confirmed->value,
                 BookingStatus::Paid->value,
@@ -283,14 +296,15 @@ class AdminQueuePageService
         return ucwords(str_replace('_', ' ', $status));
     }
 
-    private function syncVerifiedBookingsIntoQueue(string $targetDate): void
+    private function syncVerifiedBookingsIntoQueue(string $targetDate, ?int $branchId = null): void
     {
-        if ($targetDate !== now()->toDateString()) {
+        if ($targetDate !== $this->queueTodayDate()) {
             return;
         }
 
         Booking::query()
             ->whereDate('booking_date', $targetDate)
+            ->when($branchId && $branchId > 0, fn ($query) => $query->where('branch_id', (int) $branchId))
             ->whereNotNull('approved_at')
             ->whereIn('status', [
                 BookingStatus::Confirmed->value,
@@ -307,5 +321,10 @@ class AdminQueuePageService
                     // Keep queue panel available even when one booking cannot be auto-enqueued.
                 }
             });
+    }
+
+    private function queueTodayDate(): string
+    {
+        return now(config('app.queue_timezone', 'Asia/Jakarta'))->toDateString();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AdminAddOnStockMovementRequest;
 use App\Http\Requests\AdminStoreAddOnRequest;
 use App\Http\Requests\AdminUpdateAddOnRequest;
 use App\Models\AddOn;
@@ -64,6 +65,24 @@ class AdminAddOnController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Add-on deleted successfully.',
+            'data' => [
+                'add_ons' => $service->addOnManagementRows(),
+            ],
+        ]);
+    }
+
+    public function stockMovement(
+        AdminAddOnStockMovementRequest $request,
+        AddOn $addOn,
+        AdminAddOnService $addOnService,
+        AdminDashboardDataService $service,
+    ): JsonResponse {
+        $payload = $request->validated();
+        $addOnService->recordStockMovement($addOn, $payload, (int) ($request->user()?->id ?? 0));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Stock movement saved successfully.',
             'data' => [
                 'add_ons' => $service->addOnManagementRows(),
             ],

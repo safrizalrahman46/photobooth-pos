@@ -507,6 +507,15 @@ const initialsFromName = (name) => {
     return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
 };
 
+const localDateIso = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+};
+
 const sidebarBrandName = computed(() => {
     const value = String(props.brand?.name || '').trim();
 
@@ -1311,6 +1320,7 @@ const queueLoading = ref(false);
 const queueActionLoading = ref(false);
 const queueError = ref('');
 const queueProcessingTicketId = ref(null);
+const queueViewBranchId = ref(null);
 const queueBookingOptions = ref(Array.isArray(props.queueBookingOptions) ? props.queueBookingOptions : []);
 
 const queueBranchOptions = computed(() => {
@@ -1804,9 +1814,14 @@ const removeBranchSetting = async (id) => {
     }
 };
 
-const fetchQueueData = async ({ silent = false } = {}) => {
+const fetchQueueData = async ({ silent = false, branch_id = undefined } = {}) => {
     if (!props.queueDataUrl) {
         return;
+    }
+
+    if (branch_id !== undefined) {
+        const nextBranchId = Number(branch_id || 0);
+        queueViewBranchId.value = nextBranchId > 0 ? nextBranchId : null;
     }
 
     if (!silent) {
@@ -1816,7 +1831,20 @@ const fetchQueueData = async ({ silent = false } = {}) => {
     queueError.value = '';
 
     try {
-        const response = await fetch(props.queueDataUrl, {
+        const params = new URLSearchParams();
+        const branchId = Number(queueViewBranchId.value || 0);
+
+        params.set('queue_date', localDateIso());
+
+        if (branchId > 0) {
+            params.set('branch_id', String(branchId));
+        }
+
+        const queueUrl = params.toString()
+            ? `${props.queueDataUrl}?${params.toString()}`
+            : props.queueDataUrl;
+
+        const response = await fetch(queueUrl, {
             method: 'GET',
             headers: {
                 Accept: 'application/json',
@@ -1839,6 +1867,12 @@ const fetchQueueData = async ({ silent = false } = {}) => {
             queueLoading.value = false;
         }
     }
+};
+
+const setQueueViewBranchId = async (branchId) => {
+    const normalizedBranchId = Number(branchId || 0);
+    queueViewBranchId.value = normalizedBranchId > 0 ? normalizedBranchId : null;
+    await fetchQueueData();
 };
 
 const startQueueAutoRefresh = () => {
@@ -2106,6 +2140,40 @@ const updateAddOn = async ({ id, payload }) => {
     }
 };
 
+const moveAddOnStock = async ({ id, payload }) => {
+    if (!id || !props.addOnBaseUrl) {
+        return;
+    }
+
+    addOnSaving.value = true;
+    addOnError.value = '';
+
+    try {
+        const response = await fetch(`${props.addOnBaseUrl}/${id}/stock-movement`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyAddOnsPayload(result);
+    } catch (error) {
+        addOnError.value = error instanceof Error ? error.message : 'Failed to update add-on stock.';
+        throw error;
+    } finally {
+        addOnSaving.value = false;
+    }
+};
+
 const deleteAddOn = async (id) => {
     if (!id || !props.addOnBaseUrl) {
         return;
@@ -2150,6 +2218,8 @@ const addOnRows = computed(() => {
         price_text: String(item.price_text || formatRupiah(Number(item.price || 0))),
         max_qty: Math.max(1, Number(item.max_qty || 1)),
         is_physical: Boolean(item.is_physical),
+        available_stock: Math.max(0, Number(item.available_stock || 0)),
+        low_stock_threshold: Math.max(0, Number(item.low_stock_threshold || 0)),
         type_label: String(item.type_label || (item.is_physical ? 'Physical' : 'Non-physical')),
         is_active: Boolean(item.is_active),
         sort_order: Number(item.sort_order || 0),
@@ -2757,7 +2827,7 @@ const callNextQueue = async ({ branch_id, queue_date } = {}) => {
             },
             body: JSON.stringify({
                 branch_id: branchId,
-                queue_date: queue_date || new Date().toISOString().slice(0, 10),
+                queue_date: queue_date || localDateIso(),
             }),
         });
 
@@ -2765,8 +2835,8 @@ const callNextQueue = async ({ branch_id, queue_date } = {}) => {
             throw new Error(await parseRequestError(response));
         }
 
-        const payload = await response.json();
-        applyQueuePayload(payload);
+        await response.json();
+        await fetchQueueData({ silent: true });
     } catch (error) {
         queueError.value = error instanceof Error ? error.message : 'Failed to call next queue.';
         throw error;
@@ -2804,8 +2874,8 @@ const transitionQueueTicket = async ({ ticketId, status }) => {
             throw new Error(await parseRequestError(response));
         }
 
-        const payload = await response.json();
-        applyQueuePayload(payload);
+        await response.json();
+        await fetchQueueData({ silent: true });
     } catch (error) {
         queueError.value = error instanceof Error ? error.message : 'Failed to update queue status.';
         throw error;
@@ -2842,8 +2912,8 @@ const addQueueBooking = async (formPayload) => {
             throw new Error(await parseRequestError(response));
         }
 
-        const payload = await response.json();
-        applyQueuePayload(payload);
+        await response.json();
+        await fetchQueueData({ silent: true });
     } catch (error) {
         queueError.value = error instanceof Error ? error.message : 'Failed to add booking into queue.';
         throw error;
@@ -2878,8 +2948,8 @@ const addQueueWalkIn = async (formPayload) => {
             throw new Error(await parseRequestError(response));
         }
 
-        const payload = await response.json();
-        applyQueuePayload(payload);
+        await response.json();
+        await fetchQueueData({ silent: true });
     } catch (error) {
         queueError.value = error instanceof Error ? error.message : 'Failed to add queue ticket.';
         throw error;
@@ -3302,6 +3372,7 @@ onBeforeUnmount(() => {
                             @refresh-add-ons="fetchAddOnsData"
                             @create-add-on="createAddOn"
                             @update-add-on="updateAddOn"
+                            @move-stock="moveAddOnStock"
                             @delete-add-on="deleteAddOn"
                         />
 
@@ -3433,7 +3504,9 @@ onBeforeUnmount(() => {
                             :branch-options="queueBranchOptions"
                             :booking-options="queueBookingOptions"
                             :default-branch-id="defaultQueueBranchId"
-                            @refresh-queue="fetchQueueData()"
+                            :view-branch-id="queueViewBranchId"
+                            @refresh-queue="fetchQueueData($event || {})"
+                            @set-view-branch="setQueueViewBranchId"
                             @call-next="callNextQueue"
                             @transition-ticket="transitionQueueTicket"
                             @add-booking="addQueueBooking"
