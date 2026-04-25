@@ -15,3 +15,4 @@ Folder ini menyimpan dokumentasi konfigurasi dan perubahan implementasi proyek.
 - `admin-dashboard-config.md`: konfigurasi dashboard admin (Filament + Vue + endpoint data).
 - `change-log.md`: catatan perubahan yang sudah diimplementasikan.
 - `implementation-update-2026-04-23.md`: dokumentasi lengkap perubahan terbaru terkait dynamic frontend data dan konfigurasi UI berbasis backend.
+- `implementation-update-2026-04-25.md`: dokumentasi lengkap perubahan terbaru terkait booking/queue/payment flow, add-on inventory, package sample upload, sidebar control, dan owner user management.
