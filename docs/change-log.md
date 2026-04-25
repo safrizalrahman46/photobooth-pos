@@ -1,5 +1,70 @@
 # Change Log
 
+## 2026-04-25
+
+### Booking Verification, Queue Automation, and Payment Flow Hardening
+
+- Menegaskan flow **payment-first** sebelum booking dapat diverifikasi.
+- Menambahkan flow decline booking dari modal detail untuk kasus tanpa bukti pembayaran.
+- Menambahkan/menegaskan metadata bukti pembayaran di detail booking (url, nama file, waktu upload).
+- Memperbarui modal pembayaran admin:
+  - tipe `Full Payment` dan `DP 50%`
+  - nominal otomatis mengikuti tipe pembayaran.
+- Menambahkan auto-check-in antrean setelah booking terverifikasi (dengan guard tanggal/status).
+- Menyempurnakan flow transisi status queue agar label tombol tidak `undefined` dan lebih jelas di UI.
+
+### Time Slot Availability Clarity
+
+- Slot booking publik kini mengunci jam yang sudah lewat sesuai timezone branch.
+- Menambahkan alasan unavailable yang eksplisit:
+  - `Lewat jam`
+  - `Durasi paket tidak muat`
+  - `Penuh`
+
+### Add-on Inventory and Categorization
+
+- Menambahkan kolom inventori add-on:
+  - `available_stock`
+  - `low_stock_threshold`
+- Menambahkan/menegaskan pemisahan add-on `Physical` vs `Non-physical` di UI admin.
+- Memperbarui seeder add-on agar mencakup data inventori dasar.
+
+### Package Sample Photos (Upload-Based)
+
+- Menambahkan kolom `sample_photos` pada tabel packages.
+- Form package admin sekarang mendukung upload file gambar multi-item (bukan hanya link).
+- Menambahkan flow keep/remove foto existing saat edit package.
+- Menambahkan normalisasi data `sample_photos` lama melalui migration.
+- Menambahkan route media fallback `GET /media/package-samples/{path}` agar preview tetap berjalan walau `storage:link` gagal di Windows.
+
+### Sidebar Notifications and Controls
+
+- Menambahkan badge + blink sidebar berbasis data real:
+  - pending booking
+  - verified waiting queue
+- Kecepatan blink menyesuaikan jumlah item.
+- Menonaktifkan item sidebar:
+  - `Designs`
+  - `Settings`
+  - `App Settings`
+
+### Owner User Management
+
+- Menambahkan CRUD manajemen user dari page Users untuk role owner:
+  - create
+  - update
+  - delete
+- Menambahkan endpoint:
+  - `PUT /admin/users/{user}`
+  - `DELETE /admin/users/{user}`
+- Menambahkan guard keamanan:
+  - owner terakhir tidak boleh dihapus/dinonaktifkan/diturunkan.
+  - user tidak bisa menghapus/menonaktifkan akun sendiri.
+
+### Dokumentasi Lengkap
+
+- Menambahkan dokumen detail: `docs/implementation-update-2026-04-25.md`.
+
 ## 2026-04-23
 
 ### Dynamic Frontend Data + UI Config Externalization
