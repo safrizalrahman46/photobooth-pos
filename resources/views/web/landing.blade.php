@@ -322,24 +322,24 @@ $addons = [
                 <p class="text-base text-muted-foreground leading-relaxed max-w-md">
                     Tim kami siap menjawab pertanyaanmu seputar paket, konsep, ataupun jadwal booking. Hubungi kami lewat kanal di bawah ini.
                 </p>
-                <div class="flex flex-col items-center md:items-start gap-4 pt-4">
-                    <div class="flex items-center gap-4 text-left">
-                        <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-memphis-blue text-white flex items-center justify-center font-bold shrink-0">📍</div>
-                        <div>
+                <div class="flex flex-col items-center md:items-start gap-4 pt-6 px-4">
+                    <div class="flex items-center gap-4 w-full max-w-[280px] md:max-w-none">
+                        <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-memphis-blue text-white flex items-center justify-center font-bold shrink-0 shadow-sm">📍</div>
+                        <div class="text-left">
                             <p class="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Lokasi</p>
                             <p class="text-sm font-semibold text-memphis-ink">Jl. Studio Foto No. 12, Jakarta</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4 text-left">
-                        <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-memphis-yellow text-memphis-ink flex items-center justify-center font-bold shrink-0">📱</div>
-                        <div>
+                    <div class="flex items-center gap-4 w-full max-w-[280px] md:max-w-none">
+                        <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-memphis-yellow text-memphis-ink flex items-center justify-center font-bold shrink-0 shadow-sm">📱</div>
+                        <div class="text-left">
                             <p class="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">WhatsApp</p>
                             <p class="text-sm font-semibold text-memphis-ink">+62 812 3456 7890</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4 text-left">
-                        <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-memphis-orange text-white flex items-center justify-center font-bold shrink-0">✉️</div>
-                        <div>
+                    <div class="flex items-center gap-4 w-full max-w-[280px] md:max-w-none">
+                        <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-memphis-orange text-white flex items-center justify-center font-bold shrink-0 shadow-sm">✉️</div>
+                        <div class="text-left">
                             <p class="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Email</p>
                             <p class="text-sm font-semibold text-memphis-ink text-wrap break-all">hello@readytopict.com</p>
                         </div>
@@ -389,20 +389,20 @@ $addons = [
 
     <!-- FOOTER -->
     <footer class="border-t border-border bg-background">
-        <div class="max-w-7xl mx-auto px-12 py-12 grid grid-cols-2 gap-8">
-            <div>
+        <div class="max-w-7xl mx-auto px-6 md:px-12 py-12 flex flex-col md:flex-row justify-between gap-10">
+            <div class="text-center md:text-left">
                 <h3 class="font-display text-2xl text-memphis-blue font-semibold">
                     Ready to Pict
                 </h3>
-                <p class="mt-2 text-sm text-muted-foreground max-w-sm">
+                <p class="mt-3 text-sm text-muted-foreground max-w-sm mx-auto md:mx-0 leading-relaxed">
                     Foto self portrait mandiri, di mana kamu adalah sang sutradara, aktor, sekaligus penontonnya.
                 </p>
             </div>
-            <div class="flex flex-wrap items-start justify-center md:justify-end gap-x-6 gap-y-2 text-sm font-medium text-foreground/70">
-                <a href="#home" class="hover:text-memphis-blue">Home</a>
-                <a href="#about" class="hover:text-memphis-blue">About</a>
-                <a href="#pricelist" class="hover:text-memphis-blue">Pricelist</a>
-                <a href="#contact" class="hover:text-memphis-blue">Contact</a>
+            <div class="flex flex-wrap items-center justify-center md:justify-end gap-x-8 gap-y-4 text-sm font-bold text-memphis-ink/80">
+                <a href="#home" class="hover:text-memphis-blue transition-colors">Home</a>
+                <a href="#about" class="hover:text-memphis-blue transition-colors">About</a>
+                <a href="#pricelist" class="hover:text-memphis-blue transition-colors">Pricelist</a>
+                <a href="#contact" class="hover:text-memphis-blue transition-colors">Contact</a>
             </div>
         </div>
         <div class="border-t border-border py-5 text-center text-xs text-muted-foreground">
