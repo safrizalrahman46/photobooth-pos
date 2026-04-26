@@ -105,39 +105,7 @@ class AddOnCardWidget extends StatelessWidget {
                           ],
                         ),
                       ),
-
-                      const SizedBox(width: 24),
-
-                      // Price
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'PRICE',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.0,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Rp ${_formatHarga(addOn.harga)}',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(width: 20),
-
-                      // Status badge
-                      _StatusBadge(addOn: addOn),
+                        // PRICE & STATUS REMOVED (AS REQUESTED)
                     ],
                   ),
                 ),
@@ -147,14 +115,6 @@ class AddOnCardWidget extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _formatHarga(int harga) {
-    final s = harga.toString();
-    if (s.length > 3) {
-      return '${s.substring(0, s.length - 3)}.${s.substring(s.length - 3)}';
-    }
-    return s;
   }
 }
 

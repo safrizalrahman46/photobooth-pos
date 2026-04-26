@@ -25,73 +25,71 @@ class AntrianPage extends StatelessWidget {
           );
         }
 
-        if (state.errorMessage != null) {
-          return Center(
-            child: Text(
-              'Error: ${state.errorMessage}',
-              style: const TextStyle(color: Colors.red),
+        return Container(
+          color: const Color(0xFFF8FAFC), // Background abu-abu sangat muda (Premium)
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(40, 60, 40, 40), // Padding dashboard premium
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Banner Antrian Berikutnya (Full Width)
+                AntrianBerikutnyaBanner(antrian: state.antrianBerikutnya),
+                
+                const SizedBox(height: 32),
+
+                // 3 Kolom utama (Row)
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ─── Kolom Menunggu ─────────────────────
+                      Expanded(
+                        child: KolomMenungguWidget(antrian: state.antrianMenunggu),
+                      ),
+                      const SizedBox(width: 24), // Spasi antar kolom lebh lebar (Lega)
+
+                      // ─── Kolom Sedang Foto ──────────────────
+                      Expanded(
+                        child: KolomSedangFotoWidget(
+                          booths: state.booths,
+                          onKirimKeSelesai: () {
+                            final boothAktif = state.booths.firstWhere(
+                              (b) => b.antrianAktif != null,
+                              orElse: () => state.booths.first,
+                            );
+                            if (boothAktif.antrianAktif != null) {
+                              bloc.pindahKeSelesai(
+                                boothAktif.antrianAktif!.nomorAntrian,
+                                'Cetak Berhasil',
+                              );
+                            }
+                          },
+                          onSetReady: () {
+                            final boothTersedia = state.booths.firstWhere(
+                              (b) => b.status == StatusBooth.tersedia,
+                              orElse: () => state.booths.last,
+                            );
+                            bloc.setBoothReady(boothTersedia.id);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+
+                      // ─── Kolom Selesai ──────────────────────
+                      Expanded(
+                        child: KolomSelesaiWidget(
+                          antrian: state.antrianSelesai,
+                          onLihatSemua: () {
+                            // Navigate to history page
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Banner Antrian Berikutnya
-            AntrianBerikutnyaBanner(antrian: state.antrianBerikutnya),
-            const SizedBox(height: 24),
-
-            // 3 Kolom utama
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ─── Kolom Menunggu ─────────────────────
-                  Expanded(
-                    child: KolomMenungguWidget(antrian: state.antrianMenunggu),
-                  ),
-                  const SizedBox(width: 16),
-
-                  // ─── Kolom Sedang Foto ──────────────────
-                  Expanded(
-                    child: KolomSedangFotoWidget(
-                      booths: state.booths,
-                      onKirimKeSelesai: () {
-                        final boothAktif = state.booths.firstWhere(
-                          (b) => b.antrianAktif != null,
-                          orElse: () => state.booths.first,
-                        );
-                        if (boothAktif.antrianAktif != null) {
-                          bloc.pindahKeSelesai(
-                            boothAktif.antrianAktif!.nomorAntrian,
-                            'Cetak Berhasil',
-                          );
-                        }
-                      },
-                      onSetReady: () {
-                        final boothTersedia = state.booths.firstWhere(
-                          (b) => b.status == StatusBooth.tersedia,
-                          orElse: () => state.booths.last,
-                        );
-                        bloc.setBoothReady(boothTersedia.id);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-
-                  // ─── Kolom Selesai ──────────────────────
-                  Expanded(
-                    child: KolomSelesaiWidget(
-                      antrian: state.antrianSelesai,
-                      onLihatSemua: () {
-                        // Navigate to history page
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         );
       },
     );

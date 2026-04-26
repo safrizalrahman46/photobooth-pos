@@ -5,7 +5,8 @@ import '../../../shared/layout/sidebar/sidebar.dart';
 import '../../../shared/layout/header/app_header.dart';
 
 // Pages
-import '../../booking/presentation/pages/booking_page.dart';
+import '../../booking/presentation/pages/walkin_page.dart';
+import '../../booking/presentation/pages/pure_booking_page.dart';
 import '../../history/presentation/pages/history_page.dart';
 import '../../laporan/presentation/pages/laporan_page.dart';
 import '../../paket/presentation/pages/paket_page.dart';
@@ -31,29 +32,33 @@ class DesktopHomePage extends StatefulWidget {
 
 class _DesktopHomePageState extends State<DesktopHomePage> {
   int _selectedIndex = 0;
+  bool _isSidebarExpanded = true; // State baru untuk sidebar
 
   /// 🔥 BUILDER (WAJIB - bukan List statis)
   Widget _buildPage(int index) {
     switch (index) {
       case 0:
-        return const BookingPage();
+        return const WalkinPage();
 
       case 1:
+        return const PureBookingPage();
+
+      case 2:
         return ChangeNotifierProvider(
           create: (_) => AntrianInjector.create(),
           child: const AntrianPage(),
         );
 
-      case 2:
+      case 3:
         return const HistoryPage();
 
-      case 3:
+      case 4:
         return const LaporanPage();
 
-      case 4:
+      case 5:
         return const PaketPage();
 
-      case 5:
+      case 6:
         return const AddOnPage();
 
       default:
@@ -69,6 +74,12 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           // ── Sidebar ─────────────────────────────
           Sidebar(
             selectedIndex: _selectedIndex,
+            isExpanded: _isSidebarExpanded, // Pass state
+            onToggle: () { // Toggle callback
+              setState(() {
+                _isSidebarExpanded = !_isSidebarExpanded;
+              });
+            },
             onItemTapped: (index) {
               setState(() {
                 _selectedIndex = index;
@@ -80,7 +91,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           Expanded(
             child: Column(
               children: [
-                const AppHeader(),
+                if (_selectedIndex != 0 && _selectedIndex != 2 && _selectedIndex != 3 && _selectedIndex != 4 && _selectedIndex != 5 && _selectedIndex != 6) const AppHeader(),
 
                 /// 🔥 PAKAI BUILDER
                 Expanded(child: _buildPage(_selectedIndex)),

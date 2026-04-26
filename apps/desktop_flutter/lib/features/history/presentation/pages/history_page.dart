@@ -36,63 +36,56 @@ class _HistoryPageState extends State<HistoryPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // ── Main Content ─────────────────────────
           Expanded(
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Title
-                        const Text(
-                          'History Transaksi',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Header (search, filter, export)
-                        HistoryHeaderSection(
-                          searchQuery: _controller.searchQuery,
-                          onSearchChanged: _controller.onSearchChanged,
-                          selectedStatus: _controller.statusFilter,
-                          onStatusFilterChanged:
-                              _controller.onStatusFilterChanged,
-                          onExport: _controller.onExport,
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Table
-                        HistoryTableSection(
-                          transactions: _controller.pagedTransactions,
-                          onRowAction: _controller.onRowAction,
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Pagination
-                        HistoryPaginationSection(
-                          currentPage: _controller.currentPage,
-                          totalPages: _controller.totalPages,
-                          paginationLabel: _controller.paginationLabel,
-                          onPageChanged: _controller.goToPage,
-                          onPrev: _controller.prevPage,
-                          onNext: _controller.nextPage,
-                        ),
-                      ],
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(40, 60, 40, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title
+                  const Text(
+                    'History Transaksi',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1F2937),
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 28),
+
+                  // Header (search, filter, export)
+                  HistoryHeaderSection(
+                    searchQuery: _controller.searchQuery,
+                    onSearchChanged: _controller.onSearchChanged,
+                    selectedStatus: _controller.statusFilter,
+                    onStatusFilterChanged: _controller.onStatusFilterChanged,
+                    onExport: _controller.onExport,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Table
+                  HistoryTableSection(
+                    transactions: _controller.pagedTransactions,
+                    onRowAction: _controller.onRowAction,
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Pagination
+                  HistoryPaginationSection(
+                    currentPage: _controller.currentPage,
+                    totalPages: _controller.totalPages,
+                    paginationLabel: _controller.paginationLabel,
+                    onPageChanged: _controller.goToPage,
+                    onPrev: _controller.prevPage,
+                    onNext: _controller.nextPage,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

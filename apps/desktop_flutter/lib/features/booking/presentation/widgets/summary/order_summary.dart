@@ -16,7 +16,7 @@ class OrderSummaryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 210,
+      width: 320,
       decoration: BoxDecoration(
         color: AppColors.panelBg,
         borderRadius: BorderRadius.circular(20),
