@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../application/booking_controller.dart';
-import '../widgets/queue/queue_card.dart';
-import '../widgets/package/package_card.dart';
-import '../widgets/addon/addon_item.dart';
-import '../widgets/summary/order_summary.dart';
 
 class PureBookingPage extends StatefulWidget {
   const PureBookingPage({super.key});
