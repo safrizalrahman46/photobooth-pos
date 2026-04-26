@@ -36,14 +36,7 @@ class StoreBookingRequest extends FormRequest
             'customer_email' => ['nullable', 'email', 'max:255'],
             'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'booking_time' => ['required', 'date_format:H:i'],
-            'payment_type' => ['required', Rule::in(['full', 'dp50'])],
-            'transfer_reference' => ['nullable', 'string', 'max:100'],
-            'transfer_proof' => [
-                Rule::requiredIf(fn (): bool => $this->routeIs('booking.store')),
-                'file',
-                'mimes:jpg,jpeg,png,webp,pdf',
-                'max:5120',
-            ],
+            'payment_type' => ['nullable', Rule::in(['full', 'onsite'])],
             'source' => ['nullable', Rule::in(['web', 'walk_in', 'admin'])],
             'addons' => ['nullable', 'array', 'max:20'],
             'addons.*.id' => ['required_with:addons', 'string', 'max:80'],
@@ -57,19 +50,6 @@ class StoreBookingRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $decodedAddons = $this->decodeAddonsPayload();
-        $paymentType = $this->input('payment_type');
-
-        if (! is_string($paymentType) || trim($paymentType) === '') {
-            $this->merge([
-                'payment_type' => 'full',
-            ]);
-        }
-
-        if ($this->has('transfer_reference')) {
-            $this->merge([
-                'transfer_reference' => trim((string) $this->input('transfer_reference')),
-            ]);
-        }
 
         if ($decodedAddons !== null) {
             $this->merge([

@@ -10,32 +10,33 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
-    navigation: {
-        type: Array,
-        default: () => [],
-    },
 });
 
 const mobileOpen = ref(false);
-const asString = (value) => (value === null || value === undefined ? '' : String(value));
 
 const links = computed(() => {
-    if (Array.isArray(props.navigation) && props.navigation.length) {
-        return props.navigation
-            .map((item, index) => ({
-                key: asString(item?.key || `nav-${index}`),
-                href: asString(item?.href || '#'),
-                label: asString(item?.label || '-'),
-            }))
-            .filter((item) => item.href && item.label);
-    }
-
-    return [];
+    return [
+        {
+            key: 'book',
+            href: props.routes.booking || props.routes.back || '/booking',
+            label: 'Book',
+        },
+        {
+            key: 'admin',
+            href: props.routes.admin || '/admin',
+            label: 'Admin',
+        },
+        {
+            key: 'queue',
+            href: props.routes.queueBoard || '/queue-board',
+            label: 'Queue',
+        },
+    ];
 });
 
 const logoSrc = computed(() => props.site.logo_url || props.routes.logo || '/favicon.ico');
-const brandName = computed(() => asString(props.site.brand_name).trim() || asString(props.site.short_name).trim() || 'Brand');
-const shortName = computed(() => asString(props.site.short_name).trim() || asString(props.site.brand_name).trim() || 'Studio');
+const brandName = computed(() => props.site.brand_name || 'Ready to Pict');
+const shortName = computed(() => props.site.short_name || 'Studio');
 
 const currentPath = computed(() => window.location.pathname);
 
@@ -66,7 +67,7 @@ const isActive = (href) => {
                 </div>
             </a>
 
-            <div v-if="links.length" class="hidden items-center gap-1 md:flex">
+            <div class="hidden items-center gap-1 md:flex">
                 <a
                     v-for="link in links"
                     :key="link.key"
@@ -98,7 +99,7 @@ const isActive = (href) => {
             </button>
         </div>
 
-        <div v-if="mobileOpen && links.length" class="border-t border-gray-100 bg-white px-4 pb-4 md:hidden">
+        <div v-if="mobileOpen" class="border-t border-gray-100 bg-white px-4 pb-4 md:hidden">
             <a
                 v-for="link in links"
                 :key="`mobile-${link.key}`"

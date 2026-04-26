@@ -19,16 +19,19 @@ class AntrianPage extends StatelessWidget {
       builder: (context, bloc, _) {
         final state = bloc.state;
 
-        if (state.isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppTheme.primary),
+        if (state.errorMessage != null) {
+          return Center(
+            child: Text(
+              'Error: ${state.errorMessage}',
+              style: const TextStyle(color: Colors.red),
+            ),
           );
         }
 
         return Container(
-          color: const Color(0xFFF8FAFC), // Background abu-abu sangat muda (Premium)
+          color: const Color(0xFFF8FAFC), 
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(40, 60, 40, 40), // Padding dashboard premium
+            padding: const EdgeInsets.fromLTRB(40, 60, 40, 40), 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

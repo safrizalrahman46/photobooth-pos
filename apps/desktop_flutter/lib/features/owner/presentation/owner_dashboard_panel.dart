@@ -102,12 +102,19 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   bool _savingSettings = false;
   bool _savingBranch = false;
   bool _savingPackage = false;
+  bool _deletingBranch = false;
+  bool _deletingPackage = false;
   bool _savingSlot = false;
   bool _generatingSlots = false;
   bool _bulkUpdatingSlots = false;
   bool _deletingSlots = false;
   String? _error;
   String? _success;
+
+  bool get _canViewReport => widget.session.user.can('report.view');
+  bool get _canManageSettings => widget.session.user.can('settings.manage');
+  bool get _canManageCatalog => widget.session.user.can('catalog.manage');
+  bool get _canManageMaster => _canManageSettings || _canManageCatalog;
 
   @override
   void initState() {
@@ -161,33 +168,48 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
     });
 
     try {
-      final branches = await _client.fetchBranches(includeInactive: true);
-      final managedBranches = await _client.fetchManageBranches(
-        includeInactive: true,
+      final branches = await _client.fetchBranches(
+        includeInactive: _canManageSettings,
       );
-      final managedPackages = await _client.fetchManagePackages(
-        includeInactive: true,
-        search: _managementSearchController.text.trim().isEmpty
-            ? null
-            : _managementSearchController.text.trim(),
-      );
-      final managedSlots = await _client.fetchManageTimeSlots(
-        branchId: _slotFilterBranchId,
-        slotDate: _slotFilterDateController.text.trim().isEmpty
-            ? null
-            : _slotFilterDateController.text.trim(),
-      );
-      final now = DateTime.now();
-      final rangeDays = int.tryParse(_range) ?? 7;
-      final from = now.subtract(Duration(days: rangeDays - 1));
+      final managedBranches = _canManageSettings
+          ? await _client.fetchManageBranches(includeInactive: true)
+          : <BranchManagementItem>[];
+      final managedPackages = _canManageCatalog
+          ? await _client.fetchManagePackages(
+              includeInactive: true,
+              search: _managementSearchController.text.trim().isEmpty
+                  ? null
+                  : _managementSearchController.text.trim(),
+            )
+          : <PackageManagementItem>[];
+      final managedSlots = _canManageSettings
+          ? await _client.fetchManageTimeSlots(
+              branchId: _slotFilterBranchId,
+              slotDate: _slotFilterDateController.text.trim().isEmpty
+                  ? null
+                  : _slotFilterDateController.text.trim(),
+            )
+          : <TimeSlotManagementItem>[];
 
-      final summary = await _client.fetchReportSummary(
-        from: from,
-        to: now,
-        branchId: _branchId,
-      );
+      ReportSummary? summary;
 
-      final settings = await _client.fetchAppSettings();
+      if (_canViewReport) {
+        final now = DateTime.now();
+        final rangeDays = int.tryParse(_range) ?? 7;
+        final from = now.subtract(Duration(days: rangeDays - 1));
+
+        summary = await _client.fetchReportSummary(
+          from: from,
+          to: now,
+          branchId: _branchId,
+        );
+      }
+
+      AppSettingsPayload? settings;
+
+      if (_canManageSettings) {
+        settings = await _client.fetchAppSettings();
+      }
 
       if (!mounted) {
         return;
@@ -205,9 +227,17 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
           _slotBranchId = managedBranches.first.id;
         }
         _summary = summary;
+
+        final allowedTabs = _allowedTabs();
+
+        if (!allowedTabs.contains(_tabIndex)) {
+          _tabIndex = allowedTabs.first;
+        }
       });
 
-      _applySettings(settings);
+      if (settings != null) {
+        _applySettings(settings);
+      }
     } on ApiException catch (exception) {
       if (!mounted) {
         return;
@@ -245,6 +275,14 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   }
 
   Future<void> _saveSettings() async {
+    if (!_canManageSettings) {
+      setState(() {
+        _error = 'Akun ini tidak memiliki akses mengubah settings.';
+      });
+
+      return;
+    }
+
     if (_savingSettings) {
       return;
     }
@@ -313,25 +351,35 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   }
 
   Future<void> _reloadManagementData() async {
+    if (!_canManageMaster) {
+      return;
+    }
+
     try {
-      final managedBranches = await _client.fetchManageBranches(
-        includeInactive: true,
-        search: _managementSearchController.text.trim().isEmpty
-            ? null
-            : _managementSearchController.text.trim(),
-      );
-      final managedPackages = await _client.fetchManagePackages(
-        includeInactive: true,
-        search: _managementSearchController.text.trim().isEmpty
-            ? null
-            : _managementSearchController.text.trim(),
-      );
-      final managedSlots = await _client.fetchManageTimeSlots(
-        branchId: _slotFilterBranchId,
-        slotDate: _slotFilterDateController.text.trim().isEmpty
-            ? null
-            : _slotFilterDateController.text.trim(),
-      );
+      final managedBranches = _canManageSettings
+          ? await _client.fetchManageBranches(
+              includeInactive: true,
+              search: _managementSearchController.text.trim().isEmpty
+                  ? null
+                  : _managementSearchController.text.trim(),
+            )
+          : <BranchManagementItem>[];
+      final managedPackages = _canManageCatalog
+          ? await _client.fetchManagePackages(
+              includeInactive: true,
+              search: _managementSearchController.text.trim().isEmpty
+                  ? null
+                  : _managementSearchController.text.trim(),
+            )
+          : <PackageManagementItem>[];
+      final managedSlots = _canManageSettings
+          ? await _client.fetchManageTimeSlots(
+              branchId: _slotFilterBranchId,
+              slotDate: _slotFilterDateController.text.trim().isEmpty
+                  ? null
+                  : _slotFilterDateController.text.trim(),
+            )
+          : <TimeSlotManagementItem>[];
 
       if (!mounted) {
         return;
@@ -403,6 +451,14 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   }
 
   Future<void> _saveBranch() async {
+    if (!_canManageSettings) {
+      setState(() {
+        _error = 'Akun ini tidak memiliki akses mengelola cabang.';
+      });
+
+      return;
+    }
+
     if (_savingBranch) {
       return;
     }
@@ -476,7 +532,77 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
     }
   }
 
+  Future<void> _deleteBranch(BranchManagementItem branch) async {
+    if (!_canManageSettings) {
+      setState(() {
+        _error = 'Akun ini tidak memiliki akses menghapus cabang.';
+      });
+
+      return;
+    }
+
+    if (_deletingBranch) {
+      return;
+    }
+
+    final confirmed = await _confirmSlotAction(
+      title: 'Hapus cabang?',
+      message:
+          'Cabang ${branch.name} akan dihapus. Jika masih dipakai booking/transaksi, backend akan menolak.',
+      confirmLabel: 'Hapus',
+      destructive: true,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setState(() {
+      _deletingBranch = true;
+      _error = null;
+      _success = null;
+    });
+
+    try {
+      await _client.deleteBranch(branchId: branch.id);
+      await _reloadManagementData();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        if (_editBranchId == branch.id) {
+          _fillBranchForm(null);
+        }
+        _success = 'Cabang ${branch.name} berhasil dihapus.';
+      });
+    } on ApiException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = exception.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _deletingBranch = false;
+        });
+      }
+    }
+  }
+
   Future<void> _savePackage() async {
+    if (!_canManageCatalog) {
+      setState(() {
+        _error = 'Akun ini tidak memiliki akses mengelola paket.';
+      });
+
+      return;
+    }
+
     if (_savingPackage) {
       return;
     }
@@ -562,7 +688,73 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
     }
   }
 
+  Future<void> _deletePackage(PackageManagementItem package) async {
+    if (!_canManageCatalog) {
+      setState(() {
+        _error = 'Akun ini tidak memiliki akses menghapus paket.';
+      });
+
+      return;
+    }
+
+    if (_deletingPackage) {
+      return;
+    }
+
+    final confirmed = await _confirmSlotAction(
+      title: 'Hapus paket?',
+      message:
+          'Paket ${package.name} akan dihapus. Jika masih dipakai booking/transaksi, backend akan menolak.',
+      confirmLabel: 'Hapus',
+      destructive: true,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setState(() {
+      _deletingPackage = true;
+      _error = null;
+      _success = null;
+    });
+
+    try {
+      await _client.deletePackage(packageId: package.id);
+      await _reloadManagementData();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        if (_editPackageId == package.id) {
+          _fillPackageForm(null);
+        }
+        _success = 'Paket ${package.name} berhasil dihapus.';
+      });
+    } on ApiException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = exception.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _deletingPackage = false;
+        });
+      }
+    }
+  }
+
   Future<void> _reloadSlotData() async {
+    if (!_canManageSettings) {
+      return;
+    }
+
     try {
       final managedSlots = await _client.fetchManageTimeSlots(
         branchId: _slotFilterBranchId,
@@ -616,6 +808,14 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   }
 
   Future<void> _saveSlot() async {
+    if (!_canManageSettings) {
+      setState(() {
+        _error = 'Akun ini tidak memiliki akses mengelola slot jam.';
+      });
+
+      return;
+    }
+
     if (_savingSlot) {
       return;
     }
@@ -700,6 +900,14 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   }
 
   Future<void> _generateSlots() async {
+    if (!_canManageSettings) {
+      setState(() {
+        _error = 'Akun ini tidak memiliki akses generate slot jam.';
+      });
+
+      return;
+    }
+
     if (_generatingSlots) {
       return;
     }
@@ -786,6 +994,14 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   }
 
   Future<void> _bulkUpdateSelectedSlotsBookable(bool isBookable) async {
+    if (!_canManageSettings) {
+      setState(() {
+        _error = 'Akun ini tidak memiliki akses update slot jam.';
+      });
+
+      return;
+    }
+
     if (_bulkUpdatingSlots) {
       return;
     }
@@ -852,6 +1068,14 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   }
 
   Future<void> _deleteSelectedSlots() async {
+    if (!_canManageSettings) {
+      setState(() {
+        _error = 'Akun ini tidak memiliki akses menghapus slot jam.';
+      });
+
+      return;
+    }
+
     if (_deletingSlots) {
       return;
     }
@@ -916,6 +1140,14 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   }
 
   Future<void> _deleteSingleSlot(TimeSlotManagementItem slot) async {
+    if (!_canManageSettings) {
+      setState(() {
+        _error = 'Akun ini tidak memiliki akses menghapus slot jam.';
+      });
+
+      return;
+    }
+
     if (_deletingSlots) {
       return;
     }
@@ -1062,6 +1294,28 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
     return match.first.name;
   }
 
+  List<int> _allowedTabs() {
+    final tabs = <int>[];
+
+    if (_canViewReport) {
+      tabs.add(0);
+    }
+
+    if (_canManageMaster) {
+      tabs.add(1);
+    }
+
+    if (_canManageSettings) {
+      tabs.add(2);
+    }
+
+    if (tabs.isEmpty) {
+      tabs.add(0);
+    }
+
+    return tabs;
+  }
+
   String _rupiah(double value) {
     final number = value.isNaN ? 0 : value;
     final integer = number.round();
@@ -1081,6 +1335,11 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final allowedTabs = _allowedTabs();
+    final activeTab = allowedTabs.contains(_tabIndex)
+        ? _tabIndex
+        : allowedTabs.first;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1097,31 +1356,34 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
             SegmentedButton<int>(
-              segments: const <ButtonSegment<int>>[
-                ButtonSegment<int>(
-                  value: 0,
-                  label: Text('Overview'),
-                  icon: Icon(Icons.insights_outlined),
-                ),
-                ButtonSegment<int>(
-                  value: 1,
-                  label: Text('Management'),
-                  icon: Icon(Icons.tune_outlined),
-                ),
-                ButtonSegment<int>(
-                  value: 2,
-                  label: Text('Slot Jam'),
-                  icon: Icon(Icons.schedule_outlined),
-                ),
+              segments: <ButtonSegment<int>>[
+                if (allowedTabs.contains(0))
+                  const ButtonSegment<int>(
+                    value: 0,
+                    label: Text('Overview'),
+                    icon: Icon(Icons.insights_outlined),
+                  ),
+                if (allowedTabs.contains(1))
+                  const ButtonSegment<int>(
+                    value: 1,
+                    label: Text('Management'),
+                    icon: Icon(Icons.tune_outlined),
+                  ),
+                if (allowedTabs.contains(2))
+                  const ButtonSegment<int>(
+                    value: 2,
+                    label: Text('Slot Jam'),
+                    icon: Icon(Icons.schedule_outlined),
+                  ),
               ],
-              selected: <int>{_tabIndex},
+              selected: <int>{activeTab},
               onSelectionChanged: (selection) {
                 setState(() {
                   _tabIndex = selection.first;
                 });
               },
             ),
-            if (_tabIndex == 0)
+            if (activeTab == 0)
               DropdownButton<String>(
                 value: _range,
                 items: const <DropdownMenuItem<String>>[
@@ -1141,7 +1403,7 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
                   _loadData();
                 },
               ),
-            if (_tabIndex == 0)
+            if (activeTab == 0)
               SizedBox(
                 width: 260,
                 child: DropdownButtonFormField<int?>(
@@ -1168,7 +1430,7 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
                   },
                 ),
               ),
-            if (_tabIndex == 1)
+            if (activeTab == 1)
               SizedBox(
                 width: 320,
                 child: TextField(
@@ -1179,7 +1441,7 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
                   onSubmitted: (_) => _reloadManagementData(),
                 ),
               ),
-            if (_tabIndex == 2)
+            if (activeTab == 2)
               SizedBox(
                 width: 260,
                 child: DropdownButtonFormField<int?>(
@@ -1206,7 +1468,7 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
                   },
                 ),
               ),
-            if (_tabIndex == 2)
+            if (activeTab == 2)
               SizedBox(
                 width: 180,
                 child: TextField(
@@ -1220,9 +1482,9 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
             FilledButton.icon(
               onPressed: _loading
                   ? null
-                  : _tabIndex == 0
+                  : activeTab == 0
                   ? _loadData
-                  : _tabIndex == 1
+                  : activeTab == 1
                   ? _reloadManagementData
                   : _reloadSlotData,
               icon: const Icon(Icons.refresh_rounded),
@@ -1242,9 +1504,9 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
         Expanded(
           child: _loading
               ? const Center(child: CircularProgressIndicator())
-              : _tabIndex == 0
+              : activeTab == 0
               ? _buildOverviewSection(context)
-              : _tabIndex == 1
+              : activeTab == 1
               ? _buildManagementSection(context)
               : _buildSlotSection(context),
         ),
@@ -1253,6 +1515,12 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
   }
 
   Widget _buildOverviewSection(BuildContext context) {
+    if (!_canViewReport) {
+      return const Center(
+        child: Text('Akun ini tidak memiliki akses melihat laporan.'),
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1294,139 +1562,160 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
                   ],
                 ),
         ),
-        const SizedBox(width: 14),
-        SizedBox(
-          width: 420,
-          child: Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Website Settings',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+        if (_canManageSettings) ...<Widget>[
+          const SizedBox(width: 14),
+          SizedBox(
+            width: 420,
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Website Settings',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: _brandNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Brand Name',
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: _brandNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Brand Name',
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _shortNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Short Name',
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _shortNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Short Name',
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _supportEmailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Support Email',
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _supportEmailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Support Email',
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _supportPhoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Support Phone',
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _supportPhoneController,
+                        decoration: const InputDecoration(
+                          labelText: 'Support Phone',
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: TextField(
-                            controller: _holdMinutesController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Hold Minutes',
+                      const SizedBox(height: 10),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextField(
+                              controller: _holdMinutesController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Hold Minutes',
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _arrivalNoticeController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Arrival Notice (min)',
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _arrivalNoticeController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Arrival Notice (min)',
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Queue Board Enabled'),
-                      value: _queueBoardEnabled,
-                      onChanged: (value) {
-                        setState(() {
-                          _queueBoardEnabled = value;
-                        });
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Onsite Payment Enabled'),
-                      value: _onsiteEnabled,
-                      onChanged: (value) {
-                        setState(() {
-                          _onsiteEnabled = value;
-                        });
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Midtrans Enabled'),
-                      value: _midtransEnabled,
-                      onChanged: (value) {
-                        setState(() {
-                          _midtransEnabled = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: _savingSettings ? null : _saveSettings,
-                      icon: const Icon(Icons.save_outlined),
-                      label: Text(
-                        _savingSettings ? 'Menyimpan...' : 'Simpan Settings',
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Queue Board Enabled'),
+                        value: _queueBoardEnabled,
+                        onChanged: (value) {
+                          setState(() {
+                            _queueBoardEnabled = value;
+                          });
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Onsite Payment Enabled'),
+                        value: _onsiteEnabled,
+                        onChanged: (value) {
+                          setState(() {
+                            _onsiteEnabled = value;
+                          });
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Midtrans Enabled'),
+                        value: _midtransEnabled,
+                        onChanged: (value) {
+                          setState(() {
+                            _midtransEnabled = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.icon(
+                        onPressed: _savingSettings ? null : _saveSettings,
+                        icon: const Icon(Icons.save_outlined),
+                        label: Text(
+                          _savingSettings ? 'Menyimpan...' : 'Simpan Settings',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
 
   Widget _buildManagementSection(BuildContext context) {
+    if (!_canManageMaster) {
+      return const Center(
+        child: Text('Akun ini tidak memiliki akses manajemen master data.'),
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Expanded(child: _buildBranchManagementCard(context)),
-        const SizedBox(width: 14),
-        Expanded(child: _buildPackageManagementCard(context)),
+        if (_canManageSettings)
+          Expanded(child: _buildBranchManagementCard(context)),
+        if (_canManageSettings && _canManageCatalog) const SizedBox(width: 14),
+        if (_canManageCatalog)
+          Expanded(child: _buildPackageManagementCard(context)),
+        if (!_canManageCatalog)
+          const Expanded(
+            child: Center(
+              child: Text('Akun ini tidak memiliki akses manajemen paket.'),
+            ),
+          ),
       ],
     );
   }
 
   Widget _buildSlotSection(BuildContext context) {
+    if (!_canManageSettings) {
+      return const Center(
+        child: Text('Akun ini tidak memiliki akses manajemen slot jam.'),
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1846,13 +2135,25 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
                           subtitle: Text(
                             '${branch.isActive ? 'active' : 'inactive'} • ${branch.timezone}',
                           ),
-                          trailing: TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _fillBranchForm(branch);
-                              });
-                            },
-                            child: const Text('Edit'),
+                          trailing: Wrap(
+                            spacing: 4,
+                            children: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _fillBranchForm(branch);
+                                  });
+                                },
+                                child: const Text('Edit'),
+                              ),
+                              IconButton(
+                                tooltip: 'Hapus cabang',
+                                onPressed: _deletingBranch
+                                    ? null
+                                    : () => _deleteBranch(branch),
+                                icon: const Icon(Icons.delete_outline),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -2009,13 +2310,25 @@ class _OwnerDashboardPanelState extends State<OwnerDashboardPanel> {
                           subtitle: Text(
                             '${package.isActive ? 'active' : 'inactive'} • ${_branchLabel(package.branchId)} • ${_rupiah(package.basePrice)}',
                           ),
-                          trailing: TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _fillPackageForm(package);
-                              });
-                            },
-                            child: const Text('Edit'),
+                          trailing: Wrap(
+                            spacing: 4,
+                            children: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _fillPackageForm(package);
+                                  });
+                                },
+                                child: const Text('Edit'),
+                              ),
+                              IconButton(
+                                tooltip: 'Hapus paket',
+                                onPressed: _deletingPackage
+                                    ? null
+                                    : () => _deletePackage(package),
+                                icon: const Icon(Icons.delete_outline),
+                              ),
+                            ],
                           ),
                         );
                       },

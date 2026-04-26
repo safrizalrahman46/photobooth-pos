@@ -11,12 +11,14 @@ class ReceiptPrinter {
     required String brandName,
     required String branchName,
     required String cashierName,
+    int? paperWidthMm,
   }) async {
     final bytes = await buildTransactionReceiptPdf(
       transaction: transaction,
       brandName: brandName,
       branchName: branchName,
       cashierName: cashierName,
+      paperWidthMm: paperWidthMm,
     );
 
     await Printing.layoutPdf(
@@ -30,13 +32,15 @@ class ReceiptPrinter {
     required String brandName,
     required String branchName,
     required String cashierName,
+    int? paperWidthMm,
   }) async {
     final doc = pw.Document();
     final createdAt = _formatDateTime(transaction.createdAt);
+    final pageFormat = _pageFormatFromPaperWidth(paperWidthMm);
 
     doc.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a6,
+        pageFormat: pageFormat,
         margin: const pw.EdgeInsets.all(14),
         build: (context) => <pw.Widget>[
           pw.Center(
@@ -137,6 +141,18 @@ class ReceiptPrinter {
     );
 
     return doc.save();
+  }
+
+  static PdfPageFormat _pageFormatFromPaperWidth(int? paperWidthMm) {
+    final width = paperWidthMm ?? 80;
+
+    if (width <= 0) {
+      return PdfPageFormat.a6;
+    }
+
+    final widthPoint = width * PdfPageFormat.mm;
+
+    return PdfPageFormat(widthPoint, 1000 * PdfPageFormat.mm);
   }
 
   static pw.Widget _labelValue(

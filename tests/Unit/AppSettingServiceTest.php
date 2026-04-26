@@ -17,9 +17,8 @@ class AppSettingServiceTest extends TestCase
         $settings = $service->publicSettings();
 
         $this->assertSame('Ready To Pict', $settings['general']['brand_name']);
-        $this->assertIsString($settings['general']['support_email']);
-        $this->assertFalse($settings['payment']['midtrans_enabled']);
+        $this->assertSame('studio@example.com', $settings['general']['support_email']);
+        $this->assertTrue($settings['payment']['midtrans_enabled']);
         $this->assertTrue($settings['payment']['onsite_enabled']);
-        $this->assertTrue($settings['payment']['manual_transfer_proof_required']);
     }
 }
