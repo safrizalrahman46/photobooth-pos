@@ -7,26 +7,54 @@ $navItems = [
     ['label' => 'Booking', 'href' => '#pricelist'],
 ];
 
-$marqueeRowA = [
+// All available unique images
+$allImages = [
+    // BASIC
     ['src' => asset('images/landing/Basic/IMG_0394.JPG'), 'package' => 'BASIC', 'price' => '35k / sesi'],
     ['src' => asset('images/landing/Basic/IMG_0879.JPG'), 'package' => 'BASIC', 'price' => '35k / sesi'],
     ['src' => asset('images/landing/Basic/IMG_9825.JPG'), 'package' => 'BASIC', 'price' => '35k / sesi'],
-    ['src' => asset('images/landing/Basic/IMG_0394.JPG'), 'package' => 'BASIC', 'price' => '35k / sesi'],
+    
+    // MANDI BOLA
+    ['src' => asset('images/landing/manbol/IMG_0244.JPG'), 'package' => 'MANDI BOLA', 'price' => '45k / sesi'],
+    ['src' => asset('images/landing/manbol/IMG_2968.JPG'), 'package' => 'MANDI BOLA', 'price' => '45k / sesi'],
+    ['src' => asset('images/landing/manbol/IMG_3096.JPG'), 'package' => 'MANDI BOLA', 'price' => '45k / sesi'],
+    ['src' => asset('images/landing/manbol/IMG_5205.JPG'), 'package' => 'MANDI BOLA', 'price' => '45k / sesi'],
+    ['src' => asset('images/landing/manbol/IMG_5214.JPG'), 'package' => 'MANDI BOLA', 'price' => '45k / sesi'],
+    
+    // VINTAGE
+    ['src' => asset('images/landing/Vintage/IMG_0032.JPG'), 'package' => 'VINTAGE', 'price' => '45k / sesi'],
+    ['src' => asset('images/landing/Vintage/IMG_3356.JPG'), 'package' => 'VINTAGE', 'price' => '45k / sesi'],
+    ['src' => asset('images/landing/Vintage/IMG_4662.JPG'), 'package' => 'VINTAGE', 'price' => '45k / sesi'],
+    ['src' => asset('images/landing/Vintage/IMG_4761.JPG'), 'package' => 'VINTAGE', 'price' => '45k / sesi'],
+    ['src' => asset('images/landing/Vintage/IMG_7475.JPG'), 'package' => 'VINTAGE', 'price' => '45k / sesi'],
+    ['src' => asset('images/landing/Vintage/IMG_9801.JPG'), 'package' => 'VINTAGE', 'price' => '45k / sesi'],
+    
+    // MINIMARKET
+    ['src' => asset('images/landing/Mini/IMG_1228.JPG'), 'package' => 'MINIMARKET', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Mini/IMG_1254.JPG'), 'package' => 'MINIMARKET', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Mini/IMG_1555.JPG'), 'package' => 'MINIMARKET', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Mini/IMG_1976.JPG'), 'package' => 'MINIMARKET', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Mini/IMG_8011.JPG'), 'package' => 'MINIMARKET', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Mini/IMG_9013.JPG'), 'package' => 'MINIMARKET', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Mini/IMG_9647.JPG'), 'package' => 'MINIMARKET', 'price' => '50k / sesi'],
+    
+    // SOFA
+    ['src' => asset('images/landing/Sofa/IMG_0350.JPG'), 'package' => 'SOFA', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Sofa/IMG_0689.JPG'), 'package' => 'SOFA', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Sofa/IMG_0900.JPG'), 'package' => 'SOFA', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Sofa/IMG_1406.JPG'), 'package' => 'SOFA', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Sofa/IMG_8613.JPG'), 'package' => 'SOFA', 'price' => '50k / sesi'],
+    ['src' => asset('images/landing/Sofa/IMG_9945.JPG'), 'package' => 'SOFA', 'price' => '50k / sesi'],
 ];
 
-$marqueeRowB = [
-    ['src' => asset('images/landing/manbol/IMG_0244.JPG'), 'package' => 'MANDI BOLA / VINTAGE', 'price' => '45k / sesi'],
-    ['src' => asset('images/landing/manbol/IMG_2968.JPG'), 'package' => 'MANDI BOLA / VINTAGE', 'price' => '45k / sesi'],
-    ['src' => asset('images/landing/Vintage/IMG_0032.JPG'), 'package' => 'MANDI BOLA / VINTAGE', 'price' => '45k / sesi'],
-    ['src' => asset('images/landing/Vintage/IMG_3356.JPG'), 'package' => 'MANDI BOLA / VINTAGE', 'price' => '45k / sesi'],
-];
+// Shuffle all and split into 3 distinct sets (no overlaps)
+$shuffled = collect($allImages)->shuffle();
+$totalSize = $shuffled->count();
+$perRow = ceil($totalSize / 3);
 
-$marqueeRowC = [
-    ['src' => asset('images/landing/Mini/IMG_1228.JPG'), 'package' => 'MINIMARKET / SOFA', 'price' => '50k / sesi'],
-    ['src' => asset('images/landing/Mini/IMG_1254.JPG'), 'package' => 'MINIMARKET / SOFA', 'price' => '50k / sesi'],
-    ['src' => asset('images/landing/Sofa/IMG_0350.JPG'), 'package' => 'MINIMARKET / SOFA', 'price' => '50k / sesi'],
-    ['src' => asset('images/landing/Sofa/IMG_0689.JPG'), 'package' => 'MINIMARKET / SOFA', 'price' => '50k / sesi'],
-];
+$marqueeRowA = $shuffled->slice(0, $perRow)->all();
+$marqueeRowB = $shuffled->slice($perRow, $perRow)->all();
+$marqueeRowC = $shuffled->slice($perRow * 2)->all();
 
 $pricing = [
     [
@@ -51,7 +79,6 @@ $pricing = [
         'features' => ['1–2 Orang', '10 Menit', '1 Cetak 4R', 'Free All Soft File'],
     ],
 ];
-
 @endphp
 
 <!DOCTYPE html>
@@ -103,11 +130,11 @@ $pricing = [
         .font-display { font-family: ui-sans-serif, system-ui, sans-serif; }
         
         .animate-marquee-left { 
-            animation: marquee-left 30s linear infinite; 
+            animation: marquee-left 80s linear infinite; 
             will-change: transform;
         }
         .animate-marquee-right { 
-            animation: marquee-right 30s linear infinite; 
+            animation: marquee-right 80s linear infinite; 
             will-change: transform;
         }
         
@@ -173,7 +200,7 @@ $pricing = [
         <div class="relative overflow-hidden">
             <div class="flex w-max animate-marquee-left gap-4">
                 @foreach(array_merge($marqueeRowA, $marqueeRowA) as $i => $item)
-                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
+                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group outline-none focus:outline-none focus-visible:outline-none">
                         <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
                 @endforeach
@@ -184,7 +211,7 @@ $pricing = [
         <div class="relative overflow-hidden">
             <div class="flex w-max animate-marquee-right gap-4">
                 @foreach(array_merge($marqueeRowB, $marqueeRowB) as $i => $item)
-                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
+                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group outline-none focus:outline-none focus-visible:outline-none">
                         <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
                 @endforeach
@@ -195,7 +222,7 @@ $pricing = [
         <div class="relative overflow-hidden">
             <div class="flex w-max animate-marquee-left gap-4">
                 @foreach(array_merge($marqueeRowC, $marqueeRowC) as $i => $item)
-                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
+                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group outline-none focus:outline-none focus-visible:outline-none">
                         <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
                 @endforeach
