@@ -129,12 +129,21 @@ $addons = [
         .bg-memphis-ink\/95 {
             background-color: rgba(7, 59, 76, 0.95);
         }
+
+        /* Hide scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        body {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
     </style>
 </head>
 <body class="min-h-screen bg-background text-foreground overflow-x-hidden">
     
     <!-- HEADER -->
-    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-border/60 shadow-sm">
+    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm">
         <div class="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12 py-4 md:py-6">
             <a href="#home" class="flex items-center gap-2 md:gap-3">
                 <img src="{{ asset('images/logo/logo.png') }}" alt="Ready to Pict" class="h-8 md:h-12 w-auto" />
@@ -148,7 +157,7 @@ $addons = [
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>
             </button>
 
-            <nav id="nav-menu" class="hidden md:flex items-center gap-8 text-[15px] font-medium text-memphis-ink absolute md:relative top-16 md:top-0 left-0 w-full md:w-auto bg-white md:bg-transparent border-b md:border-none border-border md:border-transparent px-6 py-8 md:p-0 flex-col md:flex-row shadow-xl md:shadow-none transition-all duration-300 z-[60]">
+            <nav id="nav-menu" class="hidden md:flex items-center gap-8 text-[15px] font-medium text-memphis-ink absolute md:relative top-16 md:top-0 left-0 w-full md:w-auto bg-white md:bg-transparent px-6 py-8 md:p-0 flex-col md:flex-row shadow-xl md:shadow-none transition-all duration-300 z-[60]">
                 @foreach($navItems as $item)
                     @if($item['label'] === 'Booking')
                         <a href="{{ $item['href'] }}" class="w-full md:w-auto text-center bg-memphis-yellow text-memphis-ink px-6 py-2.5 rounded-full font-bold shadow-md hover:bg-memphis-orange hover:text-white hover:shadow-xl hover:-translate-y-1 hover:scale-105 ring-offset-background transition-all duration-300 active:scale-95">
@@ -201,7 +210,7 @@ $addons = [
     </section>
 
     <!-- ABOUT US -->
-    <section id="about" class="bg-background py-16 md:py-24 scroll-mt-24 border-t border-border">
+    <section id="about" class="bg-background py-16 md:py-24 scroll-mt-24">
         <div class="max-w-7xl mx-auto px-6 md:px-12">
             <div class="bg-memphis-cream border-2 border-dashed border-memphis-blue rounded-3xl p-8 md:p-12 relative overflow-hidden flex flex-col items-center text-center">
                 <!-- Decorative element -->
@@ -388,7 +397,7 @@ $addons = [
     </div>
 
     <!-- FOOTER -->
-    <footer class="border-t border-border bg-background">
+    <footer class="bg-background">
         <div class="max-w-7xl mx-auto px-6 md:px-12 py-12 flex flex-col md:flex-row justify-between gap-10">
             <div class="text-center md:text-left">
                 <h3 class="font-display text-2xl text-memphis-blue font-semibold">
@@ -405,7 +414,7 @@ $addons = [
                 <a href="#contact" class="hover:text-memphis-blue transition-colors">Contact</a>
             </div>
         </div>
-        <div class="border-t border-border py-5 text-center text-xs text-muted-foreground">
+        <div class="py-5 text-center text-xs text-muted-foreground">
             © {{ date('Y') }} Ready to Pict. All rights reserved.
         </div>
     </footer>
