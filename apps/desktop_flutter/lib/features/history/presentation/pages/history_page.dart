@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../app/theme/app_text_styles.dart';
+import 'package:desktop_flutter/app/theme/app_text_styles.dart';
 import '../../application/history_controller.dart';
 import '../sections/history_header_section.dart';
 import '../sections/history_table_section.dart';
