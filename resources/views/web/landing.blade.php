@@ -52,12 +52,6 @@ $pricing = [
     ],
 ];
 
-$addons = [
-    ['label' => '+1 Orang (include cetak 1 4R)', 'price' => '15k'],
-    ['label' => '+1 Cetak 4R', 'price' => '15k'],
-    ['label' => '+5 Menit Durasi Foto', 'price' => '20k'],
-    ['label' => 'Sewa 1 Kostum', 'price' => '10k'],
-];
 @endphp
 
 <!DOCTYPE html>
@@ -103,8 +97,8 @@ $addons = [
         .bg-memphis-ink { background-color: var(--memphis-ink) !important; }
         .text-memphis-ink { color: var(--memphis-ink) !important; }
         .bg-memphis-cream { background-color: var(--memphis-cream) !important; }
-        .border-memphis-blue { border-color: var(--memphis-blue) !important; }
-        .border-memphis-yellow { border-color: var(--memphis-yellow) !important; }
+        .border-memphis-blue { border-color: rgba(17, 138, 178, 0.3) !important; }
+        .border-memphis-yellow { border-color: rgba(255, 209, 102, 0.3) !important; }
 
         .font-display { font-family: ui-sans-serif, system-ui, sans-serif; }
         
@@ -297,24 +291,6 @@ $addons = [
                 @endforeach
             </div>
 
-            <!-- ADD ON -->
-            <div class="mt-10 bg-memphis-cream border-2 border-dashed border-memphis-yellow rounded-2xl p-6">
-                <p class="text-center text-sm font-bold uppercase tracking-widest text-memphis-blue mb-5">
-                    Add On (Tambahan)
-                </p>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    @foreach($addons as $a)
-                        <div class="flex items-center justify-between bg-background rounded-full px-4 md:px-5 py-3 shadow-sm">
-                            <span class="text-[10px] md:text-xs font-medium text-foreground/80 leading-tight">
-                                {{ $a['label'] }}
-                            </span>
-                            <span class="text-xs md:text-sm font-bold text-memphis-blue shrink-0">
-                                {{ $a['price'] }}
-                            </span>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
         </div>
     </section>
 
