@@ -34,124 +34,193 @@ class _PureBookingPageState extends State<PureBookingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── LEFT: Queue Sidebar (Fixed width) ───────────────────────
-          _QueueSidebar(controller: _controller),
-
-          // ── CENTER: Details (Scrollable & Constrained) ──────────────
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Detail Booking', style: AppTextStyles.h2),
-                  const SizedBox(height: 20),
-                  
-                  // Customer info row (Stretched)
-                  _CustomerInfoRow(controller: _controller),
-                  const SizedBox(height: 32),
-
-                  // Paket Terpilih
-                  Text('Paket Terpilih', style: AppTextStyles.h3),
-                  const SizedBox(height: 16),
-                  _PackageSection(controller: _controller),
-                  const SizedBox(height: 32),
-
-                  // Add-ons
-                  Text('Experience Add-ons', style: AppTextStyles.h3),
-                  const SizedBox(height: 16),
-                  _AddonSection(controller: _controller),
-                ],
-              ),
-            ),
-          ),
-
-          // ── RIGHT: Order Summary (Fixed width) ──────────────────────
-          Container(
-            width: 320,
-            padding: const EdgeInsets.all(16),
-            child: OrderSummaryPanel(controller: _controller),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QueueSidebar extends StatelessWidget {
-  final BookingController controller;
-
-  const _QueueSidebar({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 250, 
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(right: BorderSide(color: AppColors.divider, width: 1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Search Booking', style: AppTextStyles.h3),
-                const SizedBox(height: 4),
-                Text(
-                  'Cari data booking online pelanggan',
-                  style: AppTextStyles.bodySmall,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Daftar Booking', style: AppTextStyles.h2),
+                    const SizedBox(height: 4),
+                    Text('Kelola pesanan online dan konfirmasi antrean', style: AppTextStyles.bodySmall),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                // Search
+                // Search bar
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
+                  width: 300,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.inputBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.inputBorder),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.cardBorder),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.search_rounded,
-                        size: 18,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 10),
+                      const Icon(Icons.search, size: 20, color: AppColors.textMuted),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'Kode Booking / WA...',
-                          style: AppTextStyles.bodySmall,
-                        ),
+                        child: Text('Cari Booking...', style: AppTextStyles.bodySmall),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: _BookingTable(controller: _controller),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-          // Queue list
+class _BookingTable extends StatelessWidget {
+  final BookingController controller;
+
+  const _BookingTable({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildHeader(),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: ListView.separated(
               itemCount: controller.queues.length,
-              itemBuilder: (context, index) => QueueCard(
-                booking: controller.queues[index],
-                isActive: controller.selectedQueueIndex == index,
-                onTap: () => controller.selectQueue(index),
+              separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.divider),
+              itemBuilder: (context, index) {
+                return _BookingRow(
+                  booking: controller.queues[index],
+                  onAcc: () => controller.accBooking(),
+                  onCancel: () => controller.cancelBooking(),
+                  onDelete: () => controller.deleteBooking(),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      child: const Row(
+        children: [
+          _ColHeader(label: 'ID BOOKING', flex: 2),
+          _ColHeader(label: 'WAKTU', flex: 2),
+          _ColHeader(label: 'NAMA PELANGGAN', flex: 3),
+          _ColHeader(label: 'WHATSAPP', flex: 3),
+          _ColHeader(label: 'TOTAL', flex: 2),
+          _ColHeader(label: 'STATUS', flex: 2),
+          _ColHeader(label: 'AKSI', flex: 3),
+        ],
+      ),
+    );
+  }
+}
+
+class _ColHeader extends StatelessWidget {
+  final String label;
+  final int flex;
+
+  const _ColHeader({required this.label, required this.flex});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      flex: flex,
+      child: Text(
+        label,
+        style: AppTextStyles.caption.copyWith(
+          fontWeight: FontWeight.w700,
+          color: AppColors.textMuted,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingRow extends StatelessWidget {
+  final dynamic booking;
+  final VoidCallback onAcc;
+  final VoidCallback onCancel;
+  final VoidCallback onDelete;
+
+  const _BookingRow({
+    required this.booking,
+    required this.onAcc,
+    required this.onCancel,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Row(
+        children: [
+          Expanded(flex: 2, child: Text(booking.id, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600))),
+          Expanded(flex: 2, child: Text(booking.time, style: AppTextStyles.bodySmall)),
+          Expanded(flex: 3, child: Text(booking.customerName, style: AppTextStyles.bodyMedium)),
+          Expanded(flex: 3, child: Text(booking.phone, style: AppTextStyles.bodySmall)),
+          Expanded(flex: 2, child: Text('Rp 115.000', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700))),
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(6),
               ),
+              child: UnconstrainedBox(
+                child: Text(
+                  booking.status,
+                  style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                _MiniActionBtn(icon: Icons.check_circle_rounded, color: const Color(0xFF10B981), onTap: onAcc, label: 'Acc'),
+                const SizedBox(width: 8),
+                _MiniActionBtn(icon: Icons.cancel_rounded, color: const Color(0xFFF59E0B), onTap: onCancel, label: 'Batal'),
+                const SizedBox(width: 8),
+                _MiniActionBtn(icon: Icons.delete_rounded, color: const Color(0xFFEF4444), onTap: onDelete, label: 'Hapus'),
+              ],
             ),
           ),
         ],
@@ -160,113 +229,33 @@ class _QueueSidebar extends StatelessWidget {
   }
 }
 
-class _CustomerInfoRow extends StatelessWidget {
-  final BookingController controller;
-
-  const _CustomerInfoRow({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _InfoField(label: 'NAMA PELANGGAN', value: controller.customerName),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _InfoField(label: 'WHATSAPP', value: controller.whatsapp),
-        ),
-        const SizedBox(width: 16),
-        SizedBox(
-          width: 120,
-          child: _InfoField(
-            label: 'JUMLAH ORANG',
-            value: controller.jumlahOrang.toString(),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _InfoField extends StatelessWidget {
+class _MiniActionBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
   final String label;
-  final String value;
 
-  const _InfoField({required this.label, required this.value});
+  const _MiniActionBtn({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.cardBorder),
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Text(value, style: AppTextStyles.bodyMedium),
-        ),
-      ],
-    );
-  }
-}
-
-class _PackageSection extends StatelessWidget {
-  final BookingController controller;
-
-  const _PackageSection({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(controller.packages.length, (index) {
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              right: index == controller.packages.length - 1 ? 0 : 16,
-            ),
-            child: PackageCard(
-              package: controller.packages[index],
-              isSelected: controller.selectedPackageIndex == index,
-              onTap: () => controller.selectPackage(index),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-class _AddonSection extends StatelessWidget {
-  final BookingController controller;
-
-  const _AddonSection({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: List.generate(
-        controller.addons.length,
-        (index) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: AddonItem(
-            addon: controller.addons[index],
-            index: index,
-            onIncrement: () => controller.incrementAddon(index),
-            onDecrement: () => controller.decrementAddon(index),
-          ),
+          child: Icon(icon, color: color, size: 18),
         ),
       ),
     );

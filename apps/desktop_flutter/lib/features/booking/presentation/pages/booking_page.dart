@@ -37,134 +37,194 @@ class _BookingPageState extends State<BookingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Row(
-        children: [
-          // ── Main Content ──────────────────────────────────────────
-          Expanded(
-            child: Column(
+      body: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Daftar Booking', style: AppTextStyles.h2),
+                    const SizedBox(height: 4),
+                    Text('Kelola pesanan online dan konfirmasi antrean', style: AppTextStyles.bodySmall),
+                  ],
+                ),
+                // Search bar (Simplified for table)
+                Container(
+                  width: 300,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Queue sidebar
-                      _QueueSidebar(controller: _controller),
-
-                      // Center content
-                      Expanded(child: _CenterContent(controller: _controller)),
-
-                      // Order summary
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: OrderSummaryPanel(controller: _controller),
+                      const Icon(Icons.search, size: 20, color: AppColors.textMuted),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text('Cari Booking...', style: AppTextStyles.bodySmall),
                       ),
                     ],
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: _BookingTable(controller: _controller),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingTable extends StatelessWidget {
+  final BookingController controller;
+
+  const _BookingTable({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header
+          _buildHeader(),
+          // Data rows
+          Expanded(
+            child: ListView.separated(
+              itemCount: controller.queues.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.divider),
+              itemBuilder: (context, index) {
+                return _BookingRow(
+                  booking: controller.queues[index],
+                  onAcc: () => controller.accBooking(),
+                  onCancel: () => controller.cancelBooking(),
+                  onDelete: () => controller.deleteBooking(),
+                );
+              },
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      child: const Row(
+        children: [
+          _ColHeader(label: 'ID BOOKING', flex: 2),
+          _ColHeader(label: 'WAKTU', flex: 2),
+          _ColHeader(label: 'NAMA PELANGGAN', flex: 3),
+          _ColHeader(label: 'WHATSAPP', flex: 3),
+          _ColHeader(label: 'TOTAL', flex: 2),
+          _ColHeader(label: 'STATUS', flex: 2),
+          _ColHeader(label: 'AKSI', flex: 3),
+        ],
+      ),
+    );
+  }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Queue Sidebar (Left panel inside main)
-// ══════════════════════════════════════════════════════════════════════════════
+class _ColHeader extends StatelessWidget {
+  final String label;
+  final int flex;
 
-class _QueueSidebar extends StatelessWidget {
-  final BookingController controller;
-
-  const _QueueSidebar({required this.controller});
+  const _ColHeader({required this.label, required this.flex});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 200,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(right: BorderSide(color: AppColors.divider, width: 1)),
+    return Expanded(
+      flex: flex,
+      child: Text(
+        label,
+        style: AppTextStyles.caption.copyWith(
+          fontWeight: FontWeight.w700,
+          color: AppColors.textMuted,
+          letterSpacing: 0.5,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Booking Search', style: AppTextStyles.h3),
-                const SizedBox(height: 2),
-                Text(
-                  'Kelola antrean pelanggan aktif',
-                  style: AppTextStyles.bodySmall,
-                ),
-                const SizedBox(height: 14),
-                // Search
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.inputBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.inputBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Cari Kode Booking/\nWhatsApp',
-                          style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.search_rounded,
-                        size: 16,
-                        color: AppColors.textMuted,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
-            ),
-          ),
+    );
+  }
+}
 
-          // Queue list
+class _BookingRow extends StatelessWidget {
+  final dynamic booking;
+  final VoidCallback onAcc;
+  final VoidCallback onCancel;
+  final VoidCallback onDelete;
+
+  const _BookingRow({
+    required this.booking,
+    required this.onAcc,
+    required this.onCancel,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Row(
+        children: [
+          Expanded(flex: 2, child: Text(booking.id, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600))),
+          Expanded(flex: 2, child: Text(booking.time, style: AppTextStyles.bodySmall)),
+          Expanded(flex: 3, child: Text(booking.customerName, style: AppTextStyles.bodyMedium)),
+          Expanded(flex: 3, child: Text(booking.phone, style: AppTextStyles.bodySmall)),
+          Expanded(flex: 2, child: Text('Rp 115.000', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700))),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: controller.queues.length,
-              itemBuilder: (context, index) => QueueCard(
-                booking: controller.queues[index],
-                isActive: controller.selectedQueueIndex == index,
-                onTap: () => controller.selectQueue(index),
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: UnconstrainedBox(
+                child: Text(
+                  booking.status,
+                  style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),
-
-          // Pagination
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          Expanded(
+            flex: 3,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _PaginationBtn(label: '< Prev', onTap: () {}),
-                Row(
-                  children: [
-                    _PaginationDot(isActive: true),
-                    const SizedBox(width: 4),
-                    _PaginationDot(isActive: false),
-                    const SizedBox(width: 4),
-                    _PaginationDot(isActive: false),
-                  ],
-                ),
-                _PaginationBtn(label: 'Next >', onTap: () {}),
+                _MiniActionBtn(icon: Icons.check_circle_rounded, color: const Color(0xFF10B981), onTap: onAcc, label: 'Acc'),
+                const SizedBox(width: 8),
+                _MiniActionBtn(icon: Icons.cancel_rounded, color: const Color(0xFFF59E0B), onTap: onCancel, label: 'Batal'),
+                const SizedBox(width: 8),
+                _MiniActionBtn(icon: Icons.delete_rounded, color: const Color(0xFFEF4444), onTap: onDelete, label: 'Hapus'),
               ],
             ),
           ),
@@ -174,174 +234,33 @@ class _QueueSidebar extends StatelessWidget {
   }
 }
 
-class _PaginationBtn extends StatelessWidget {
-  final String label;
+class _MiniActionBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
   final VoidCallback onTap;
-
-  const _PaginationBtn({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Text(
-        label,
-        style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
-class _PaginationDot extends StatelessWidget {
-  final bool isActive;
-
-  const _PaginationDot({required this.isActive});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: isActive ? 16 : 7,
-      height: 7,
-      decoration: BoxDecoration(
-        color: isActive ? AppColors.primary : AppColors.cardBorder,
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Center Content
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _CenterContent extends StatelessWidget {
-  final BookingController controller;
-
-  const _CenterContent({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Customer info row
-          _CustomerInfoRow(controller: controller),
-          const SizedBox(height: 24),
-
-          // Pilih Paket
-          Text('Pilih Paket', style: AppTextStyles.h3),
-          const SizedBox(height: 14),
-          _PackageSection(controller: controller),
-          const SizedBox(height: 24),
-
-          // Add-ons
-          Text('Experience Add-ons', style: AppTextStyles.h3),
-          const SizedBox(height: 12),
-          _AddonSection(controller: controller),
-        ],
-      ),
-    );
-  }
-}
-
-class _CustomerInfoRow extends StatelessWidget {
-  final BookingController controller;
-
-  const _CustomerInfoRow({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _InfoField(label: 'NAMA PELANGGAN', value: controller.customerName),
-        const SizedBox(width: 12),
-        _InfoField(label: 'WHATSAPP (OPSIONAL)', value: controller.whatsapp),
-        const SizedBox(width: 12),
-        _InfoField(
-          label: 'JUMLAH ORANG',
-          value: controller.jumlahOrang.toString(),
-        ),
-      ],
-    );
-  }
-}
-
-class _InfoField extends StatelessWidget {
   final String label;
-  final String value;
 
-  const _InfoField({required this.label, required this.value});
+  const _MiniActionBtn({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.cardBorder),
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Text(value, style: AppTextStyles.bodyMedium),
-        ),
-      ],
-    );
-  }
-}
-
-class _PackageSection extends StatelessWidget {
-  final BookingController controller;
-
-  const _PackageSection({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 185,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: controller.packages.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) => PackageCard(
-          package: controller.packages[index],
-          isSelected: controller.selectedPackageIndex == index,
-          onTap: () => controller.selectPackage(index),
-        ),
-      ),
-    );
-  }
-}
-
-class _AddonSection extends StatelessWidget {
-  final BookingController controller;
-
-  const _AddonSection({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: List.generate(
-        controller.addons.length,
-        (index) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: AddonItem(
-            addon: controller.addons[index],
-            index: index,
-            onIncrement: () => controller.incrementAddon(index),
-            onDecrement: () => controller.decrementAddon(index),
-          ),
+          child: Icon(icon, color: color, size: 18),
         ),
       ),
     );

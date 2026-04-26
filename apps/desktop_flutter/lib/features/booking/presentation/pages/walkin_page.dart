@@ -83,22 +83,38 @@ class _CustomerInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _InfoField(label: 'NAMA PELANGGAN', value: controller.customerName),
+        Row(
+          children: [
+            Expanded(
+              child: _InfoField(label: 'NAMA PELANGGAN', value: controller.customerName),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _InfoField(label: 'WHATSAPP (WAJIB)', value: controller.whatsapp),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _InfoField(label: 'GMAIL', value: controller.email),
+            ),
+          ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _InfoField(label: 'WHATSAPP (OPSIONAL)', value: controller.whatsapp),
-        ),
-        const SizedBox(width: 16),
-        SizedBox(
-          width: 120,
-          child: _InfoField(
-            label: 'JUMLAH ORANG',
-            value: controller.jumlahOrang.toString(),
-          ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            SizedBox(
+              width: 120,
+              child: _InfoField(
+                label: 'JUMLAH ORANG',
+                value: controller.jumlahOrang.toString(),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _InfoField(label: 'NOTE', value: controller.note),
+            ),
+          ],
         ),
       ],
     );

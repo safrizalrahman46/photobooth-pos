@@ -14,7 +14,7 @@ class HistoryRow extends StatelessWidget {
   static const int _flexPaket = 4;
   static const int _flexTotal = 2;
   static const int _flexStatus = 2;
-  static const double _colAction = 48;
+  static const double _colAction = 140;
 
   const HistoryRow({
     super.key,
@@ -108,17 +108,32 @@ class HistoryRow extends StatelessWidget {
               ),
             ),
 
-            // Action menu (⋮)
+            // Action: Cetak Ulang
             SizedBox(
               width: _colAction,
-              child: IconButton(
-                onPressed: onActionPressed,
-                icon: const Icon(Icons.more_vert_rounded),
-                iconSize: 22,
-                color: const Color(0xFF9CA3AF),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                splashRadius: 20,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    // Di production, panggil _controller.onReprint(transaction)
+                    // Untuk sekarang kita asumsikan controller dikirim atau via callback
+                    onActionPressed(); 
+                  },
+                  icon: const Icon(Icons.print_rounded, size: 16),
+                  label: const Text(
+                    'Cetak Ulang',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF6366F1), // indigo-500
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: Color(0xFFE0E7FF)), // indigo-100
+                    ),
+                    backgroundColor: const Color(0xFFF5F7FF),
+                  ),
+                ),
               ),
             ),
           ],

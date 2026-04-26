@@ -33,7 +33,7 @@ class HistoryTable extends StatelessWidget {
   static const int _flexPaket = 4;
   static const int _flexTotal = 2;
   static const int _flexStatus = 2;
-  static const double _colAction = 48; // Action tetap kecil kinetik
+  static const double _colAction = 140; // Action column width
 
   const HistoryTable({
     super.key,
