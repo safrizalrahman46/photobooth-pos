@@ -73,7 +73,7 @@ class LaporanPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /// TITLE & FILTER
+                    /// TITLE
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -83,50 +83,10 @@ class LaporanPage extends StatelessWidget {
                             Text('Laporan Keuangan', style: AppTextStyles.h2),
                             const SizedBox(height: 4),
                             Obx(() => Text(
-                              'Periode: ${controller.selectedPeriod.value.name.capitalizeFirst}',
+                              'Data terakhir diperbarui: ${controller.lastUpdated.value}',
                               style: AppTextStyles.bodySmall,
                             )),
                           ],
-                        ),
-                        // Segmented Filter
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: LaporanPeriod.values.map((period) {
-                               return Obx(() {
-                                 final isActive = controller.selectedPeriod.value == period;
-                                 return GestureDetector(
-                                   onTap: () => controller.setPeriod(period),
-                                   child: Container(
-                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                     decoration: BoxDecoration(
-                                       color: isActive ? Colors.white : Colors.transparent,
-                                       borderRadius: BorderRadius.circular(8),
-                                       boxShadow: isActive ? [
-                                         BoxShadow(
-                                           color: Colors.black.withOpacity(0.05),
-                                           blurRadius: 4,
-                                           offset: const Offset(0, 2),
-                                         )
-                                       ] : null,
-                                     ),
-                                     child: Text(
-                                       period.name.capitalizeFirst!,
-                                       style: TextStyle(
-                                         fontSize: 13,
-                                         fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                                         color: isActive ? const Color(0xFF1E293B) : const Color(0xFF64748B),
-                                       ),
-                                     ),
-                                   ),
-                                 );
-                               });
-                            }).toList(),
-                          ),
                         ),
                       ],
                     ),

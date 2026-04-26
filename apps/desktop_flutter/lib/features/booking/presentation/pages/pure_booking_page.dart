@@ -197,28 +197,35 @@ class _BookingRow extends StatelessWidget {
           Expanded(flex: 2, child: Text('Rp 115.000', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700))),
           Expanded(
             flex: 2,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: UnconstrainedBox(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(6),
+                ),
                 child: Text(
-                  booking.status,
-                  style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                  booking.status.toUpperCase(),
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
             ),
           ),
+          const SizedBox(width: 40), // GAP ANTARA STATUS DAN AKSI
           Expanded(
             flex: 3,
             child: Row(
               children: [
                 _MiniActionBtn(icon: Icons.check_circle_rounded, color: const Color(0xFF10B981), onTap: onAcc, label: 'Acc'),
-                const SizedBox(width: 8),
+                const SizedBox(width: 16),
                 _MiniActionBtn(icon: Icons.cancel_rounded, color: const Color(0xFFF59E0B), onTap: onCancel, label: 'Batal'),
-                const SizedBox(width: 8),
+                const SizedBox(width: 16),
                 _MiniActionBtn(icon: Icons.delete_rounded, color: const Color(0xFFEF4444), onTap: onDelete, label: 'Hapus'),
               ],
             ),
