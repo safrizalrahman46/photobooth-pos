@@ -14,7 +14,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             BranchSeeder::class,
             PackageSeeder::class,
-            AddOnSeeder::class,
             TimeSlotSeeder::class,
             RolesAndPermissionsSeeder::class,
         ]);

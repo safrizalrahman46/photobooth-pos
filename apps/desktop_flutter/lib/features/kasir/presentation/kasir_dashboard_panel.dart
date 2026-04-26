@@ -2,7 +2,9 @@ import 'package:desktop_flutter/core/network/api_client.dart';
 import 'package:desktop_flutter/features/kasir/services/receipt_printer.dart';
 import 'package:desktop_flutter/shared/models/booking_item.dart';
 import 'package:desktop_flutter/shared/models/branch_option.dart';
+import 'package:desktop_flutter/shared/models/cashier_session_item.dart';
 import 'package:desktop_flutter/shared/models/desktop_session.dart';
+import 'package:desktop_flutter/shared/models/printer_setting_item.dart';
 import 'package:desktop_flutter/shared/models/queue_ticket_item.dart';
 import 'package:desktop_flutter/shared/models/transaction_record.dart';
 import 'package:flutter/material.dart';
@@ -39,13 +41,17 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
   List<QueueTicketItem> _tickets = <QueueTicketItem>[];
   List<BookingItem> _bookings = <BookingItem>[];
   List<TransactionRecord> _transactions = <TransactionRecord>[];
+  List<PrinterSettingItem> _printers = <PrinterSettingItem>[];
+  CashierSessionItem? _currentSession;
   int? _branchId;
   int _tabIndex = 0;
   String _paymentMethod = 'cash';
+  String _brandName = 'Ready To Pict';
   bool _autoPrintAfterPayment = true;
   bool _loading = true;
   bool _submitting = false;
   bool _printing = false;
+  bool _sessionSubmitting = false;
   String? _error;
   TransactionRecord? _latestTransaction;
 
@@ -100,6 +106,18 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
               branchId: selectedBranch,
               perPage: 15,
             );
+      final settings = await _client.fetchAppSettings();
+      final configuredBrand =
+          settings.general['brand_name']?.toString().trim() ?? '';
+      final currentSession = selectedBranch == null
+          ? null
+          : await _client.fetchCurrentCashierSession(branchId: selectedBranch);
+      final printers = selectedBranch == null
+          ? <PrinterSettingItem>[]
+          : await _client.fetchPrinterSettings(
+              branchId: selectedBranch,
+              includeInactive: false,
+            );
 
       if (!mounted) {
         return;
@@ -111,6 +129,11 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
         _tickets = queue;
         _bookings = bookings;
         _transactions = transactions;
+        _brandName = configuredBrand.isEmpty
+            ? 'Ready To Pict'
+            : configuredBrand;
+        _currentSession = currentSession;
+        _printers = printers;
       });
     } on ApiException catch (exception) {
       if (!mounted) {
@@ -187,6 +210,39 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
     }
   }
 
+  Future<void> _refreshSessionAndPrinters() async {
+    if (_branchId == null) {
+      return;
+    }
+
+    try {
+      final currentSession = await _client.fetchCurrentCashierSession(
+        branchId: _branchId,
+      );
+      final printers = await _client.fetchPrinterSettings(
+        branchId: _branchId,
+        includeInactive: false,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _currentSession = currentSession;
+        _printers = printers;
+      });
+    } on ApiException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = exception.message;
+      });
+    }
+  }
+
   Future<void> _refreshBookings({String? bookingCode}) async {
     if (_branchId == null) {
       return;
@@ -215,6 +271,202 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
       setState(() {
         _error = exception.message;
       });
+    }
+  }
+
+  Future<void> _openCashierSession() async {
+    if (_branchId == null || _sessionSubmitting) {
+      return;
+    }
+
+    final openingCashController = TextEditingController(text: '0');
+    final notesController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Buka Sesi Kasir'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: openingCashController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Kas awal'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Catatan (opsional)',
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Buka Sesi'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      openingCashController.dispose();
+      notesController.dispose();
+      return;
+    }
+
+    final openingCash = double.tryParse(
+      openingCashController.text.trim().replaceAll(',', '.'),
+    );
+    final notes = notesController.text.trim();
+
+    openingCashController.dispose();
+    notesController.dispose();
+
+    setState(() {
+      _sessionSubmitting = true;
+      _error = null;
+    });
+
+    try {
+      final session = await _client.openCashierSession(
+        branchId: _branchId!,
+        openingCash: openingCash,
+        notes: notes.isEmpty ? null : notes,
+      );
+
+      await _refreshSessionAndPrinters();
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sesi kasir dibuka (${session.branchName}).')),
+      );
+    } on ApiException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = exception.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _sessionSubmitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _closeCashierSession() async {
+    final session = _currentSession;
+
+    if (session == null || !session.isOpen || _sessionSubmitting) {
+      return;
+    }
+
+    final closingCashController = TextEditingController();
+    final notesController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Tutup Sesi Kasir'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: closingCashController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Kas akhir (opsional)',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Catatan (opsional)',
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Tutup Sesi'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      closingCashController.dispose();
+      notesController.dispose();
+      return;
+    }
+
+    final closingCash = double.tryParse(
+      closingCashController.text.trim().replaceAll(',', '.'),
+    );
+    final notes = notesController.text.trim();
+
+    closingCashController.dispose();
+    notesController.dispose();
+
+    setState(() {
+      _sessionSubmitting = true;
+      _error = null;
+    });
+
+    try {
+      await _client.closeCashierSession(
+        sessionId: session.id,
+        closingCash: closingCash,
+        notes: notes.isEmpty ? null : notes,
+      );
+
+      await _refreshSessionAndPrinters();
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Sesi kasir ditutup.')));
+    } on ApiException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = exception.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _sessionSubmitting = false;
+        });
+      }
     }
   }
 
@@ -486,6 +738,14 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
       return;
     }
 
+    if (!_hasOpenSession) {
+      setState(() {
+        _error = 'Buka sesi kasir terlebih dahulu sebelum membuat transaksi.';
+      });
+
+      return;
+    }
+
     final itemName = _itemNameController.text.trim();
     final qty = double.tryParse(_qtyController.text.replaceAll(',', '.')) ?? 0;
     final unitPrice =
@@ -561,6 +821,14 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
       return;
     }
 
+    if (!_hasOpenSession) {
+      setState(() {
+        _error = 'Sesi kasir tidak aktif. Buka sesi kasir sebelum pembayaran.';
+      });
+
+      return;
+    }
+
     final amount =
         double.tryParse(_paymentAmountController.text.replaceAll(',', '.')) ??
         0;
@@ -599,8 +867,16 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
         orElse: () => transaction,
       );
 
+      final refreshedTransaction = await _client.fetchTransactionDetail(
+        transactionId: updatedTransaction.id,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
       setState(() {
-        _latestTransaction = updatedTransaction;
+        _latestTransaction = refreshedTransaction;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -608,7 +884,7 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
       );
 
       if (_autoPrintAfterPayment) {
-        await _printTransactionReceipt(updatedTransaction);
+        await _printTransactionReceipt(refreshedTransaction);
       }
     } on ApiException catch (exception) {
       if (!mounted) {
@@ -627,6 +903,81 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
     }
   }
 
+  Future<void> _updateBookingStatus({
+    required BookingItem booking,
+    required String status,
+  }) async {
+    if (_submitting) {
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    try {
+      await _client.updateBookingStatus(bookingId: booking.id, status: status);
+      await _refreshBookings(bookingCode: _bookingSearchController.text.trim());
+      await _refreshQueue();
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Status booking ${booking.bookingCode} diubah ke ${_statusLabel(status)}.',
+          ),
+        ),
+      );
+    } on ApiException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = exception.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _selectTransaction(TransactionRecord transaction) async {
+    setState(() {
+      _error = null;
+    });
+
+    try {
+      final detail = await _client.fetchTransactionDetail(
+        transactionId: transaction.id,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _latestTransaction = detail;
+        _paymentAmountController.text = detail.totalAmount.toStringAsFixed(0);
+      });
+    } on ApiException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = exception.message;
+      });
+    }
+  }
+
   String _branchNameById(int branchId) {
     for (final branch in _branches) {
       if (branch.id == branchId) {
@@ -635,6 +986,46 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
     }
 
     return 'Cabang #$branchId';
+  }
+
+  bool get _hasOpenSession {
+    final session = _currentSession;
+
+    if (session == null || _branchId == null) {
+      return false;
+    }
+
+    return session.isOpen && session.branchId == _branchId;
+  }
+
+  String get _sessionStatusLabel {
+    final session = _currentSession;
+
+    if (session == null || !_hasOpenSession) {
+      return 'Sesi kasir: belum dibuka';
+    }
+
+    return 'Sesi kasir: OPEN (${session.branchName})';
+  }
+
+  PrinterSettingItem? get _activePrinter {
+    if (_printers.isEmpty) {
+      return null;
+    }
+
+    for (final printer in _printers) {
+      if (printer.isDefault && printer.isActive) {
+        return printer;
+      }
+    }
+
+    for (final printer in _printers) {
+      if (printer.isActive) {
+        return printer;
+      }
+    }
+
+    return _printers.first;
   }
 
   Future<void> _printTransactionReceipt(TransactionRecord transaction) async {
@@ -648,11 +1039,14 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
     });
 
     try {
+      final printer = _activePrinter;
+
       await ReceiptPrinter.printTransactionReceipt(
         transaction: transaction,
-        brandName: 'Ready To Pict',
+        brandName: _brandName,
         branchName: _branchNameById(transaction.branchId),
         cashierName: widget.session.user.name,
+        paperWidthMm: printer?.paperWidthMm,
       );
 
       if (!mounted) {
@@ -662,7 +1056,9 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Dialog cetak untuk ${transaction.transactionCode} terbuka.',
+            printer == null
+                ? 'Dialog cetak untuk ${transaction.transactionCode} terbuka.'
+                : 'Dialog cetak ${printer.deviceName} untuk ${transaction.transactionCode} terbuka.',
           ),
         ),
       );
@@ -789,6 +1185,36 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
         status != 'in_queue';
   }
 
+  List<({String status, String label})> _bookingStatusActions(
+    BookingItem booking,
+  ) {
+    final current = booking.status;
+
+    if (current == 'done' || current == 'cancelled') {
+      return const <({String status, String label})>[];
+    }
+
+    final actions = <({String status, String label})>[];
+
+    if (current == 'pending') {
+      actions.add((status: 'confirmed', label: 'Set Confirmed'));
+    }
+
+    if (current == 'confirmed') {
+      actions.add((status: 'paid', label: 'Set Paid'));
+    }
+
+    if (current == 'in_session' ||
+        current == 'checked_in' ||
+        current == 'in_queue') {
+      actions.add((status: 'done', label: 'Set Done'));
+    }
+
+    actions.add((status: 'cancelled', label: 'Set Cancelled'));
+
+    return actions;
+  }
+
   List<BookingItem> get _visibleBookings {
     final search = _bookingSearchController.text.trim().toLowerCase();
 
@@ -891,6 +1317,31 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
               onPressed: _loading ? null : _loadInitial,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Refresh'),
+            ),
+            Chip(
+              avatar: Icon(
+                _hasOpenSession ? Icons.lock_open : Icons.lock_outline,
+                size: 18,
+                color: _hasOpenSession
+                    ? const Color(0xFF166534)
+                    : const Color(0xFFB45309),
+              ),
+              label: Text(_sessionStatusLabel),
+            ),
+            OutlinedButton.icon(
+              onPressed:
+                  _sessionSubmitting || _branchId == null || _hasOpenSession
+                  ? null
+                  : _openCashierSession,
+              icon: const Icon(Icons.login_rounded),
+              label: const Text('Buka Sesi'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _sessionSubmitting || !_hasOpenSession
+                  ? null
+                  : _closeCashierSession,
+              icon: const Icon(Icons.logout_rounded),
+              label: const Text('Tutup Sesi'),
             ),
           ],
         ),
@@ -1062,6 +1513,7 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
             itemBuilder: (context, index) {
               final booking = bookings[index];
               final canCheckIn = _canCheckInBooking(booking.status);
+              final statusActions = _bookingStatusActions(booking);
 
               return ListTile(
                 dense: true,
@@ -1082,11 +1534,33 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
                     Text(booking.customerPhone),
                   ],
                 ),
-                trailing: OutlinedButton(
-                  onPressed: !canCheckIn || _submitting
-                      ? null
-                      : () => _checkInBooking(booking),
-                  child: const Text('Check-in'),
+                trailing: Wrap(
+                  spacing: 4,
+                  children: <Widget>[
+                    OutlinedButton(
+                      onPressed: !canCheckIn || _submitting
+                          ? null
+                          : () => _checkInBooking(booking),
+                      child: const Text('Check-in'),
+                    ),
+                    PopupMenuButton<String>(
+                      enabled: statusActions.isNotEmpty && !_submitting,
+                      tooltip: 'Aksi status booking',
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (value) =>
+                          _updateBookingStatus(booking: booking, status: value),
+                      itemBuilder: (context) {
+                        return statusActions
+                            .map(
+                              (option) => PopupMenuItem<String>(
+                                value: option.status,
+                                child: Text(option.label),
+                              ),
+                            )
+                            .toList();
+                      },
+                    ),
+                  ],
                 ),
               );
             },
@@ -1333,13 +1807,18 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
                       ),
                       const SizedBox(height: 12),
                       FilledButton.icon(
-                        onPressed: _latestTransaction == null || _submitting
+                        onPressed:
+                            _latestTransaction == null ||
+                                _submitting ||
+                                !_hasOpenSession
                             ? null
                             : _submitPayment,
                         icon: const Icon(Icons.payments_outlined),
                         label: Text(
                           _latestTransaction == null
                               ? 'Pilih/Buat transaksi dulu'
+                              : !_hasOpenSession
+                              ? 'Buka sesi kasir dulu'
                               : 'Tambah Pembayaran',
                         ),
                       ),
@@ -1432,14 +1911,8 @@ class _KasirDashboardPanelState extends State<KasirDashboardPanel> {
                                           ),
                                         ),
                                         TextButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              _latestTransaction = transaction;
-                                              _paymentAmountController.text =
-                                                  transaction.totalAmount
-                                                      .toStringAsFixed(0);
-                                            });
-                                          },
+                                          onPressed: () =>
+                                              _selectTransaction(transaction),
                                           child: const Text('Pilih'),
                                         ),
                                       ],

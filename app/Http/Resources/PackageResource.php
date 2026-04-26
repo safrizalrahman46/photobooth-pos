@@ -15,7 +15,6 @@ class PackageResource extends JsonResource
             'code' => $this->code,
             'name' => $this->name,
             'description' => $this->description,
-            'sample_photos' => $this->resolvedSamplePhotos(),
             'duration_minutes' => $this->duration_minutes,
             'base_price' => (float) $this->base_price,
             'is_active' => (bool) $this->is_active,
