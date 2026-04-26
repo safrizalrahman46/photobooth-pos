@@ -29,8 +29,8 @@ class Sidebar extends StatelessWidget {
       child: ClipRect(
         child: OverflowBox(
           alignment: Alignment.topLeft,
-          maxWidth: 240,
-          minWidth: 240,
+          maxWidth: isExpanded ? 240 : 88,
+          minWidth: isExpanded ? 240 : 88,
           child: Column(
             crossAxisAlignment: isExpanded ? CrossAxisAlignment.start : CrossAxisAlignment.center,
             children: [
