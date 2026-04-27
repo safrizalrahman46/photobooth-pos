@@ -4,16 +4,9 @@ import 'package:flutter/material.dart';
 import '../widgets/history/history_table.dart';
 import '../../domain/entities/transaction.dart';
 
-/// Section yang membungkus [HistoryTable] dengan horizontal scroll
-/// agar tabel tidak overflow di layar kecil.
-///
-/// Contoh penggunaan:
-/// ```dart
-/// HistoryTableSection(
-///   transactions: controller.pagedTransactions,
-///   onRowAction: controller.onRowAction,
-/// )
-/// ```
+/// Section yang membungkus [HistoryTable].
+/// Sekarang tidak lagi menggunakan SingleChildScrollView horizontal 
+/// karena tabel sudah menggunakan Flexible/Expanded columns.
 class HistoryTableSection extends StatelessWidget {
   final List<Transaction> transactions;
   final void Function(Transaction) onRowAction;
@@ -26,16 +19,11 @@ class HistoryTableSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: ConstrainedBox(
-        // Lebar minimum agar tabel tidak terlalu sempit di tablet
-        constraints: const BoxConstraints(minWidth: 800),
-        child: HistoryTable(
-          transactions: transactions,
-          onRowAction: onRowAction,
-        ),
-      ),
+    // Kita hapus SingleChildScrollView horizontal-nya agar Expanded di dalam tabel 
+    // bisa menghitung lebar dengan benar berdasarkan ruang yang tersedia.
+    return HistoryTable(
+      transactions: transactions,
+      onRowAction: onRowAction,
     );
   }
 }

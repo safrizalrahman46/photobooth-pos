@@ -1,38 +1,20 @@
-// features/history/presentation/widgets/history/history_row.dart
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../domain/entities/transaction.dart';
 import '../common/transaction_status_badge.dart';
 
-// ─── Referensi global ──────────────────────────────────────────────────────────
-// Gunakan AppTextStyles dari app/theme/app_text_styles.dart untuk konsistensi teks.
-// Contoh: import '../../../../../app/theme/app_text_styles.dart';
-
-/// Satu baris data transaksi dalam tabel History.
-///
-/// Menerima [transaction] dan callback [onActionPressed] untuk
-/// menu titik tiga (⋮) di ujung kanan.
-///
-/// Contoh penggunaan:
-/// ```dart
-/// HistoryRow(
-///   transaction: tx,
-///   onActionPressed: () => controller.onRowAction(tx),
-/// )
-/// ```
 class HistoryRow extends StatelessWidget {
   final Transaction transaction;
   final VoidCallback onActionPressed;
 
-  // Lebar kolom — harus sinkron dengan HistoryTable header
-  static const double _colId = 130;
-  static const double _colWaktu = 100;
-  static const double _colNama = 140;
-  static const double _colPaket = 160;
-  static const double _colTotal = 110;
-  static const double _colStatus = 110;
-  static const double _colAction = 48;
+  // Flex factors - harus sama persis dengan HistoryTable
+  static const int _flexId = 2;
+  static const int _flexWaktu = 2;
+  static const int _flexNama = 3;
+  static const int _flexPaket = 4;
+  static const int _flexTotal = 2;
+  static const int _flexStatus = 2;
+  static const double _colAction = 140;
 
   const HistoryRow({
     super.key,
@@ -49,90 +31,109 @@ class HistoryRow extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
         child: Row(
           children: [
             // ID Transaksi
-            SizedBox(
-              width: _colId,
+            Expanded(
+              flex: _flexId,
               child: Text(
                 transaction.id,
                 style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827), // gray-900
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
                 ),
               ),
             ),
 
             // Waktu
-            SizedBox(
-              width: _colWaktu,
+            Expanded(
+              flex: _flexWaktu,
               child: Text(
                 _formatWaktu(transaction.waktu),
                 style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF6B7280), // gray-500
+                  fontSize: 14,
+                  color: Color(0xFF4B5563),
                   height: 1.5,
                 ),
               ),
             ),
 
             // Nama Pelanggan
-            SizedBox(
-              width: _colNama,
+            Expanded(
+              flex: _flexNama,
               child: Text(
                 transaction.namaPelanggan,
                 style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF374151), // gray-700
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF374151),
                 ),
               ),
             ),
 
             // Paket & Add-ons
-            SizedBox(
-              width: _colPaket,
+            Expanded(
+              flex: _flexPaket,
               child: Text(
                 transaction.paketDanAddOns,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   color: Color(0xFF6B7280),
-                  height: 1.4,
+                  height: 1.5,
                 ),
               ),
             ),
 
             // Total Bayar
-            SizedBox(
-              width: _colTotal,
+            Expanded(
+              flex: _flexTotal,
               child: Text(
                 _formatRupiah(transaction.totalBayar),
                 style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
                   color: Color(0xFF111827),
                 ),
               ),
             ),
 
             // Status
-            SizedBox(
-              width: _colStatus,
-              child: TransactionStatusBadge(status: transaction.status),
+            Expanded(
+              flex: _flexStatus,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TransactionStatusBadge(status: transaction.status),
+              ),
             ),
 
-            // Action menu (⋮)
+            // Action: Cetak Ulang
             SizedBox(
               width: _colAction,
-              child: IconButton(
-                onPressed: onActionPressed,
-                icon: const Icon(Icons.more_vert_rounded),
-                iconSize: 20,
-                color: const Color(0xFF9CA3AF), // gray-400
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                splashRadius: 16,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    // Di production, panggil _controller.onReprint(transaction)
+                    // Untuk sekarang kita asumsikan controller dikirim atau via callback
+                    onActionPressed(); 
+                  },
+                  icon: const Icon(Icons.print_rounded, size: 16),
+                  label: const Text(
+                    'Cetak Ulang',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF6366F1), // indigo-500
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: Color(0xFFE0E7FF)), // indigo-100
+                    ),
+                    backgroundColor: const Color(0xFFF5F7FF),
+                  ),
+                ),
               ),
             ),
           ],
@@ -141,17 +142,15 @@ class HistoryRow extends StatelessWidget {
     );
   }
 
-  /// Format: "24\nOct,\n14:22"
   String _formatWaktu(DateTime dt) {
     final day = dt.day.toString();
-    final month = DateFormat('MMM').format(dt); // "Oct"
+    final month = DateFormat('MMM').format(dt);
     final time = DateFormat('HH:mm').format(dt);
-    return '$day\n$month,\n$time';
+    return '$day $month, $time';
   }
 
-  /// Format: "Rp\n90.000"  (ditampilkan dalam satu Text dengan newline)
   String _formatRupiah(int amount) {
     final formatted = NumberFormat('#,###', 'id_ID').format(amount);
-    return 'Rp\n$formatted';
+    return 'Rp $formatted';
   }
 }

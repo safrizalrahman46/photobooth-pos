@@ -48,11 +48,6 @@ class TransactionStatusBadge extends StatelessWidget {
           backgroundColor: const Color(0xFFDCFCE7), // green-100
           textColor: const Color(0xFF16A34A), // green-600
         );
-      case TransactionStatus.pending:
-        return _BadgeConfig(
-          backgroundColor: const Color(0xFFFEF9C3), // yellow-100
-          textColor: const Color(0xFFCA8A04), // yellow-600
-        );
       case TransactionStatus.batal:
         return _BadgeConfig(
           backgroundColor: const Color(0xFFFEE2E2), // red-100
