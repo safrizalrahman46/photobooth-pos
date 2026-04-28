@@ -10,6 +10,7 @@ use App\Models\Branch;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 
 class BranchController extends Controller
 {
@@ -99,5 +100,18 @@ class BranchController extends Controller
         $branch->save();
 
         return $this->responder->success(new BranchResource($branch), 'Cabang berhasil diperbarui.');
+    }
+
+    public function destroy(Request $request, Branch $branch): JsonResponse
+    {
+        abort_unless($request->user()?->can('settings.manage') || $request->user()?->hasRole('owner'), 403);
+
+        try {
+            $branch->delete();
+        } catch (QueryException $exception) {
+            return $this->responder->error('Cabang tidak dapat dihapus karena masih dipakai data transaksi/booking.', 422);
+        }
+
+        return $this->responder->success(null, 'Cabang berhasil dihapus.');
     }
 }

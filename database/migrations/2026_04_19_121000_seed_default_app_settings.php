@@ -28,9 +28,6 @@ return new class extends Migration
             'payment' => [
                 'onsite_enabled' => true,
                 'midtrans_enabled' => false,
-                'full_payment_enabled' => true,
-                'dp50_enabled' => true,
-                'manual_transfer_proof_required' => true,
                 'currency' => 'IDR',
             ],
         ];

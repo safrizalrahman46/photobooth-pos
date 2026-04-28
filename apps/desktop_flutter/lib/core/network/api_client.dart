@@ -5,8 +5,10 @@ import 'package:desktop_flutter/shared/models/app_settings_payload.dart';
 import 'package:desktop_flutter/shared/models/booking_item.dart';
 import 'package:desktop_flutter/shared/models/branch_management_item.dart';
 import 'package:desktop_flutter/shared/models/branch_option.dart';
+import 'package:desktop_flutter/shared/models/cashier_session_item.dart';
 import 'package:desktop_flutter/shared/models/package_management_item.dart';
 import 'package:desktop_flutter/shared/models/payment_record.dart';
+import 'package:desktop_flutter/shared/models/printer_setting_item.dart';
 import 'package:desktop_flutter/shared/models/queue_ticket_item.dart';
 import 'package:desktop_flutter/shared/models/report_summary.dart';
 import 'package:desktop_flutter/shared/models/auth_user.dart';
@@ -61,6 +63,50 @@ class ApiClient {
       Uri.parse('$baseUrl/auth/logout'),
       headers: _headers(authenticated: true),
     );
+  }
+
+  Future<AuthUser> fetchProfile() async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/profile',
+      authenticated: true,
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons profile tidak valid.');
+    }
+
+    return AuthUser.fromJson(data);
+  }
+
+  Future<AuthUser> updateProfile({
+    String? name,
+    String? phone,
+    String? password,
+    String? passwordConfirmation,
+  }) async {
+    final payload = await _send(
+      method: 'PUT',
+      path: '/profile',
+      authenticated: true,
+      body: {
+        if (name != null) 'name': name,
+        if (phone != null) 'phone': phone,
+        if (password != null) 'password': password,
+        if (passwordConfirmation != null)
+          'password_confirmation': passwordConfirmation,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons update profile tidak valid.');
+    }
+
+    return AuthUser.fromJson(data);
   }
 
   Future<List<BranchOption>> fetchBranches({
@@ -176,6 +222,14 @@ class ApiClient {
     return BranchManagementItem.fromJson(data);
   }
 
+  Future<void> deleteBranch({required int branchId}) async {
+    await _send(
+      method: 'DELETE',
+      path: '/manage/branches/$branchId',
+      authenticated: true,
+    );
+  }
+
   Future<List<PackageManagementItem>> fetchManagePackages({
     bool includeInactive = true,
     int? branchId,
@@ -275,6 +329,108 @@ class ApiClient {
     }
 
     return PackageManagementItem.fromJson(data);
+  }
+
+  Future<void> deletePackage({required int packageId}) async {
+    await _send(
+      method: 'DELETE',
+      path: '/manage/packages/$packageId',
+      authenticated: true,
+    );
+  }
+
+  Future<CashierSessionItem?> fetchCurrentCashierSession({
+    int? branchId,
+  }) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/cashier-sessions/current',
+      authenticated: true,
+      query: {if (branchId != null) 'branch_id': '$branchId'},
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      return null;
+    }
+
+    return CashierSessionItem.fromJson(data);
+  }
+
+  Future<CashierSessionItem> openCashierSession({
+    required int branchId,
+    double? openingCash,
+    String? notes,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/cashier-sessions/open',
+      authenticated: true,
+      body: {
+        'branch_id': branchId,
+        if (openingCash != null) 'opening_cash': openingCash,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons buka sesi kasir tidak valid.');
+    }
+
+    return CashierSessionItem.fromJson(data);
+  }
+
+  Future<CashierSessionItem> closeCashierSession({
+    required int sessionId,
+    double? closingCash,
+    String? notes,
+  }) async {
+    final payload = await _send(
+      method: 'PATCH',
+      path: '/cashier-sessions/$sessionId/close',
+      authenticated: true,
+      body: {
+        if (closingCash != null) 'closing_cash': closingCash,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons tutup sesi kasir tidak valid.');
+    }
+
+    return CashierSessionItem.fromJson(data);
+  }
+
+  Future<List<PrinterSettingItem>> fetchPrinterSettings({
+    int? branchId,
+    bool includeInactive = false,
+  }) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/printer-settings',
+      authenticated: true,
+      query: {
+        if (branchId != null) 'branch_id': '$branchId',
+        if (includeInactive) 'include_inactive': '1',
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! List) {
+      return <PrinterSettingItem>[];
+    }
+
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(PrinterSettingItem.fromJson)
+        .toList();
   }
 
   Future<List<TimeSlotManagementItem>> fetchManageTimeSlots({
@@ -498,6 +654,46 @@ class ApiClient {
         .toList();
   }
 
+  Future<BookingItem> fetchBookingDetail({required int bookingId}) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/bookings/$bookingId',
+      authenticated: true,
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons detail booking tidak valid.');
+    }
+
+    return BookingItem.fromJson(data);
+  }
+
+  Future<BookingItem> updateBookingStatus({
+    required int bookingId,
+    required String status,
+    String? reason,
+  }) async {
+    final payload = await _send(
+      method: 'PATCH',
+      path: '/bookings/$bookingId/status',
+      authenticated: true,
+      body: {
+        'status': status,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons update status booking tidak valid.');
+    }
+
+    return BookingItem.fromJson(data);
+  }
+
   Future<QueueTicketItem?> callNext({
     required int branchId,
     required String queueDate,
@@ -626,6 +822,24 @@ class ApiClient {
         .whereType<Map<String, dynamic>>()
         .map(TransactionRecord.fromJson)
         .toList();
+  }
+
+  Future<TransactionRecord> fetchTransactionDetail({
+    required int transactionId,
+  }) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/transactions/$transactionId',
+      authenticated: true,
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons detail transaksi tidak valid.');
+    }
+
+    return TransactionRecord.fromJson(data);
   }
 
   Future<TransactionRecord> createTransaction({

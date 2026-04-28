@@ -24,7 +24,29 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
   }
 
   Future<void> _restoreSession() async {
-    final session = await _sessionStore.load();
+    final storedSession = await _sessionStore.load();
+
+    DesktopSession? session = storedSession;
+
+    if (storedSession != null) {
+      try {
+        final profile = await ApiClient(
+          baseUrl: storedSession.baseUrl,
+          token: storedSession.token,
+        ).fetchProfile();
+
+        session = DesktopSession(
+          baseUrl: storedSession.baseUrl,
+          token: storedSession.token,
+          user: profile,
+        );
+
+        await _sessionStore.save(session);
+      } on ApiException {
+        await _sessionStore.clear();
+        session = null;
+      }
+    }
 
     if (!mounted) {
       return;

@@ -39,8 +39,9 @@ class PackageCard extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 130,
-        padding: const EdgeInsets.all(14),
+        // No fixed width, use constraints for responsiveness
+        constraints: const BoxConstraints(maxWidth: 220),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.surface : AppColors.surface,
           borderRadius: BorderRadius.circular(14),

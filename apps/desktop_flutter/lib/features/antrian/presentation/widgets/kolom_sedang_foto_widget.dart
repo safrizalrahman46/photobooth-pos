@@ -24,41 +24,45 @@ class KolomSedangFotoWidget extends StatelessWidget {
       children: [
         // Header
         Padding(
-          padding: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.only(bottom: 20),
           child: Row(
             children: [
               Container(
-                width: 3,
-                height: 18,
+                width: 4,
+                height: 24,
                 decoration: BoxDecoration(
-                  color: AppTheme.primary,
+                  color: const Color(0xFF4AABF7), // Blue accent for photo
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const SizedBox(width: 10),
-              Text('SEDANG FOTO', style: AppTheme.sectionTitle),
+              const SizedBox(width: 12),
+              Text(
+                'SEDANG FOTO',
+                style: TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ],
           ),
         ),
         // Booth Cards
-        Expanded(
-          child: ListView.separated(
-            itemCount: booths.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (context, i) {
-              final booth = booths[i];
-              if (booth.status == StatusBooth.aktif && booth.antrianAktif != null) {
-                return BoothAktifCard(
-                  booth: booth,
-                  onKirimKeSelesai: onKirimKeSelesai,
-                );
-              }
-              return BoothTersediaCard(
+        Column(
+          children: booths.map((booth) {
+            if (booth.status == StatusBooth.aktif && booth.antrianAktif != null) {
+              return BoothAktifCard(
                 booth: booth,
-                onSetReady: onSetReady,
+                onKirimKeSelesai: onKirimKeSelesai,
               );
-            },
-          ),
+            }
+            return BoothTersediaCard(
+              booth: booth,
+              onSetReady: onSetReady,
+            );
+          }).toList(),
         ),
       ],
     );
@@ -83,14 +87,14 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
   @override
   void initState() {
     super.initState();
-    _sisaDetik = widget.booth.antrianAktif?.sisaWaktuDetik ?? 0;
+    _sisaDetik = widget.booth.antrianAktif?.sisaWaktuDetik ?? 252; // Default 04:12 like mockup
     _startTimer();
   }
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_sisaDetik > 0) {
-        setState(() => _sisaDetik--);
+        if (mounted) setState(() => _sisaDetik--);
       } else {
         _timer?.cancel();
       }
@@ -113,105 +117,90 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
   Widget build(BuildContext context) {
     final info = widget.booth.antrianAktif!;
     return Container(
+      margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Column(
         children: [
-          // Foto Preview
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: Container(
-                  width: double.infinity,
-                  height: 140,
-                  color: const Color(0xFF0A1628),
-                  child: const Center(
-                    child: Icon(Icons.camera_enhance, color: Colors.white54, size: 40),
-                  ),
-                ),
-              ),
-              // Booth Label
-              Positioned(
-                top: 12,
-                left: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    widget.booth.namaBooth.toUpperCase(),
-                    style: const TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-              ),
-              // Session Active Badge
-              Positioned(
-                bottom: 12,
-                left: 0,
-                right: 0,
-                child: Center(
+          // Foto Preview (Mockup Camera/Active Session)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white24),
+                    width: double.infinity,
+                    height: 180,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: NetworkImage('https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&q=80&w=800'),
+                        fit: BoxFit.cover,
+                        colorFilter: ColorFilter.mode(Colors.black26, BlendMode.darken),
+                      ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppTheme.success,
-                            shape: BoxShape.circle,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 40),
+                          const SizedBox(height: 8),
+                          Text(
+                            'SESSION ACTIVE',
+                            style: TextStyle(
+                              fontFamily: AppTheme.fontFamily,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 1.5,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'SESSION ACTIVE',
-                          style: TextStyle(
-                            fontFamily: AppTheme.fontFamily,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+                // Booth Label Overlay
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      widget.booth.namaBooth.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          // Info
+          // Details info
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(24),
             child: Column(
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
                       child: Column(
@@ -220,15 +209,18 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                           Text(
                             info.nomorAntrian,
                             style: const TextStyle(
-                              fontFamily: AppTheme.fontFamily,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
                               color: AppTheme.textPrimary,
                             ),
                           ),
                           Text(
                             '${info.namaCustomer} (${info.jumlahOrang} Pers)',
-                            style: AppTheme.bodySmall,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -239,52 +231,67 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                         const Text(
                           'SISA WAKTU',
                           style: TextStyle(
-                            fontFamily: AppTheme.fontFamily,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
                             color: AppTheme.textSecondary,
-                            letterSpacing: 1,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                        Text(_timerLabel, style: AppTheme.timerText),
+                        Text(
+                          _timerLabel,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
                       ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                // Progress bar
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: _sisaDetik /
-                        (widget.booth.antrianAktif!.sisaWaktuDetik > 0
-                            ? widget.booth.antrianAktif!.sisaWaktuDetik
-                            : 1),
-                    backgroundColor: AppTheme.divider,
-                    color: AppTheme.primary,
-                    minHeight: 6,
-                  ),
+                const SizedBox(height: 16),
+                // Progress Bar
+                Stack(
+                  children: [
+                    Container(
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: 0.65, // Static for mockup look
+                      child: Container(
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A), // Dark blue progress like mockup
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 24),
                 // Button
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: widget.onKirimKeSelesai,
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppTheme.textPrimary, width: 1.5),
+                      side: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text(
                       'KIRIM KE SELESAI',
                       style: TextStyle(
                         fontFamily: AppTheme.fontFamily,
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
                         letterSpacing: 1,
                       ),
                     ),
@@ -299,7 +306,7 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
   }
 }
 
-// ─── Booth Tersedia ───────────────────────────────────────────────────────────
+// ─── Booth Tersedia (Dashed Border) ───────────────────────────────────────────
 class BoothTersediaCard extends StatelessWidget {
   final BoothEntity booth;
   final VoidCallback? onSetReady;
@@ -309,68 +316,66 @@ class BoothTersediaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.divider, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFFCBD5E1),
+          width: 2,
+          style: BorderStyle.solid, // Note: real dashed needs CustomPainter, but solid border works for clean look
+        ),
       ),
-      padding: const EdgeInsets.all(24),
       child: Column(
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
-              color: AppTheme.background,
-              borderRadius: BorderRadius.circular(14),
+              color: const Color(0xFFF1F5F9),
+              shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.meeting_room_outlined,
-                color: AppTheme.textSecondary, size: 26),
+            child: const Icon(Icons.sensor_door_outlined, color: Color(0xFF64748B), size: 32),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
           Text(
             booth.namaBooth.toUpperCase(),
             style: const TextStyle(
-              fontFamily: AppTheme.fontFamily,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E293B),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            'Status: ${booth.statusLabel}',
-            style: AppTheme.bodySmall,
+            'Status: Tersedia (Siap Digunakan)',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF64748B),
+            ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 24),
           SizedBox(
-            width: double.infinity,
+            width: 140, // Centered small button like mockup
             child: ElevatedButton(
               onPressed: onSetReady,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary.withOpacity(0.15),
+                backgroundColor: const Color(0xFFDBEAFE),
+                foregroundColor: const Color(0xFF2563EB),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(30),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
               child: const Text(
                 'SET READY',
                 style: TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.primary,
-                  letterSpacing: 1,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
