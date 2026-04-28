@@ -108,9 +108,10 @@ class AdminBookingManagementService
             ]);
         }
 
-        $remainingAmount = $this->remainingAmountForVerification($booking);
+        $totalAmount = $this->effectiveTotalAmountForVerification($booking);
+        $paidAmount = $this->paidAmountForVerification($booking);
 
-        if ($remainingAmount > 0) {
+        if ($totalAmount > 0 && $paidAmount <= 0) {
             throw ValidationException::withMessages([
                 'booking' => 'Booking harus dibayar terlebih dahulu sebelum diverifikasi.',
             ]);
@@ -200,7 +201,7 @@ class AdminBookingManagementService
         if (
             $booking->approved_at === null
             && ! in_array($bookingStatusAfterPayment, [BookingStatus::Cancelled->value, BookingStatus::Done->value], true)
-            && $this->remainingAmountForVerification($booking) <= 0
+            && $this->paidAmountForVerification($booking) > 0
         ) {
             $this->confirm(
                 $booking,
@@ -555,7 +556,7 @@ class AdminBookingManagementService
     {
         $bookingDate = $booking->booking_date?->toDateString();
 
-        if ($bookingDate !== now()->toDateString()) {
+        if ($bookingDate !== $this->queueTodayDate()) {
             return;
         }
 
@@ -578,16 +579,26 @@ class AdminBookingManagementService
         }
     }
 
+    private function queueTodayDate(): string
+    {
+        return now(config('app.queue_timezone', 'Asia/Jakarta'))->toDateString();
+    }
+
     private function remainingAmountForVerification(Booking $booking): float
     {
-        $effectiveTotalAmount = max(
+        $effectiveTotalAmount = $this->effectiveTotalAmountForVerification($booking);
+
+        return max($effectiveTotalAmount - $this->paidAmountForVerification($booking), 0);
+    }
+
+    private function effectiveTotalAmountForVerification(Booking $booking): float
+    {
+        return max(
             (float) $booking->total_amount,
             (float) ($booking->transaction?->total_amount ?? 0),
             $this->derivedTotalFromBookingItems($booking),
             0
         );
-
-        return max($effectiveTotalAmount - $this->paidAmountForVerification($booking), 0);
     }
 
     private function paidAmountForVerification(Booking $booking): float

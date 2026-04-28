@@ -24,7 +24,7 @@ class QueueService
         return DB::transaction(function () use ($booking): QueueTicket {
             $date = Carbon::parse($booking->booking_date);
 
-            if ($date->toDateString() !== now()->toDateString()) {
+            if ($date->toDateString() !== $this->queueTodayDate()) {
                 throw new RuntimeException('Check-in booking hanya dapat dilakukan pada hari yang sama.');
             }
 
@@ -229,5 +229,10 @@ class QueueService
             $booking->status = BookingStatus::Cancelled;
             $booking->save();
         }
+    }
+
+    private function queueTodayDate(): string
+    {
+        return now(config('app.queue_timezone', 'Asia/Jakarta'))->toDateString();
     }
 }
