@@ -16,9 +16,9 @@ class AppSettingService
         $bookingSettings = $this->bookingSettings();
         $branches = $this->activeBranchesPayload();
         $defaultBranchId = (int) ($bookingSettings['default_branch_id'] ?? 0);
-        $activeBranchIds = array_map(static fn (array $branch): int => (int) $branch['id'], $branches);
+        $activeBranchIds = array_map(static fn(array $branch): int => (int) $branch['id'], $branches);
 
-        if (! in_array($defaultBranchId, $activeBranchIds, true)) {
+        if (!in_array($defaultBranchId, $activeBranchIds, true)) {
             $defaultBranchId = (int) ($activeBranchIds[0] ?? 0);
 
             if ($defaultBranchId > 0) {
@@ -40,7 +40,7 @@ class AppSettingService
             ->where('is_active', true)
             ->first();
 
-        if (! $branch) {
+        if (!$branch) {
             throw ValidationException::withMessages([
                 'branch_id' => 'Selected branch is not active.',
             ]);
@@ -60,8 +60,8 @@ class AppSettingService
             'code' => $this->generateBranchCode((string) ($payload['name'] ?? 'BRANCH')),
             'name' => (string) ($payload['name'] ?? 'Branch'),
             'timezone' => (string) ($payload['timezone'] ?? 'Asia/Jakarta'),
-            'phone' => ! empty($payload['phone']) ? (string) $payload['phone'] : null,
-            'address' => ! empty($payload['address']) ? (string) $payload['address'] : null,
+            'phone' => !empty($payload['phone']) ? (string) $payload['phone'] : null,
+            'address' => !empty($payload['address']) ? (string) $payload['address'] : null,
             'is_active' => true,
         ]);
 
@@ -80,8 +80,8 @@ class AppSettingService
         $branch->fill([
             'name' => (string) ($payload['name'] ?? $branch->name),
             'timezone' => (string) ($payload['timezone'] ?? $branch->timezone),
-            'phone' => ! empty($payload['phone']) ? (string) $payload['phone'] : null,
-            'address' => ! empty($payload['address']) ? (string) $payload['address'] : null,
+            'phone' => !empty($payload['phone']) ? (string) $payload['phone'] : null,
+            'address' => !empty($payload['address']) ? (string) $payload['address'] : null,
         ]);
 
         $branch->save();
@@ -156,7 +156,7 @@ class AppSettingService
             return $defaults;
         }
 
-        if (! $setting) {
+        if (!$setting) {
             return $defaults;
         }
 
@@ -182,7 +182,7 @@ class AppSettingService
         $stored = [];
 
         foreach ($groups as $key => $value) {
-            if (! is_array($value)) {
+            if (!is_array($value)) {
                 continue;
             }
 
@@ -211,7 +211,7 @@ class AppSettingService
 
     private function normalizeScalar(mixed $value): mixed
     {
-        if (! is_string($value)) {
+        if (!is_string($value)) {
             return $value;
         }
 
@@ -222,8 +222,8 @@ class AppSettingService
             'false' => false,
             'null' => null,
             default => is_numeric($trimmed)
-                ? (str_contains($trimmed, '.') ? (float) $trimmed : (int) $trimmed)
-                : $value,
+            ? (str_contains($trimmed, '.') ? (float) $trimmed : (int) $trimmed)
+            : $value,
         };
     }
 
@@ -251,6 +251,7 @@ class AppSettingService
                 ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'href' => '/admin', 'group' => 'overview'],
                 ['id' => 'packages', 'label' => 'Packages', 'icon' => 'package', 'href' => '/admin/packages', 'group' => 'management'],
                 ['id' => 'add-ons', 'label' => 'Add-ons', 'icon' => 'package', 'href' => '/admin/add-ons', 'group' => 'management'],
+                ['id' => 'stock','label' => 'Stock', 'icon' => 'package', 'href' => '/admin/stock','group' => 'management', ],
                 ['id' => 'designs', 'label' => 'Designs', 'icon' => 'palette', 'href' => '/admin/design-catalogs', 'group' => 'management'],
                 ['id' => 'branches', 'label' => 'Branches', 'icon' => 'users', 'href' => '/admin/branches', 'group' => 'management'],
                 ['id' => 'time-slots', 'label' => 'Time Slots', 'icon' => 'calendar', 'href' => '/admin/time-slots', 'group' => 'management'],
@@ -343,7 +344,7 @@ class AppSettingService
         while (true) {
             $candidate = sprintf('%s-%02d', $prefix, $index);
 
-            if (! Branch::query()->where('code', $candidate)->exists()) {
+            if (!Branch::query()->where('code', $candidate)->exists()) {
                 return $candidate;
             }
 

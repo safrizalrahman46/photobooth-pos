@@ -32,6 +32,7 @@ import SettingsPage from './pages/SettingsPage.vue';
 import TimeSlotsPage from './pages/TimeSlotsPage.vue';
 import TransactionsPage from './pages/TransactionsPage.vue';
 import UsersPage from './pages/UsersPage.vue';
+import StockPage from './pages/StockPage.vue';
 import { useAppSettingsModule } from './composables/useAppSettingsModule';
 import { useBlackoutDatesModule } from './composables/useBlackoutDatesModule';
 import { useBranchesModule } from './composables/useBranchesModule';
@@ -3298,310 +3299,154 @@ onBeforeUnmount(() => {
 <template>
     <div class="min-h-screen bg-[#F8FAFC]" style="font-family: Poppins, sans-serif;">
         <div class="flex h-screen overflow-hidden">
-            <AdminSidebar
-                :nav-items="navItems"
-                :nav-groups="navGroups"
-                :active-module-id="activeModuleId"
-                :mobile-open="mobileOpen"
-                :sidebar-collapsed="sidebarCollapsed"
-                :brand-name="sidebarBrandName"
-                :dashboard-label="sidebarDashboardLabel"
-                :current-user="sidebarCurrentUser"
-                @toggle-mobile="mobileOpen = !mobileOpen"
-                @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
-                @navigate="navigateFromSidebar"
-                @logout="submitLogout"
-            />
+            <AdminSidebar :nav-items="navItems" :nav-groups="navGroups" :active-module-id="activeModuleId"
+                :mobile-open="mobileOpen" :sidebar-collapsed="sidebarCollapsed" :brand-name="sidebarBrandName"
+                :dashboard-label="sidebarDashboardLabel" :current-user="sidebarCurrentUser"
+                @toggle-mobile="mobileOpen = !mobileOpen" @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
+                @navigate="navigateFromSidebar" @logout="submitLogout" />
 
             <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
-                <AdminTopBar
-                    :title="topbarTitle"
-                    :date-label="topbarDate"
-                    :show-top-search="showTopSearch"
-                    :top-search-value="topSearchValue"
-                    @open-mobile="mobileOpen = true"
-                    @toggle-top-search="showTopSearch = $event"
-                    @update:top-search-value="topSearchValue = $event"
-                />
+                <AdminTopBar :title="topbarTitle" :date-label="topbarDate" :show-top-search="showTopSearch"
+                    :top-search-value="topSearchValue" @open-mobile="mobileOpen = true"
+                    @toggle-top-search="showTopSearch = $event" @update:top-search-value="topSearchValue = $event" />
 
                 <main class="flex-1 overflow-y-auto">
                     <div class="mx-auto w-full max-w-[1600px] p-5 lg:p-7">
-                        <DashboardPage
-                            v-if="activeModuleId === 'dashboard'"
-                            :summary-cards="normalizedSummaryCards"
-                            :revenue-series="normalizedRevenueSeries"
-                            :active-revenue-period="activeRevenuePeriod"
-                            :revenue-total="revenueTotal"
-                            :booking-total="bookingTotal"
-                            :queue-stats="queueStats"
-                            :current-queue="currentQueue"
-                            :waiting-queue="waitingQueue"
+                        <DashboardPage v-if="activeModuleId === 'dashboard'" :summary-cards="normalizedSummaryCards"
+                            :revenue-series="normalizedRevenueSeries" :active-revenue-period="activeRevenuePeriod"
+                            :revenue-total="revenueTotal" :booking-total="bookingTotal" :queue-stats="queueStats"
+                            :current-queue="currentQueue" :waiting-queue="waitingQueue"
                             :recent-transactions="normalizedRecentTransactions"
-                            :recent-activities="normalizedRecentActivities"
-                            :panel-bookings-url="panelBookingsUrl"
-                            :panel-transactions-url="panelTransactionsUrl"
-                            :format-rupiah="formatRupiah"
-                            @set-revenue-period="activeRevenuePeriod = $event"
-                        />
+                            :recent-activities="normalizedRecentActivities" :panel-bookings-url="panelBookingsUrl"
+                            :panel-transactions-url="panelTransactionsUrl" :format-rupiah="formatRupiah"
+                            @set-revenue-period="activeRevenuePeriod = $event" />
 
-                        <PackagesPage
-                            v-else-if="activeModuleId === 'packages'"
-                            :package-cards="packageCards"
-                            :branch-options="branchOptionsForManagement"
-                            :panel-base-url="panelBaseUrl"
-                            :format-rupiah="formatRupiah"
-                            :loading="packageLoading"
-                            :saving="packageSaving"
-                            :deleting-package-id="deletingPackageId"
-                            :error-message="packageError"
-                            @refresh-packages="fetchPackagesData"
-                            @create-package="createPackage"
-                            @update-package="updatePackage"
-                            @delete-package="deletePackage"
-                        />
+                        <PackagesPage v-else-if="activeModuleId === 'packages'" :package-cards="packageCards"
+                            :branch-options="branchOptionsForManagement" :panel-base-url="panelBaseUrl"
+                            :format-rupiah="formatRupiah" :loading="packageLoading" :saving="packageSaving"
+                            :deleting-package-id="deletingPackageId" :error-message="packageError"
+                            @refresh-packages="fetchPackagesData" @create-package="createPackage"
+                            @update-package="updatePackage" @delete-package="deletePackage" />
 
-                        <AddOnsPage
-                            v-else-if="activeModuleId === 'add-ons'"
-                            :add-on-rows="addOnRows"
-                            :package-options="packageOptions"
-                            :format-rupiah="formatRupiah"
-                            :loading="addOnLoading"
-                            :saving="addOnSaving"
-                            :deleting-add-on-id="deletingAddOnId"
-                            :error-message="addOnError"
-                            @refresh-add-ons="fetchAddOnsData"
-                            @create-add-on="createAddOn"
-                            @update-add-on="updateAddOn"
-                            @move-stock="moveAddOnStock"
-                            @delete-add-on="deleteAddOn"
-                        />
+                        <AddOnsPage v-else-if="activeModuleId === 'add-ons'" :add-on-rows="addOnRows"
+                            :package-options="packageOptions" :format-rupiah="formatRupiah" :loading="addOnLoading"
+                            :saving="addOnSaving" :deleting-add-on-id="deletingAddOnId" :error-message="addOnError"
+                            @refresh-add-ons="fetchAddOnsData" @create-add-on="createAddOn" @update-add-on="updateAddOn"
+                            @move-stock="moveAddOnStock" @delete-add-on="deleteAddOn" />
 
-                        <DesignsPage
-                            v-else-if="activeModuleId === 'designs'"
-                            :design-cards="designCards"
-                            :panel-base-url="panelBaseUrl"
-                            :package-options="packageOptions"
-                            :loading="designLoading"
-                            :saving="designSaving"
-                            :deleting-design-id="deletingDesignId"
-                            :error-message="designError"
-                            @refresh-designs="fetchDesignsData"
-                            @create-design="createDesign"
-                            @update-design="updateDesign"
-                            @delete-design="deleteDesign"
-                        />
+                        <StockPage v-else-if="activeModuleId === 'stock'" :addOnRows="addOnRows" :loading="addOnLoading"
+                            :saving="addOnSaving" :errorMessage="addOnError" @move-stock="moveAddOnStock" />
 
-                        <BranchesPage
-                            v-else-if="activeModuleId === 'branches'"
-                            :branch-rows="branchRows"
-                            :loading="branchLoading"
-                            :saving="branchSaving"
-                            :deleting-branch-id="deletingBranchId"
-                            :error-message="branchError"
-                            @refresh-branches="fetchBranchesData"
-                            @create-branch="createBranch"
-                            @update-branch="updateBranch"
-                            @delete-branch="deleteBranch"
-                        />
+                        <DesignsPage v-else-if="activeModuleId === 'designs'" :design-cards="designCards"
+                            :panel-base-url="panelBaseUrl" :package-options="packageOptions" :loading="designLoading"
+                            :saving="designSaving" :deleting-design-id="deletingDesignId" :error-message="designError"
+                            @refresh-designs="fetchDesignsData" @create-design="createDesign"
+                            @update-design="updateDesign" @delete-design="deleteDesign" />
 
-                        <TimeSlotsPage
-                            v-else-if="activeModuleId === 'time-slots'"
-                            :time-slot-rows="timeSlotRows"
-                            :branch-options="branchOptionsForManagement"
-                            :loading="timeSlotLoading"
-                            :saving="timeSlotSaving"
-                            :deleting-time-slot-id="deletingTimeSlotId"
-                            :error-message="timeSlotError"
-                            @refresh-time-slots="fetchTimeSlotsData"
-                            @create-time-slot="createTimeSlot"
-                            @update-time-slot="updateTimeSlot"
-                            @delete-time-slot="deleteTimeSlot"
-                            @generate-time-slots="generateTimeSlots"
-                            @bulk-bookable="bulkBookableTimeSlots"
-                        />
+                        <BranchesPage v-else-if="activeModuleId === 'branches'" :branch-rows="branchRows"
+                            :loading="branchLoading" :saving="branchSaving" :deleting-branch-id="deletingBranchId"
+                            :error-message="branchError" @refresh-branches="fetchBranchesData"
+                            @create-branch="createBranch" @update-branch="updateBranch" @delete-branch="deleteBranch" />
 
-                        <BlackoutDatesPage
-                            v-else-if="activeModuleId === 'blackout-dates'"
-                            :blackout-date-rows="blackoutDateRows"
-                            :branch-options="branchOptionsForManagement"
-                            :loading="blackoutDateLoading"
-                            :saving="blackoutDateSaving"
-                            :deleting-blackout-date-id="deletingBlackoutDateId"
-                            :error-message="blackoutDateError"
-                            @refresh-blackout-dates="fetchBlackoutDatesData"
-                            @create-blackout-date="createBlackoutDate"
-                            @update-blackout-date="updateBlackoutDate"
-                            @delete-blackout-date="deleteBlackoutDate"
-                        />
+                        <TimeSlotsPage v-else-if="activeModuleId === 'time-slots'" :time-slot-rows="timeSlotRows"
+                            :branch-options="branchOptionsForManagement" :loading="timeSlotLoading"
+                            :saving="timeSlotSaving" :deleting-time-slot-id="deletingTimeSlotId"
+                            :error-message="timeSlotError" @refresh-time-slots="fetchTimeSlotsData"
+                            @create-time-slot="createTimeSlot" @update-time-slot="updateTimeSlot"
+                            @delete-time-slot="deleteTimeSlot" @generate-time-slots="generateTimeSlots"
+                            @bulk-bookable="bulkBookableTimeSlots" />
 
-                        <UsersPage
-                            v-else-if="activeModuleId === 'users'"
-                            :user-rows="userRows"
-                            :initials-from-name="initialsFromName"
-                            :panel-base-url="panelBaseUrl"
-                            :role-options="userRoles"
-                            :can-manage="canManageUsers"
-                            :deleting-user-id="deletingUserId"
-                            :current-user-email="String(props.currentUser?.email || '')"
-                            :loading="userLoading"
-                            :saving="userSaving"
-                            :error-message="userError"
-                            @refresh-users="fetchUsersData"
-                            @create-user="createUser"
-                            @update-user="updateUser"
-                            @delete-user="deleteUser"
-                        />
+                        <BlackoutDatesPage v-else-if="activeModuleId === 'blackout-dates'"
+                            :blackout-date-rows="blackoutDateRows" :branch-options="branchOptionsForManagement"
+                            :loading="blackoutDateLoading" :saving="blackoutDateSaving"
+                            :deleting-blackout-date-id="deletingBlackoutDateId" :error-message="blackoutDateError"
+                            @refresh-blackout-dates="fetchBlackoutDatesData" @create-blackout-date="createBlackoutDate"
+                            @update-blackout-date="updateBlackoutDate" @delete-blackout-date="deleteBlackoutDate" />
 
-                        <BookingsPage
-                            v-else-if="activeModuleId === 'bookings'"
-                            :search="search"
-                            :filter-status="filterStatus"
-                            :filter-tabs="filterTabs"
-                            :sort-by="bookingSortBy"
-                            :sort-dir="bookingSortDir"
-                            :panel-bookings-url="panelBookingsUrl"
-                            :normalized-rows="normalizedRows"
-                            :loading="loading"
-                            :saving="bookingSaving"
-                            :booking-error="bookingError"
-                            :booking-options="bookingOptions"
-                            :default-branch-id="resolvedDefaultBranchId"
-                            :availability-url="bookingAvailabilityUrl"
-                            :deleting-booking-id="deletingBookingId"
-                            :processing-booking-id="processingBookingId"
-                            :booking-result-caption="bookingResultCaption"
-                            :can-go-prev="canGoPrev"
-                            :can-go-next="canGoNext"
-                            :pagination="pagination"
-                            :resolve-booking-status="resolveBookingStatus"
-                            @update:search="search = $event"
-                            @set-filter-status="setFilterStatus"
-                            @set-sort="setBookingSort"
-                            @refresh-bookings="refreshBookings()"
-                            @create-booking="createBooking"
-                            @update-booking="updateBooking"
-                            @delete-booking="deleteBooking"
-                            @confirm-booking="confirmBooking"
-                            @confirm-booking-payment="confirmBookingPayment"
-                            @decline-booking="declineBooking"
-                            @go-prev-page="goToPrevPage"
-                            @go-next-page="goToNextPage"
-                        />
+                        <UsersPage v-else-if="activeModuleId === 'users'" :user-rows="userRows"
+                            :initials-from-name="initialsFromName" :panel-base-url="panelBaseUrl"
+                            :role-options="userRoles" :can-manage="canManageUsers" :deleting-user-id="deletingUserId"
+                            :current-user-email="String(props.currentUser?.email || '')" :loading="userLoading"
+                            :saving="userSaving" :error-message="userError" @refresh-users="fetchUsersData"
+                            @create-user="createUser" @update-user="updateUser" @delete-user="deleteUser" />
 
-                        <QueuePage
-                            v-else-if="activeModuleId === 'queue'"
-                            :queue-stats="queueStats"
-                            :current-queue="currentQueue"
-                            :waiting-queue="waitingQueue"
-                            :queue-progress-style="queueProgressStyle"
-                            :queue-remaining-text="queueRemainingText"
+                        <BookingsPage v-else-if="activeModuleId === 'bookings'" :search="search"
+                            :filter-status="filterStatus" :filter-tabs="filterTabs" :sort-by="bookingSortBy"
+                            :sort-dir="bookingSortDir" :panel-bookings-url="panelBookingsUrl"
+                            :normalized-rows="normalizedRows" :loading="loading" :saving="bookingSaving"
+                            :booking-error="bookingError" :booking-options="bookingOptions"
+                            :default-branch-id="resolvedDefaultBranchId" :availability-url="bookingAvailabilityUrl"
+                            :deleting-booking-id="deletingBookingId" :processing-booking-id="processingBookingId"
+                            :booking-result-caption="bookingResultCaption" :can-go-prev="canGoPrev"
+                            :can-go-next="canGoNext" :pagination="pagination"
+                            :resolve-booking-status="resolveBookingStatus" @update:search="search = $event"
+                            @set-filter-status="setFilterStatus" @set-sort="setBookingSort"
+                            @refresh-bookings="refreshBookings()" @create-booking="createBooking"
+                            @update-booking="updateBooking" @delete-booking="deleteBooking"
+                            @confirm-booking="confirmBooking" @confirm-booking-payment="confirmBookingPayment"
+                            @decline-booking="declineBooking" @go-prev-page="goToPrevPage"
+                            @go-next-page="goToNextPage" />
+
+                        <QueuePage v-else-if="activeModuleId === 'queue'" :queue-stats="queueStats"
+                            :current-queue="currentQueue" :waiting-queue="waitingQueue"
+                            :queue-progress-style="queueProgressStyle" :queue-remaining-text="queueRemainingText"
                             :queue-session-duration-text="queueSessionDurationText"
-                            :resolve-queue-status="resolveQueueStatus"
-                            :queue-loading="queueLoading"
+                            :resolve-queue-status="resolveQueueStatus" :queue-loading="queueLoading"
                             :queue-action-loading="queueActionLoading"
-                            :queue-processing-ticket-id="queueProcessingTicketId"
-                            :queue-error="queueError"
-                            :branch-options="queueBranchOptions"
-                            :booking-options="queueBookingOptions"
-                            :default-branch-id="defaultQueueBranchId"
-                            :view-branch-id="queueViewBranchId"
-                            @refresh-queue="fetchQueueData($event || {})"
-                            @set-view-branch="setQueueViewBranchId"
-                            @call-next="callNextQueue"
-                            @transition-ticket="transitionQueueTicket"
-                            @add-booking="addQueueBooking"
-                            @add-walk-in="addQueueWalkIn"
-                        />
+                            :queue-processing-ticket-id="queueProcessingTicketId" :queue-error="queueError"
+                            :branch-options="queueBranchOptions" :booking-options="queueBookingOptions"
+                            :default-branch-id="defaultQueueBranchId" :view-branch-id="queueViewBranchId"
+                            @refresh-queue="fetchQueueData($event || {})" @set-view-branch="setQueueViewBranchId"
+                            @call-next="callNextQueue" @transition-ticket="transitionQueueTicket"
+                            @add-booking="addQueueBooking" @add-walk-in="addQueueWalkIn" />
 
-                        <TransactionsPage
-                            v-else-if="activeModuleId === 'transactions'"
+                        <TransactionsPage v-else-if="activeModuleId === 'transactions'"
                             :panel-transactions-url="panelTransactionsUrl"
                             :normalized-recent-transactions="normalizedRecentTransactions"
-                            :transaction-today-total="transactionTodayTotal"
-                            :resolve-method-style="resolveMethodStyle"
-                            :resolve-transaction-status="resolveTransactionStatus"
-                        />
+                            :transaction-today-total="transactionTodayTotal" :resolve-method-style="resolveMethodStyle"
+                            :resolve-transaction-status="resolveTransactionStatus" />
 
-                        <PaymentsPage
-                            v-else-if="activeModuleId === 'payments'"
-                            :payment-rows="paymentRows"
-                            :transaction-options="paymentTransactionRows"
-                            :loading="paymentLoading"
-                            :saving="paymentSaving"
-                            :error-message="paymentError"
-                            @refresh-payments="fetchPaymentsData"
-                            @create-payment="createPayment"
-                        />
+                        <PaymentsPage v-else-if="activeModuleId === 'payments'" :payment-rows="paymentRows"
+                            :transaction-options="paymentTransactionRows" :loading="paymentLoading"
+                            :saving="paymentSaving" :error-message="paymentError" @refresh-payments="fetchPaymentsData"
+                            @create-payment="createPayment" />
 
-                        <ReportsPage
-                            v-else-if="activeModuleId === 'reports'"
-                            :report-filters="reportFilters"
-                            :report-error="reportError"
-                            :report-loading="reportLoading"
-                            :report-summary-cards="reportSummaryCards"
-                            :report-daily-rows="reportDailyRows"
-                            :report-daily-max-revenue="reportDailyMaxRevenue"
-                            :report-status-rows="reportStatusRows"
-                            :report-package-rows="reportPackageRows"
-                            :report-cashier-rows="reportCashierRows"
-                            :report-add-on-rows="reportAddOnRows"
-                        />
+                        <ReportsPage v-else-if="activeModuleId === 'reports'" :report-filters="reportFilters"
+                            :report-error="reportError" :report-loading="reportLoading"
+                            :report-summary-cards="reportSummaryCards" :report-daily-rows="reportDailyRows"
+                            :report-daily-max-revenue="reportDailyMaxRevenue" :report-status-rows="reportStatusRows"
+                            :report-package-rows="reportPackageRows" :report-cashier-rows="reportCashierRows"
+                            :report-add-on-rows="reportAddOnRows" />
 
-                        <ActivityLogsPage
-                            v-else-if="activeModuleId === 'activity-logs'"
-                            :activity-search="activitySearch"
-                            :activity-module-filter="activityModuleFilter"
+                        <ActivityLogsPage v-else-if="activeModuleId === 'activity-logs'"
+                            :activity-search="activitySearch" :activity-module-filter="activityModuleFilter"
                             :activity-module-options="activityModuleOptions"
-                            :filtered-activity-rows="filteredActivityRows"
-                            :resolve-activity-tone="resolveActivityTone"
+                            :filtered-activity-rows="filteredActivityRows" :resolve-activity-tone="resolveActivityTone"
                             @update:activity-search="activitySearch = $event"
-                            @update:activity-module-filter="activityModuleFilter = $event"
-                        />
+                            @update:activity-module-filter="activityModuleFilter = $event" />
 
-                        <PrinterSettingsPage
-                            v-else-if="activeModuleId === 'printer-settings'"
-                            :printer-setting-rows="printerSettingRows"
-                            :branch-options="branchOptionsForManagement"
-                            :loading="printerSettingLoading"
-                            :saving="printerSettingSaving"
-                            :deleting-printer-setting-id="deletingPrinterSettingId"
-                            :error-message="printerSettingError"
+                        <PrinterSettingsPage v-else-if="activeModuleId === 'printer-settings'"
+                            :printer-setting-rows="printerSettingRows" :branch-options="branchOptionsForManagement"
+                            :loading="printerSettingLoading" :saving="printerSettingSaving"
+                            :deleting-printer-setting-id="deletingPrinterSettingId" :error-message="printerSettingError"
                             @refresh-printer-settings="fetchPrinterSettingsData"
                             @create-printer-setting="createPrinterSetting"
                             @update-printer-setting="updatePrinterSetting"
                             @delete-printer-setting="deletePrinterSetting"
-                            @set-default-printer-setting="setDefaultPrinterSetting"
-                        />
+                            @set-default-printer-setting="setDefaultPrinterSetting" />
 
-                        <AppSettingsPage
-                            v-else-if="activeModuleId === 'app-settings'"
-                            :groups="appSettingsGroups"
-                            :loading="appSettingsLoading"
-                            :saving="appSettingsSaving"
-                            :error-message="appSettingsError"
-                            :success-message="appSettingsSuccess"
-                            @refresh-app-settings="fetchAppSettingsData"
-                            @update-app-setting="updateAppSetting"
-                        />
+                        <AppSettingsPage v-else-if="activeModuleId === 'app-settings'" :groups="appSettingsGroups"
+                            :loading="appSettingsLoading" :saving="appSettingsSaving" :error-message="appSettingsError"
+                            :success-message="appSettingsSuccess" @refresh-app-settings="fetchAppSettingsData"
+                            @update-app-setting="updateAppSetting" />
 
-                        <SettingsPage
-                            v-else-if="activeModuleId === 'settings'"
-                            :settings-tab="settingsTab"
-                            :settings-tabs="settingsTabs"
-                            :settings="settings"
-                            :branch-options="settingsBranchOptions"
-                            :default-branch-id="resolvedDefaultBranchId"
-                            :loading="settingsLoading"
-                            :saving="settingsSaving"
-                            :error-message="settingsError"
-                            :success-message="settingsSuccess"
-                            @update:settings-tab="settingsTab = $event"
-                            @refresh-settings="fetchSettingsData()"
-                            @save-default-branch="saveDefaultBranch"
-                            @create-branch="createBranchSetting"
-                            @update-branch="updateBranchSetting"
-                            @remove-branch="removeBranchSetting"
-                        />
+                        <SettingsPage v-else-if="activeModuleId === 'settings'" :settings-tab="settingsTab"
+                            :settings-tabs="settingsTabs" :settings="settings" :branch-options="settingsBranchOptions"
+                            :default-branch-id="resolvedDefaultBranchId" :loading="settingsLoading"
+                            :saving="settingsSaving" :error-message="settingsError" :success-message="settingsSuccess"
+                            @update:settings-tab="settingsTab = $event" @refresh-settings="fetchSettingsData()"
+                            @save-default-branch="saveDefaultBranch" @create-branch="createBranchSetting"
+                            @update-branch="updateBranchSetting" @remove-branch="removeBranchSetting" />
                     </div>
                 </main>
             </div>
