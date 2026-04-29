@@ -47,7 +47,7 @@ class BookingService
                 'end_at' => $endAt,
                 'status' => BookingStatus::Pending,
                 'source' => $payload['source'] ?? BookingSource::Web,
-                'payment_type' => $payload['payment_type'] ?? 'onsite',
+                'payment_type' => $payload['payment_type'] ?? 'full',
                 'addons' => $addons,
                 'addon_total' => $addonTotal,
                 'total_amount' => (float) $package->base_price + (float) $addonTotal,

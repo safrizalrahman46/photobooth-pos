@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('bookings', function (Blueprint $table) {
-            $table->string('payment_type', 20)->default('onsite')->after('source');
+            $table->string('payment_type', 20)->default('full')->after('source');
             $table->string('payment_gateway', 30)->nullable()->after('payment_type');
             $table->string('payment_reference', 80)->nullable()->after('payment_gateway');
             $table->string('payment_token', 120)->nullable()->after('payment_reference');

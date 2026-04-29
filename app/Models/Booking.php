@@ -7,6 +7,7 @@ use App\Enums\BookingStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -33,6 +34,8 @@ class Booking extends Model
         'payment_token',
         'payment_url',
         'payment_payload',
+        'transfer_proof_path',
+        'transfer_proof_uploaded_at',
         'addons',
         'addon_total',
         'payment_expires_at',
@@ -56,6 +59,7 @@ class Booking extends Model
             'source' => BookingSource::class,
             'payment_expires_at' => 'datetime',
             'paid_at' => 'datetime',
+            'transfer_proof_uploaded_at' => 'datetime',
             'payment_payload' => 'array',
             'addons' => 'array',
             'addon_total' => 'decimal:2',
@@ -98,5 +102,12 @@ class Booking extends Model
     public function transaction(): HasOne
     {
         return $this->hasOne(Transaction::class);
+    }
+
+    public function addOns(): BelongsToMany
+    {
+        return $this->belongsToMany(AddOn::class, 'booking_add_ons')
+            ->withPivot(['qty', 'unit_price', 'line_total'])
+            ->withTimestamps();
     }
 }

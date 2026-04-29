@@ -11,11 +11,12 @@ use App\Models\Branch;
 use App\Models\DesignCatalog;
 use App\Models\Package;
 use App\Services\BookingService;
-use App\Services\BookingPaymentService;
 use App\Services\SlotService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
@@ -23,7 +24,6 @@ class BookingController extends Controller
 {
     public function __construct(
         private readonly BookingService $bookingService,
-        private readonly BookingPaymentService $bookingPaymentService,
         private readonly SlotService $slotService,
     ) {}
 
@@ -163,41 +163,38 @@ class BookingController extends Controller
 
         try {
             $booking = $this->bookingService->create($payload);
+            $storedProofPath = $this->storeTransferProof(
+                $request->file('transfer_proof'),
+                $booking->booking_code
+            );
 
-            if (($payload['payment_type'] ?? 'onsite') === 'full') {
-                try {
-                    $booking = $this->bookingPaymentService->startOnlinePayment($booking);
-
-                    $request->session()->forget('booking.payment_payload');
-
-                    return redirect()->away($booking->payment_url);
-                } catch (RuntimeException $exception) {
-                    $booking->forceFill([
-                        'payment_type' => 'onsite',
-                        'payment_gateway' => null,
-                        'payment_reference' => null,
-                        'payment_token' => null,
-                        'payment_url' => null,
-                        'payment_payload' => null,
-                        'payment_expires_at' => null,
-                    ])->save();
-
-                    session()->flash('booking_payment_notice', 'Pembayaran online belum tersedia. Booking diproses dengan metode bayar di studio.');
-                }
-            }
+            $booking->forceFill([
+                'payment_gateway' => 'manual_transfer',
+                'payment_url' => null,
+                'payment_token' => null,
+                'payment_reference' => null,
+                'payment_payload' => [
+                    'method' => 'manual_transfer',
+                    'payment_type' => (string) ($payload['payment_type'] ?? 'full'),
+                    'submitted_via' => 'web',
+                ],
+                'transfer_proof_path' => $storedProofPath,
+                'transfer_proof_uploaded_at' => now(),
+            ])->save();
 
             $request->session()->forget('booking.payment_payload');
 
             return redirect()
                 ->route('booking.success', $booking->booking_code)
-                ->with('booking_created', true);
-        } catch (RuntimeException $exception) {
+                ->with('booking_created', true)
+                ->with('booking_payment_notice', 'Bukti pembayaran berhasil diunggah. Booking menunggu verifikasi admin.');
+        } catch (Throwable $exception) {
             if (isset($booking) && $booking instanceof Booking) {
                 $booking->delete();
             }
 
             return back()
-                ->withErrors(['booking_time' => $exception->getMessage()])
+                ->withErrors(['booking' => $exception->getMessage() ?: 'Gagal menyimpan booking.'])
                 ->withInput();
         }
     }
@@ -254,5 +251,18 @@ class BookingController extends Controller
         return view('web.booking-success', [
             'booking' => $booking,
         ]);
+    }
+
+    private function storeTransferProof(?UploadedFile $file, string $bookingCode): string
+    {
+        if (! $file instanceof UploadedFile) {
+            throw new RuntimeException('Bukti pembayaran wajib diunggah.');
+        }
+
+        $directory = 'booking-transfer-proofs/'.now()->format('Y/m');
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
+        $fileName = Str::slug($bookingCode).'-'.Str::lower(Str::random(10)).'.'.$extension;
+
+        return $file->storeAs($directory, $fileName, 'public');
     }
 }
