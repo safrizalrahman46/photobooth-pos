@@ -36,7 +36,7 @@ class HistoryController extends ChangeNotifier {
       paket: 'Quick Snap',
       addOns: 'Keychain',
       totalBayar: 45000,
-      status: TransactionStatus.pending,
+      status: TransactionStatus.lunas,
     ),
     Transaction(
       id: 'TRX-9399',
@@ -132,7 +132,14 @@ class HistoryController extends ChangeNotifier {
   }
 
   /// Placeholder aksi per-baris (edit / hapus / detail)
+  static const double _colAction = 140; // Increased width for button
   void onRowAction(Transaction transaction) {
     debugPrint('Row action: ${transaction.id}');
+  }
+
+  /// Aksi Cetak Ulang
+  void onReprint(Transaction transaction) {
+    debugPrint('Cetak ulang: ${transaction.id}');
+    // Logic untuk integrasi ke printer thermal / ESC/POS
   }
 }

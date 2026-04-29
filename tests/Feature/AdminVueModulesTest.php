@@ -44,6 +44,16 @@ class AdminVueModulesTest extends TestCase
             ->assertRedirect('/admin/login');
     }
 
+    public function test_admin_dashboard_loads_for_authenticated_user(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('admin-dashboard-app');
+    }
+
     public function test_branch_module_create_and_list(): void
     {
         $user = User::factory()->create();
@@ -165,7 +175,7 @@ class AdminVueModulesTest extends TestCase
             'end_at' => $bookingDate.' 10:30:00',
             'status' => 'confirmed',
             'source' => 'web',
-            'payment_type' => 'onsite',
+            'payment_type' => 'full',
             'total_amount' => 100000,
             'paid_amount' => 0,
             'deposit_amount' => 0,
@@ -290,7 +300,7 @@ class AdminVueModulesTest extends TestCase
             'end_at' => '2026-04-22 09:30:00',
             'status' => 'pending',
             'source' => 'web',
-            'payment_type' => 'onsite',
+            'payment_type' => 'full',
             'total_amount' => 100000,
             'paid_amount' => 0,
             'deposit_amount' => 0,
@@ -338,7 +348,7 @@ class AdminVueModulesTest extends TestCase
             'end_at' => '2026-04-22 10:30:00',
             'status' => 'pending',
             'source' => 'web',
-            'payment_type' => 'onsite',
+            'payment_type' => 'full',
             'total_amount' => 100000,
             'paid_amount' => 0,
             'deposit_amount' => 0,
@@ -355,7 +365,7 @@ class AdminVueModulesTest extends TestCase
             'end_at' => '2026-04-22 11:30:00',
             'status' => 'confirmed',
             'source' => 'web',
-            'payment_type' => 'onsite',
+            'payment_type' => 'full',
             'total_amount' => 100000,
             'paid_amount' => 0,
             'deposit_amount' => 0,
@@ -418,7 +428,7 @@ class AdminVueModulesTest extends TestCase
                 'end_at' => '2026-04-05 10:30:00',
                 'status' => 'confirmed',
                 'source' => 'web',
-                'payment_type' => 'onsite',
+                'payment_type' => 'full',
                 'total_amount' => 100000,
                 'paid_amount' => 0,
                 'deposit_amount' => 0,
@@ -435,7 +445,7 @@ class AdminVueModulesTest extends TestCase
                 'end_at' => '2026-04-25 11:30:00',
                 'status' => 'pending',
                 'source' => 'web',
-                'payment_type' => 'onsite',
+                'payment_type' => 'full',
                 'total_amount' => 100000,
                 'paid_amount' => 0,
                 'deposit_amount' => 0,
@@ -452,7 +462,7 @@ class AdminVueModulesTest extends TestCase
                 'end_at' => '2026-03-28 09:30:00',
                 'status' => 'done',
                 'source' => 'web',
-                'payment_type' => 'onsite',
+                'payment_type' => 'full',
                 'total_amount' => 100000,
                 'paid_amount' => 100000,
                 'deposit_amount' => 0,
@@ -469,7 +479,7 @@ class AdminVueModulesTest extends TestCase
                 'end_at' => '2026-04-15 13:30:00',
                 'status' => 'paid',
                 'source' => 'web',
-                'payment_type' => 'onsite',
+                'payment_type' => 'full',
                 'total_amount' => 150000,
                 'paid_amount' => 150000,
                 'deposit_amount' => 0,

@@ -4,6 +4,8 @@ import '../domain/entities/cashflow.dart';
 import '../domain/entities/payment_method.dart';
 import '../domain/repositories/laporan_repository.dart';
 
+enum LaporanPeriod { hari, minggu, bulan, tahun }
+
 class LaporanController extends GetxController {
   final LaporanRepository repository;
 
@@ -15,6 +17,8 @@ class LaporanController extends GetxController {
   final RxBool isLoading = true.obs;
   final RxString errorMessage = ''.obs;
   final RxString lastUpdated = ''.obs;
+  final Rx<LaporanPeriod> selectedPeriod = LaporanPeriod.bulan.obs;
+  final Rx<DateTime> selectedDate = DateTime.now().obs;
 
   @override
   void onInit() {
@@ -43,6 +47,16 @@ class LaporanController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void setPeriod(LaporanPeriod period) {
+    selectedPeriod.value = period;
+    fetchLaporan(); // Reload data based on period
+  }
+
+  void setDate(DateTime date) {
+    selectedDate.value = date;
+    fetchLaporan();
   }
 
   void _updateLastUpdated() {

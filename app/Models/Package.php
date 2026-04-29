@@ -84,28 +84,28 @@ class Package extends Model
             $absolutePath = (string) (parse_url($value, PHP_URL_PATH) ?? '');
 
             if ($absolutePath !== '' && str_starts_with($absolutePath, '/storage/package-samples/')) {
-                return '/media/'.ltrim(substr($absolutePath, strlen('/storage/')), '/');
+                return '/media/' . ltrim(substr($absolutePath, strlen('/storage/')), '/');
             }
 
             return $value;
         }
 
         if (! str_contains($value, '/')) {
-            return '/media/package-samples/'.$value;
+            return '/media/package-samples/' . $value;
         }
 
-        $normalized = '/'.ltrim(str_replace('\\', '/', $value), '/');
+        $normalized = '/' . ltrim(str_replace('\\', '/', $value), '/');
 
         if (str_starts_with($normalized, '/media/package-samples/')) {
             return $normalized;
         }
 
         if (str_starts_with($normalized, '/storage/package-samples/')) {
-            return '/media/'.ltrim(substr($normalized, strlen('/storage/')), '/');
+            return '/media/' . ltrim(substr($normalized, strlen('/storage/')), '/');
         }
 
         if (str_starts_with($normalized, '/package-samples/')) {
-            return '/media/'.ltrim($normalized, '/');
+            return '/media/' . ltrim($normalized, '/');
         }
 
         return $normalized;

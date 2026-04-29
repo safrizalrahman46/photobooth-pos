@@ -5,8 +5,8 @@ namespace App\Services;
 use App\Models\Branch;
 use App\Models\AppSetting;
 use Illuminate\Support\Arr;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class AppSettingService
@@ -137,9 +137,13 @@ class AppSettingService
                 'queue_board_enabled' => true,
             ]),
             'payment' => $this->get('payment', [
-                'onsite_enabled' => true,
+                'manual_payment_enabled' => true,
+                'onsite_enabled' => false,
                 'midtrans_enabled' => (bool) config('services.midtrans.enabled', false),
                 'currency' => 'IDR',
+                'qr_label' => 'QR Pembayaran',
+                'qr_image_url' => '',
+                'transfer_instructions' => 'Scan QR sesuai nominal pembayaran lalu unggah bukti pembayaran untuk verifikasi admin.',
             ]),
             'ui' => $this->get('ui', [
                 'admin' => $this->defaultAdminUiConfig(),
@@ -306,7 +310,7 @@ class AppSettingService
         return [
             'steps' => ['Paket', 'Tanggal', 'Waktu', 'Add-on'],
             'navigation' => [
-                ['key' => 'book', 'label' => 'Book', 'route' => 'booking.customer'],
+                ['key' => 'book', 'label' => 'Book', 'route' => 'booking.create'],
                 ['key' => 'admin', 'label' => 'Admin', 'route' => 'admin.login'],
                 ['key' => 'queue', 'label' => 'Queue', 'route' => 'queue.board'],
             ],
@@ -338,7 +342,6 @@ class AppSettingService
         $normalized = strtoupper(Str::of($name)->ascii()->replaceMatches('/[^A-Z0-9]+/', '')->toString());
         $prefix = substr($normalized, 0, 6);
         $prefix = $prefix !== '' ? $prefix : 'BRANCH';
-
         $index = 1;
 
         while (true) {

@@ -5,6 +5,8 @@ class BookingController extends ChangeNotifier {
   // Customer
   String customerName = 'Budi Santoso';
   String whatsapp = '081199881234';
+  String email = 'budisantoso@gmail.com';
+  String note = 'Acara Ulang Tahun';
   int jumlahOrang = 4;
 
   // Queue list
@@ -154,8 +156,46 @@ class BookingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateEmail(String val) {
+    email = val;
+    notifyListeners();
+  }
+
+  void updateNote(String val) {
+    note = val;
+    notifyListeners();
+  }
+
   void applyVoucher() {
     voucherApplied = !voucherApplied;
     notifyListeners();
+  }
+
+  void accBooking() {
+    if (selectedQueueIndex >= 0 && selectedQueueIndex < queues.length) {
+      // Mock: change status to 'TERKONFIRMASI' or similar
+      // In real app, this might move it to the actual queue
+      notifyListeners();
+    }
+  }
+
+  void cancelBooking() {
+    if (selectedQueueIndex >= 0 && selectedQueueIndex < queues.length) {
+      queues.removeAt(selectedQueueIndex);
+      if (selectedQueueIndex >= queues.length) {
+        selectedQueueIndex = queues.length - 1;
+      }
+      notifyListeners();
+    }
+  }
+
+  void deleteBooking() {
+    if (selectedQueueIndex >= 0 && selectedQueueIndex < queues.length) {
+      queues.removeAt(selectedQueueIndex);
+      if (selectedQueueIndex >= queues.length) {
+        selectedQueueIndex = queues.length - 1;
+      }
+      notifyListeners();
+    }
   }
 }

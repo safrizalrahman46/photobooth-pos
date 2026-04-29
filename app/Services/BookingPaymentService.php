@@ -15,22 +15,15 @@ class BookingPaymentService
         private readonly MidtransService $midtransService,
     ) {}
 
-    public function gatewayEnabled(): bool
-    {
-        return $this->midtransService->enabled();
-    }
-
     public function startOnlinePayment(Booking $booking): Booking
     {
-        $paymentType = (string) ($booking->payment_type ?? 'full');
-
-        if (! in_array($paymentType, ['full', 'dp50'], true)) {
+        if (! in_array((string) ($booking->payment_type ?? ''), ['full', 'dp50'], true)) {
             throw new RuntimeException('Booking ini tidak menggunakan pembayaran online.');
         }
 
         $booking->loadMissing('package');
-
         $chargeAmount = $this->resolveChargeAmount($booking);
+
         $session = $this->midtransService->createBookingTransaction($booking, $chargeAmount);
 
         $booking->forceFill([
@@ -75,24 +68,14 @@ class BookingPaymentService
             $fraudStatus = (string) ($payload['fraud_status'] ?? '');
 
             if ($this->isPaidStatus($transactionStatus, $fraudStatus)) {
-                $settledAmount = $this->resolveChargeAmount($booking);
-                $totalAmount = (float) $booking->total_amount;
-                $existingPaidAmount = (float) $booking->paid_amount;
-                $newPaidAmount = min(max($existingPaidAmount, $settledAmount), $totalAmount);
+                $paidAmount = $this->resolveChargeAmount($booking);
 
-                $booking->paid_amount = $newPaidAmount;
-                $booking->deposit_amount = max((float) $booking->deposit_amount, $settledAmount);
-                $booking->paid_at = $booking->paid_at ?? now();
+                $booking->paid_amount = $paidAmount;
+                $booking->deposit_amount = $paidAmount;
+                $booking->paid_at = now();
                 $booking->save();
 
-                if ($newPaidAmount >= $totalAmount || (string) ($booking->payment_type ?? 'full') === 'full') {
-                    $booking->paid_amount = $totalAmount;
-                    $booking->deposit_amount = $totalAmount;
-                    $booking->save();
-                    $this->transitionStatus($booking, BookingStatus::Paid, 'Pembayaran QR berhasil diterima.');
-                } else {
-                    $this->transitionStatus($booking, BookingStatus::Confirmed, 'DP 50% QR berhasil diterima.');
-                }
+                $this->transitionStatus($booking, BookingStatus::Paid, 'Pembayaran Midtrans berhasil diterima.');
 
                 return $booking->refresh();
             }
@@ -124,6 +107,17 @@ class BookingPaymentService
         return in_array($transactionStatus, ['cancel', 'deny', 'expire'], true);
     }
 
+    private function resolveChargeAmount(Booking $booking): float
+    {
+        $totalAmount = max((float) $booking->total_amount, 0);
+
+        if ((string) $booking->payment_type === 'dp50') {
+            return max(round($totalAmount * 0.5, 2), 0);
+        }
+
+        return $totalAmount;
+    }
+
     private function transitionStatus(Booking $booking, BookingStatus $status, string $reason): void
     {
         $currentStatus = $booking->status instanceof BookingStatus
@@ -145,17 +139,5 @@ class BookingPaymentService
         ]);
 
         SendBookingNotificationJob::dispatch($booking->id, 'status_changed');
-    }
-
-    private function resolveChargeAmount(Booking $booking): float
-    {
-        $totalAmount = max((float) $booking->total_amount, 0);
-        $paymentType = (string) ($booking->payment_type ?? 'full');
-
-        if ($paymentType === 'dp50') {
-            return round($totalAmount * 0.5, 2);
-        }
-
-        return $totalAmount;
     }
 }

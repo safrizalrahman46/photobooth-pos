@@ -16,70 +16,56 @@ class KolomSelesaiWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 3,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: AppTheme.success,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981), // Emerald for finished
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                const SizedBox(width: 10),
-                Text('SELESAI', style: AppTheme.sectionTitle),
-                const Spacer(),
-                GestureDetector(
-                  onTap: onLihatSemua,
-                  child: const Text(
-                    'LIHAT SEMUA',
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.primary,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: AppTheme.divider),
-
-          // List
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: antrian.length,
-              separatorBuilder: (_, __) => const Divider(
-                height: 1,
-                indent: 20,
-                endIndent: 20,
-                color: AppTheme.divider,
               ),
-              itemBuilder: (context, i) => AntrianSelesaiCard(antrian: antrian[i]),
-            ),
+              const SizedBox(width: 12),
+              Text(
+                'SELESAI',
+                style: TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: onLihatSemua,
+                child: const Text(
+                  'LIHAT SEMUA',
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+
+        // List of Cards
+        Column(
+          children: antrian.map((a) => AntrianSelesaiCard(antrian: a)).toList(),
+        ),
+      ],
     );
   }
 }
@@ -91,56 +77,71 @@ class AntrianSelesaiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9).withOpacity(0.5), // Subtle gray background like mockup
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Row(
         children: [
-          // Nomor circle
+          // Circle with ID
           Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: AppTheme.background,
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Colors.white,
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 antrian.nomorAntrian.replaceAll('#A-0', '#').replaceAll('#A-', '#'),
                 style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1E293B),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
 
-          // Info
+          // Customer Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(antrian.namaCustomer, style: AppTheme.namaCustomer),
+                Text(
+                  antrian.namaCustomer,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
-                  antrian.catatanSelesai ?? 'Selesai',
-                  style: AppTheme.bodySmall,
+                  antrian.catatanSelesai ?? 'Selesai: Bagus & Cetak',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
               ],
             ),
           ),
 
-          // Check icon
+          // Green Check Icon
           Container(
-            width: 28,
-            height: 28,
+            width: 24,
+            height: 24,
             decoration: const BoxDecoration(
-              color: AppTheme.success,
+              color: Color(0xFF10B981),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.check, color: Colors.white, size: 16),
+            child: const Icon(Icons.check, color: Colors.white, size: 14),
           ),
         ],
       ),

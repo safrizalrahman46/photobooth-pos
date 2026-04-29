@@ -13,19 +13,14 @@ class MidtransService
         return (bool) config('services.midtrans.enabled') && filled(config('services.midtrans.server_key'));
     }
 
-    public function createBookingTransaction(Booking $booking, float $chargeAmount): array
+    public function createBookingTransaction(Booking $booking, float $grossAmount): array
     {
         if (! $this->enabled()) {
             throw new RuntimeException('Midtrans belum dikonfigurasi.');
         }
 
-        $normalizedChargeAmount = max((float) round($chargeAmount, 2), 0);
-
-        if ($normalizedChargeAmount <= 0) {
-            throw new RuntimeException('Nominal pembayaran tidak valid.');
-        }
-
         $orderId = $booking->booking_code;
+        $chargeAmount = max((int) round($grossAmount), 0);
         $expiryMinutes = (int) config('services.midtrans.expiry_minutes', 15);
         $notificationUrl = url('/api/v1/payments/midtrans/notifications');
 
@@ -37,7 +32,7 @@ class MidtransService
             ->post(rtrim((string) config('services.midtrans.base_url'), '/').'/snap/v1/transactions', [
                 'transaction_details' => [
                     'order_id' => $orderId,
-                    'gross_amount' => (int) round($normalizedChargeAmount),
+                    'gross_amount' => $chargeAmount,
                 ],
                 'customer_details' => [
                     'first_name' => $booking->customer_name,
@@ -46,9 +41,9 @@ class MidtransService
                 ],
                 'item_details' => [[
                     'id' => 'booking-'.$booking->package_id,
-                    'price' => (int) round($normalizedChargeAmount),
+                    'price' => $chargeAmount,
                     'quantity' => 1,
-                    'name' => $this->resolveItemName($booking),
+                    'name' => ($booking->payment_type === 'dp50' ? 'DP 50% - ' : 'Full Lunas - ').($booking->package?->name ?? 'Booking Photobooth'),
                 ]],
                 'expiry' => [
                     'unit' => 'minute',
@@ -78,16 +73,6 @@ class MidtransService
             'payload' => $payload,
             'expires_at' => now()->addMinutes($expiryMinutes),
         ];
-    }
-
-    private function resolveItemName(Booking $booking): string
-    {
-        $baseName = $booking->package?->name ?? 'Booking Photobooth';
-        $paymentType = (string) ($booking->payment_type ?? 'full');
-
-        return $paymentType === 'dp50'
-            ? $baseName.' - DP 50%'
-            : $baseName.' - Pelunasan';
     }
 
     public function verifyNotificationSignature(array $payload): bool

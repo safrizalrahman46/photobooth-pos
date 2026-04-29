@@ -26,12 +26,13 @@ return new class extends Migration
                 'queue_board_enabled' => true,
             ],
             'payment' => [
-                'onsite_enabled' => true,
+                'manual_payment_enabled' => true,
+                'onsite_enabled' => false,
                 'midtrans_enabled' => false,
-                'full_payment_enabled' => true,
-                'dp50_enabled' => true,
-                'manual_transfer_proof_required' => true,
                 'currency' => 'IDR',
+                'qr_label' => 'QR Pembayaran',
+                'qr_image_url' => '',
+                'transfer_instructions' => 'Scan QR sesuai nominal pembayaran lalu unggah bukti pembayaran untuk verifikasi admin.',
             ],
         ];
 

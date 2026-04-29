@@ -42,7 +42,7 @@ class TimeSlotSeeder extends Seeder
                             'end_time' => $end,
                         ],
                         [
-                            'capacity' => 1,
+                            'capacity' => 2,
                             'is_bookable' => true,
                         ]
                     );

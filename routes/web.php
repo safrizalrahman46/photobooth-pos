@@ -19,21 +19,13 @@ use App\Http\Controllers\Web\AdminTimeSlotController;
 use App\Http\Controllers\Web\AdminUserController;
 use App\Http\Controllers\Web\BookingController;
 use App\Http\Controllers\Web\LandingController;
-use App\Http\Controllers\Web\PackageSamplePhotoController;
 use App\Http\Controllers\Web\QueueBoardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::get('/queue-board', [QueueBoardController::class, 'index'])->name('queue.board');
-Route::get('/media/package-samples/{path}', PackageSamplePhotoController::class)
-    ->where('path', '.*')
-    ->name('media.package-sample');
-Route::redirect('/panel', '/admin');
-Route::get('/panel/{path}', fn () => redirect('/admin'))->where('path', '.*');
 
 Route::prefix('booking')->name('booking.')->group(function () {
-    Route::get('/data-pemesan', [BookingController::class, 'customer'])->name('customer');
-    Route::post('/data-pemesan', [BookingController::class, 'storeCustomer'])->name('customer.store');
     Route::get('/', [BookingController::class, 'create'])->name('create');
     Route::get('/availability', [BookingController::class, 'availability'])->name('availability');
     Route::get('/payment', [BookingController::class, 'payment'])->name('payment');

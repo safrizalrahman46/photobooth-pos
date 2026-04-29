@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import PublicBookingNavbar from './PublicBookingNavbar.vue';
 
 const props = defineProps({
@@ -39,10 +39,6 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
-    navigation: {
-        type: Array,
-        default: () => [],
-    },
     csrfToken: {
         type: String,
         required: true,
@@ -50,53 +46,70 @@ const props = defineProps({
 });
 
 const asString = (value) => (value === null || value === undefined ? '' : String(value));
-const isDisabled = (value) => value === false || value === 0 || value === '0';
 
-const onlinePaymentEnabled = computed(() => !isDisabled(props.paymentSettings.online_payment_enabled));
-const fullPaymentEnabled = computed(() => !isDisabled(props.paymentSettings.full_payment_enabled));
-const dp50PaymentEnabled = computed(() => !isDisabled(props.paymentSettings.dp50_enabled));
-const transferReference = ref(asString(props.oldValues.transfer_reference || ''));
-
-const paymentOptions = computed(() => {
-    const options = [];
-
-    if (fullPaymentEnabled.value) {
-        options.push('full');
-    }
-
-    if (dp50PaymentEnabled.value) {
-        options.push('dp50');
-    }
-
-    return options;
+const manualPaymentEnabled = computed(() => {
+    return props.paymentSettings.manual_payment_enabled !== false && props.paymentSettings.manual_payment_enabled !== 0;
 });
 
-const defaultPaymentType = computed(() => {
-    const candidate = asString(props.oldValues.payment_type);
+const qrImageUrl = computed(() => {
+    const candidates = [
+        props.paymentSettings.qr_image_url,
+        props.paymentSettings.qris_image_url,
+        props.paymentSettings.qr_url,
+    ];
 
-    if (paymentOptions.value.includes(candidate)) {
-        return candidate;
+    for (const candidate of candidates) {
+        const value = asString(candidate).trim();
+
+        if (value !== '') {
+            return value;
+        }
     }
 
-    return paymentOptions.value[0] || 'full';
+    return '';
 });
 
-const paymentType = ref(defaultPaymentType.value);
+const qrLabel = computed(() => {
+    return asString(
+        props.paymentSettings.qr_label
+        || props.paymentSettings.qr_title
+        || 'QR Pembayaran'
+    ).trim() || 'QR Pembayaran';
+});
+
+const paymentInstructions = computed(() => {
+    return asString(
+        props.paymentSettings.transfer_instructions
+        || props.paymentSettings.instructions
+        || 'Scan QR di bawah ini sesuai nominal pilihanmu, lalu unggah bukti pembayaran untuk verifikasi admin.'
+    ).trim();
+});
+
+const paymentAvailabilityMessage = computed(() => {
+    if (!manualPaymentEnabled.value) {
+        return 'Metode pembayaran belum tersedia saat ini. Silakan hubungi admin studio.';
+    }
+
+    if (qrImageUrl.value === '') {
+        return 'Foto QR pembayaran belum diatur. Silakan hubungi admin studio.';
+    }
+
+    return '';
+});
+
+const defaultPaymentType = 'full';
+const paymentType = ref(asString(props.oldValues.payment_type || defaultPaymentType));
 const processing = ref(false);
 const countdown = ref(600);
-
-watch(paymentOptions, (options) => {
-    if (!options.includes(paymentType.value)) {
-        paymentType.value = options[0] || 'full';
-    }
-});
+const transferProofName = ref('');
+const transferProofPreviewUrl = ref('');
 
 let countdownTimer = null;
 
 const packageAccentTokens = ['#2563eb', '#ec4899', '#22c55e', '#f59e0b', '#0ea5e9', '#8b5cf6'];
 
 const selectedAddons = computed(() => {
-    if (!Array.isArray(props.bookingPayload?.addons)) {
+    if (! Array.isArray(props.bookingPayload?.addons)) {
         return [];
     }
 
@@ -110,22 +123,15 @@ const selectedAddons = computed(() => {
         }));
 });
 
-const addonsPayloadJson = computed(() => JSON.stringify(selectedAddons.value));
-
 const addonTotal = computed(() => {
     return selectedAddons.value.reduce((total, addon) => total + (addon.price * addon.qty), 0);
 });
 
 const totalPrice = computed(() => Number(props.package?.base_price || 0) + addonTotal.value);
-const payNowAmount = computed(() => {
-    if (paymentType.value === 'dp50') {
-        return Math.round(totalPrice.value * 0.5);
-    }
+const dpAmount = computed(() => Math.round(totalPrice.value * 0.5));
+const remainingAfterDp = computed(() => Math.max(totalPrice.value - dpAmount.value, 0));
 
-    return totalPrice.value;
-});
-
-const remainingAmount = computed(() => Math.max(totalPrice.value - payNowAmount.value, 0));
+const addonsPayloadJson = computed(() => JSON.stringify(selectedAddons.value));
 
 const packageColor = computed(() => {
     if (props.package?.color) {
@@ -134,6 +140,7 @@ const packageColor = computed(() => {
 
     const source = asString(props.package?.name || props.package?.id || 'PK');
     const sum = source.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
     return packageAccentTokens[sum % packageAccentTokens.length];
 });
 
@@ -143,6 +150,7 @@ const isCountdownDanger = computed(() => countdown.value < 120);
 
 const formatRupiah = (value) => {
     const amount = Number(value || 0);
+
     return `Rp ${new Intl.NumberFormat('id-ID', {
         maximumFractionDigits: 0,
     }).format(Number.isNaN(amount) ? 0 : amount)}`;
@@ -151,7 +159,7 @@ const formatRupiah = (value) => {
 const displayDate = computed(() => {
     const value = asString(props.bookingPayload.booking_date);
 
-    if (!value) {
+    if (! value) {
         return '-';
     }
 
@@ -172,32 +180,75 @@ const displayDate = computed(() => {
 const displayTime = computed(() => {
     const value = asString(props.bookingPayload.booking_time);
 
-    if (!value) {
+    if (! value) {
         return '-';
     }
 
     return `${value} WIB`;
 });
 
+const selectedPaymentLabel = computed(() => {
+    return paymentType.value === 'dp50' ? 'DP 50%' : 'Full Lunas';
+});
+
+const payableAmount = computed(() => {
+    return paymentType.value === 'dp50' ? dpAmount.value : totalPrice.value;
+});
+
 const submitLabel = computed(() => {
-    return 'Kirim Booking & Bukti Transfer';
+    if (!manualPaymentEnabled.value) {
+        return 'Pembayaran Belum Tersedia';
+    }
+
+    return paymentType.value === 'dp50'
+        ? 'Kirim Bukti DP 50%'
+        : 'Kirim Bukti Full Lunas';
 });
 
-const payNowLabel = computed(() => {
-    return paymentType.value === 'dp50' ? 'Bayar Sekarang (DP 50%)' : 'Bayar Sekarang';
+const hasTransferProof = computed(() => transferProofName.value !== '');
+
+const canSubmit = computed(() => {
+    return manualPaymentEnabled.value
+        && qrImageUrl.value !== ''
+        && ['full', 'dp50'].includes(paymentType.value)
+        && hasTransferProof.value;
 });
 
-const paymentHint = computed(() => {
-    return 'Transfer ke QRIS BRI personal owner, lalu upload bukti transfer di bawah ini untuk verifikasi admin.';
-});
-
-const canSubmit = computed(() => paymentOptions.value.includes(paymentType.value));
+if (! ['full', 'dp50'].includes(paymentType.value)) {
+    paymentType.value = defaultPaymentType;
+}
 
 const countdownLabel = computed(() => {
     const min = String(mins.value).padStart(2, '0');
     const sec = String(secs.value).padStart(2, '0');
+
     return `${min}:${sec} tersisa`;
 });
+
+const clearTransferProofPreview = () => {
+    if (transferProofPreviewUrl.value.startsWith('blob:')) {
+        URL.revokeObjectURL(transferProofPreviewUrl.value);
+    }
+
+    transferProofPreviewUrl.value = '';
+};
+
+const handleTransferProofChange = (event) => {
+    const file = event?.target?.files?.[0] ?? null;
+
+    clearTransferProofPreview();
+
+    if (! file) {
+        transferProofName.value = '';
+        return;
+    }
+
+    transferProofName.value = file.name;
+
+    if (String(file.type || '').startsWith('image/')) {
+        transferProofPreviewUrl.value = URL.createObjectURL(file);
+    }
+};
 
 const handleSubmit = (event) => {
     if (!canSubmit.value) {
@@ -221,6 +272,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    clearTransferProofPreview();
+
     if (countdownTimer) {
         window.clearInterval(countdownTimer);
         countdownTimer = null;
@@ -230,7 +283,7 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="min-h-screen bg-[#F8FAFC]">
-        <PublicBookingNavbar :routes="props.routes" :site="props.site" :navigation="props.navigation" />
+        <PublicBookingNavbar :routes="props.routes" :site="props.site" />
 
         <div class="min-h-[calc(100vh-4rem)] bg-[#F8FAFC]">
             <div class="pointer-events-none absolute inset-0 overflow-hidden">
@@ -250,8 +303,8 @@ onBeforeUnmount(() => {
                     Kembali
                 </a>
 
-                <h1 class="mb-2 text-[#1F2937]" style="font-size: 1.5rem; font-weight: 700;">Konfirmasi Pembayaran QR</h1>
-                <p class="mb-6 text-sm text-gray-500">Pilih skema pembayaran: lunas atau DP 50%</p>
+                <h1 class="mb-2 text-[#1F2937]" style="font-size: 1.5rem; font-weight: 700;">Selesaikan Pembayaran</h1>
+                <p class="mb-6 text-sm text-gray-500">Lakukan pembayaran untuk konfirmasi booking</p>
 
                 <div v-if="props.errors.length" class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     <ul class="space-y-1">
@@ -275,7 +328,7 @@ onBeforeUnmount(() => {
                         <p class="text-sm" :class="isCountdownDanger ? 'text-[#EF4444]' : 'text-[#F59E0B]'" style="font-weight: 600;">
                             {{ countdownLabel }}
                         </p>
-                        <p class="text-sm text-gray-500">Selesaikan proses booking sebelum waktu habis</p>
+                        <p class="text-sm text-gray-500">Selesaikan sebelum waktu habis</p>
                     </div>
                 </div>
 
@@ -286,25 +339,45 @@ onBeforeUnmount(() => {
                                 <rect x="2" y="5" width="20" height="14" rx="2" />
                                 <line x1="2" y1="10" x2="22" y2="10" />
                             </svg>
-                            Ringkasan Booking
+                            Ringkasan Pembayaran
                         </h2>
                     </div>
 
                     <div class="space-y-3 p-6">
-                        <div class="flex justify-between text-sm" v-if="props.package">
-                            <span class="flex items-center gap-1.5 text-gray-500">Paket</span>
+                        <div v-if="props.package" class="flex justify-between text-sm">
+                            <span class="flex items-center gap-1.5 text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8l7-5h8l7 5z" />
+                                    <circle cx="12" cy="13" r="4" />
+                                </svg>
+                                Paket
+                            </span>
                             <span class="rounded-full px-2 py-0.5 text-xs text-white" :style="{ backgroundColor: packageColor, fontWeight: 500 }">
                                 {{ props.package.name }}
                             </span>
                         </div>
 
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Tanggal</span>
+                            <span class="flex items-center gap-1.5 text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                    <line x1="16" y1="2" x2="16" y2="6" />
+                                    <line x1="8" y1="2" x2="8" y2="6" />
+                                    <line x1="3" y1="10" x2="21" y2="10" />
+                                </svg>
+                                Tanggal
+                            </span>
                             <span class="text-[#1F2937]" style="font-weight: 500;">{{ displayDate }}</span>
                         </div>
 
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Waktu</span>
+                            <span class="flex items-center gap-1.5 text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 6v6l4 2" />
+                                </svg>
+                                Waktu
+                            </span>
                             <span class="text-[#1F2937]" style="font-weight: 500;">{{ displayTime }}</span>
                         </div>
 
@@ -324,26 +397,27 @@ onBeforeUnmount(() => {
                             </div>
 
                             <div class="flex justify-between border-t border-gray-100 pt-2 text-sm">
-                                <span class="text-gray-600" style="font-weight: 500;">Total Tagihan</span>
-                                <span class="text-[#1F2937]" style="font-weight: 700;">{{ formatRupiah(totalPrice) }}</span>
+                                <span class="text-gray-600" style="font-weight: 500;">Total Booking</span>
+                                <span class="text-[#1F2937]">{{ formatRupiah(totalPrice) }}</span>
                             </div>
 
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-600">{{ payNowLabel }}</span>
-                                <span class="text-[#1F2937]" style="font-weight: 700;">{{ formatRupiah(payNowAmount) }}</span>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600" style="font-weight: 500;">{{ selectedPaymentLabel }}</span>
+                                <span class="text-[#1F2937]" style="font-size: 1.25rem; font-weight: 700;">
+                                    {{ formatRupiah(payableAmount) }}
+                                </span>
                             </div>
 
                             <div v-if="paymentType === 'dp50'" class="flex justify-between text-sm">
                                 <span class="text-gray-500">Sisa Pelunasan</span>
-                                <span class="text-[#1F2937]">{{ formatRupiah(remainingAmount) }}</span>
+                                <span class="text-[#1F2937]">{{ formatRupiah(remainingAfterDp) }}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div v-if="paymentOptions.length" class="mb-6 grid gap-3" :class="paymentOptions.length > 1 ? 'grid-cols-2' : 'grid-cols-1'">
+                <div v-if="manualPaymentEnabled" class="mb-6 grid grid-cols-2 gap-3">
                     <button
-                        v-if="fullPaymentEnabled"
                         type="button"
                         class="rounded-xl border-2 p-4 text-left transition-all duration-200"
                         :class="paymentType === 'full'
@@ -351,12 +425,11 @@ onBeforeUnmount(() => {
                             : 'border-slate-300 bg-white hover:border-slate-400'"
                         @click="paymentType = 'full'"
                     >
-                        <p class="text-sm" :class="paymentType === 'full' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">QR Lunas</p>
-                        <p class="mt-0.5 text-xs text-gray-500">{{ formatRupiah(totalPrice) }}</p>
+                        <p class="text-sm" :class="paymentType === 'full' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">Full Lunas</p>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ qrLabel }} - {{ formatRupiah(totalPrice) }}</p>
                     </button>
 
                     <button
-                        v-if="dp50PaymentEnabled"
                         type="button"
                         class="rounded-xl border-2 p-4 text-left transition-all duration-200"
                         :class="paymentType === 'dp50'
@@ -364,42 +437,55 @@ onBeforeUnmount(() => {
                             : 'border-slate-300 bg-white hover:border-slate-400'"
                         @click="paymentType = 'dp50'"
                     >
-                        <p class="text-sm" :class="paymentType === 'dp50' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">QR DP 50%</p>
-                        <p class="mt-0.5 text-xs text-gray-500">{{ formatRupiah(Math.round(totalPrice * 0.5)) }}</p>
+                        <p class="text-sm" :class="paymentType === 'dp50' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">DP 50%</p>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ qrLabel }} - {{ formatRupiah(dpAmount) }}</p>
                     </button>
                 </div>
 
-                <div v-else class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                    Metode pembayaran tidak tersedia saat ini. Silakan hubungi admin studio.
+                <div v-if="paymentAvailabilityMessage" class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    {{ paymentAvailabilityMessage }}
                 </div>
 
-                <div class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
+                <div v-if="manualPaymentEnabled && qrImageUrl" class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
                     <div class="border-b border-slate-300 px-6 pb-6 pt-6">
                         <h3 class="flex items-center gap-2 text-[#1F2937]" style="font-weight: 600;">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#2563EB]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <rect x="3" y="3" width="5" height="5" />
-                                <rect x="16" y="3" width="5" height="5" />
-                                <rect x="3" y="16" width="5" height="5" />
-                                <path d="M21 16h-3v3" />
-                                <path d="M21 21h-3" />
-                                <path d="M14 14h1" />
-                                <path d="M10 3h4" />
-                                <path d="M10 7h4" />
-                                <path d="M3 10h4" />
-                                <path d="M7 14h4" />
-                                <path d="M10 18h1" />
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <path d="M7 7h3v3H7z" />
+                                <path d="M14 7h3v3h-3z" />
+                                <path d="M7 14h3v3H7z" />
+                                <path d="M13 13h1" />
+                                <path d="M16 13h1" />
+                                <path d="M13 16h1" />
+                                <path d="M16 16h1" />
                             </svg>
-                            Pembayaran QR
+                            {{ selectedPaymentLabel }} via {{ qrLabel }}
                         </h3>
                     </div>
 
-                    <div class="flex flex-col items-center p-6 text-center">
-                        <div class="mb-2 text-[#1F2937]" style="font-size: 1.125rem; font-weight: 700;">{{ formatRupiah(payNowAmount) }}</div>
-                        <p class="max-w-sm text-sm text-gray-500">{{ paymentHint }}</p>
+                    <div class="flex flex-col items-center p-6">
+                        <img
+                            :src="qrImageUrl"
+                            :alt="qrLabel"
+                            class="mb-4 h-64 w-64 rounded-2xl border border-gray-100 bg-gray-50 object-contain p-2"
+                        >
+                        <p class="mb-2 text-[#1F2937]" style="font-size: 1.125rem; font-weight: 700;">{{ formatRupiah(payableAmount) }}</p>
+                        <p v-if="paymentType === 'dp50'" class="mb-2 text-center text-xs text-gray-500">
+                            Sisa pelunasan setelah DP: {{ formatRupiah(remainingAfterDp) }}
+                        </p>
+                        <p class="max-w-sm text-center text-sm text-gray-500">
+                            {{ paymentInstructions }}
+                        </p>
                     </div>
                 </div>
 
-                <form :action="props.routes.store" method="post" enctype="multipart/form-data" @submit="handleSubmit">
+                <form
+                    v-if="manualPaymentEnabled && qrImageUrl"
+                    :action="props.routes.store"
+                    method="post"
+                    enctype="multipart/form-data"
+                    @submit="handleSubmit"
+                >
                     <input type="hidden" name="_token" :value="props.csrfToken">
                     <input type="hidden" name="branch_id" :value="props.bookingPayload.branch_id">
                     <input type="hidden" name="package_id" :value="props.bookingPayload.package_id">
@@ -413,25 +499,47 @@ onBeforeUnmount(() => {
                     <input type="hidden" name="payment_type" :value="paymentType">
                     <input type="hidden" name="addons_payload" :value="addonsPayloadJson">
 
-                    <div class="mb-4 rounded-xl border border-slate-200 bg-white p-4">
-                        <label class="mb-2 block text-sm text-[#1F2937]" style="font-weight: 600;">Nomor Referensi Transfer (opsional)</label>
-                        <input
-                            v-model="transferReference"
-                            type="text"
-                            name="transfer_reference"
-                            placeholder="Contoh: 1234567890"
-                            class="mb-3 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-[#1F2937] outline-none focus:border-[#2563EB]"
-                        >
+                    <div class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
+                        <div class="border-b border-slate-300 px-6 pb-6 pt-6">
+                            <h3 class="flex items-center gap-2 text-[#1F2937]" style="font-weight: 600;">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#2563EB]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                Upload Bukti Pembayaran
+                            </h3>
+                        </div>
 
-                        <label class="mb-2 block text-sm text-[#1F2937]" style="font-weight: 600;">Upload Bukti Transfer <span class="text-red-500">*</span></label>
-                        <input
-                            type="file"
-                            name="transfer_proof"
-                            required
-                            accept=".jpg,.jpeg,.png,.webp,.pdf"
-                            class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-[#1F2937] file:mr-3 file:rounded-md file:border-0 file:bg-[#2563EB] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
-                        >
-                        <p class="mt-2 text-xs text-slate-500">Format: JPG, PNG, WEBP, atau PDF (maks. 5MB).</p>
+                        <div class="space-y-4 p-6">
+                            <label class="block text-sm text-[#475569]">
+                                Foto bukti pembayaran
+                                <input
+                                    type="file"
+                                    name="transfer_proof"
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    required
+                                    class="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-[#334155] file:mr-3 file:rounded-lg file:border-0 file:bg-[#2563EB]/10 file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#2563EB]"
+                                    @change="handleTransferProofChange"
+                                >
+                            </label>
+
+                            <p class="text-xs text-gray-500">
+                                Format yang didukung: JPG, PNG, WEBP. Unggah screenshot atau foto bukti transfer yang jelas.
+                            </p>
+
+                            <div v-if="transferProofName" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <p class="text-sm text-[#1F2937]" style="font-weight: 600;">File dipilih</p>
+                                <p class="mt-1 text-sm text-gray-500">{{ transferProofName }}</p>
+
+                                <img
+                                    v-if="transferProofPreviewUrl"
+                                    :src="transferProofPreviewUrl"
+                                    alt="Preview bukti pembayaran"
+                                    class="mt-3 max-h-64 w-full rounded-xl border border-slate-200 object-contain bg-white p-2"
+                                >
+                            </div>
+                        </div>
                     </div>
 
                     <button
@@ -447,6 +555,14 @@ onBeforeUnmount(() => {
                         <span v-else>{{ submitLabel }}</span>
                     </button>
                 </form>
+
+                <a
+                    v-else
+                    :href="props.routes.back"
+                    class="inline-flex h-12 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-medium text-[#334155] transition hover:bg-slate-50"
+                >
+                    Kembali Ubah Booking
+                </a>
 
                 <div class="h-20 md:hidden" />
             </div>
