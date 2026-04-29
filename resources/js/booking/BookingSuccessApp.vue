@@ -40,6 +40,10 @@ const paymentBadgeClass = (status) => {
         return 'bg-[#F59E0B]/10 text-[#F59E0B]';
     }
 
+    if (status === 'Menunggu Verifikasi') {
+        return 'bg-[#F59E0B]/10 text-[#B45309]';
+    }
+
     return 'bg-gray-100 text-gray-500';
 };
 

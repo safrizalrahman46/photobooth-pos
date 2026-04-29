@@ -17,13 +17,14 @@ class BookingPaymentService
 
     public function startOnlinePayment(Booking $booking): Booking
     {
-        if (($booking->payment_type ?? 'onsite') !== 'full') {
+        if (! in_array((string) ($booking->payment_type ?? ''), ['full', 'dp50'], true)) {
             throw new RuntimeException('Booking ini tidak menggunakan pembayaran online.');
         }
 
         $booking->loadMissing('package');
+        $chargeAmount = $this->resolveChargeAmount($booking);
 
-        $session = $this->midtransService->createBookingTransaction($booking);
+        $session = $this->midtransService->createBookingTransaction($booking, $chargeAmount);
 
         $booking->forceFill([
             'payment_gateway' => 'midtrans',
@@ -67,8 +68,10 @@ class BookingPaymentService
             $fraudStatus = (string) ($payload['fraud_status'] ?? '');
 
             if ($this->isPaidStatus($transactionStatus, $fraudStatus)) {
-                $booking->paid_amount = $booking->total_amount;
-                $booking->deposit_amount = $booking->total_amount;
+                $paidAmount = $this->resolveChargeAmount($booking);
+
+                $booking->paid_amount = $paidAmount;
+                $booking->deposit_amount = $paidAmount;
                 $booking->paid_at = now();
                 $booking->save();
 
@@ -102,6 +105,17 @@ class BookingPaymentService
     private function isCancelledStatus(string $transactionStatus): bool
     {
         return in_array($transactionStatus, ['cancel', 'deny', 'expire'], true);
+    }
+
+    private function resolveChargeAmount(Booking $booking): float
+    {
+        $totalAmount = max((float) $booking->total_amount, 0);
+
+        if ((string) $booking->payment_type === 'dp50') {
+            return max(round($totalAmount * 0.5, 2), 0);
+        }
+
+        return $totalAmount;
     }
 
     private function transitionStatus(Booking $booking, BookingStatus $status, string $reason): void

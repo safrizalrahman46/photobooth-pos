@@ -26,7 +26,9 @@
     $statusValue = $booking->status?->value ?? (string) $booking->status;
     $hasTransferProof = filled($booking->transfer_proof_path);
 
-    if ((float) $booking->paid_amount >= (float) $booking->total_amount && (float) $booking->total_amount > 0) {
+    if ($hasTransferProof) {
+        $paymentStatusLabel = 'Menunggu Verifikasi';
+    } elseif ((float) $booking->paid_amount >= (float) $booking->total_amount && (float) $booking->total_amount > 0) {
         $paymentStatusLabel = 'Lunas';
     } elseif ((float) $booking->paid_amount > 0) {
         $paymentStatusLabel = 'DP';
@@ -37,9 +39,9 @@
     if ($hasTransferProof) {
         $paymentMessage = 'Bukti transfer sudah diterima. Menunggu verifikasi admin.';
     } elseif ($booking->payment_type === 'dp50') {
-        $paymentMessage = 'Menunggu upload bukti transfer DP 50% via QR BRI.';
+        $paymentMessage = 'Silakan transfer DP 50% lalu unggah bukti pembayaran untuk konfirmasi booking.';
     } else {
-        $paymentMessage = 'Menunggu upload bukti transfer pelunasan via QR BRI.';
+        $paymentMessage = 'Silakan transfer pembayaran lalu unggah bukti pembayaran untuk konfirmasi booking.';
     }
 
     $bootstrap = [
@@ -60,9 +62,7 @@
             'status' => (string) $statusValue,
             'notice' => (string) session('booking_payment_notice', ''),
             'notes' => (string) ($booking->notes ?? ''),
-            'continue_payment_url' => ($booking->payment_gateway === 'midtrans' && in_array($booking->payment_type, ['full', 'dp50'], true) && $statusValue !== 'paid' && $booking->payment_url)
-                ? (string) $booking->payment_url
-                : '',
+            'continue_payment_url' => '',
         ],
         'routes' => [
             'landing' => route('landing'),

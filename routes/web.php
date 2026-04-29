@@ -1,5 +1,22 @@
 <?php
 
+use App\Http\Controllers\Web\AdminAddOnController;
+use App\Http\Controllers\Web\AdminAppSettingController;
+use App\Http\Controllers\Web\AdminAuthController;
+use App\Http\Controllers\Web\AdminBlackoutDateController;
+use App\Http\Controllers\Web\AdminBookingController;
+use App\Http\Controllers\Web\AdminBranchController;
+use App\Http\Controllers\Web\AdminDashboardController;
+use App\Http\Controllers\Web\AdminDashboardDataController;
+use App\Http\Controllers\Web\AdminDashboardReportController;
+use App\Http\Controllers\Web\AdminDesignController;
+use App\Http\Controllers\Web\AdminPackageController;
+use App\Http\Controllers\Web\AdminPaymentController;
+use App\Http\Controllers\Web\AdminPrinterSettingController;
+use App\Http\Controllers\Web\AdminQueueController;
+use App\Http\Controllers\Web\AdminSettingsController;
+use App\Http\Controllers\Web\AdminTimeSlotController;
+use App\Http\Controllers\Web\AdminUserController;
 use App\Http\Controllers\Web\BookingController;
 use App\Http\Controllers\Web\LandingController;
 use App\Http\Controllers\Web\QueueBoardController;

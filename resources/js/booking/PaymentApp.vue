@@ -47,32 +47,69 @@ const props = defineProps({
 
 const asString = (value) => (value === null || value === undefined ? '' : String(value));
 
-const onlinePaymentEnabled = computed(() => props.paymentSettings.midtrans_enabled === true || props.paymentSettings.midtrans_enabled === 1);
-const onsitePaymentEnabled = computed(() => props.paymentSettings.onsite_enabled !== false && props.paymentSettings.onsite_enabled !== 0);
-const defaultPaymentType = computed(() => {
-    if (onlinePaymentEnabled.value) {
-        return 'full';
-    }
-
-    return 'onsite';
+const manualPaymentEnabled = computed(() => {
+    return props.paymentSettings.manual_payment_enabled !== false && props.paymentSettings.manual_payment_enabled !== 0;
 });
 
-const paymentType = ref(asString(props.oldValues.payment_type || defaultPaymentType.value));
+const qrImageUrl = computed(() => {
+    const candidates = [
+        props.paymentSettings.qr_image_url,
+        props.paymentSettings.qris_image_url,
+        props.paymentSettings.qr_url,
+    ];
+
+    for (const candidate of candidates) {
+        const value = asString(candidate).trim();
+
+        if (value !== '') {
+            return value;
+        }
+    }
+
+    return '';
+});
+
+const qrLabel = computed(() => {
+    return asString(
+        props.paymentSettings.qr_label
+        || props.paymentSettings.qr_title
+        || 'QR Pembayaran'
+    ).trim() || 'QR Pembayaran';
+});
+
+const paymentInstructions = computed(() => {
+    return asString(
+        props.paymentSettings.transfer_instructions
+        || props.paymentSettings.instructions
+        || 'Scan QR di bawah ini sesuai nominal pilihanmu, lalu unggah bukti pembayaran untuk verifikasi admin.'
+    ).trim();
+});
+
+const paymentAvailabilityMessage = computed(() => {
+    if (!manualPaymentEnabled.value) {
+        return 'Metode pembayaran belum tersedia saat ini. Silakan hubungi admin studio.';
+    }
+
+    if (qrImageUrl.value === '') {
+        return 'Foto QR pembayaran belum diatur. Silakan hubungi admin studio.';
+    }
+
+    return '';
+});
+
+const defaultPaymentType = 'full';
+const paymentType = ref(asString(props.oldValues.payment_type || defaultPaymentType));
 const processing = ref(false);
 const countdown = ref(600);
+const transferProofName = ref('');
+const transferProofPreviewUrl = ref('');
 
 let countdownTimer = null;
 
 const packageAccentTokens = ['#2563eb', '#ec4899', '#22c55e', '#f59e0b', '#0ea5e9', '#8b5cf6'];
 
-const addonTotal = computed(() => {
-    return selectedAddons.value.reduce((total, addon) => total + (addon.price * addon.qty), 0);
-});
-
-const totalPrice = computed(() => Number(props.package?.base_price || 0) + addonTotal.value);
-
 const selectedAddons = computed(() => {
-    if (!Array.isArray(props.bookingPayload?.addons)) {
+    if (! Array.isArray(props.bookingPayload?.addons)) {
         return [];
     }
 
@@ -86,6 +123,14 @@ const selectedAddons = computed(() => {
         }));
 });
 
+const addonTotal = computed(() => {
+    return selectedAddons.value.reduce((total, addon) => total + (addon.price * addon.qty), 0);
+});
+
+const totalPrice = computed(() => Number(props.package?.base_price || 0) + addonTotal.value);
+const dpAmount = computed(() => Math.round(totalPrice.value * 0.5));
+const remainingAfterDp = computed(() => Math.max(totalPrice.value - dpAmount.value, 0));
+
 const addonsPayloadJson = computed(() => JSON.stringify(selectedAddons.value));
 
 const packageColor = computed(() => {
@@ -95,6 +140,7 @@ const packageColor = computed(() => {
 
     const source = asString(props.package?.name || props.package?.id || 'PK');
     const sum = source.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
     return packageAccentTokens[sum % packageAccentTokens.length];
 });
 
@@ -104,6 +150,7 @@ const isCountdownDanger = computed(() => countdown.value < 120);
 
 const formatRupiah = (value) => {
     const amount = Number(value || 0);
+
     return `Rp ${new Intl.NumberFormat('id-ID', {
         maximumFractionDigits: 0,
     }).format(Number.isNaN(amount) ? 0 : amount)}`;
@@ -112,7 +159,7 @@ const formatRupiah = (value) => {
 const displayDate = computed(() => {
     const value = asString(props.bookingPayload.booking_date);
 
-    if (!value) {
+    if (! value) {
         return '-';
     }
 
@@ -133,34 +180,75 @@ const displayDate = computed(() => {
 const displayTime = computed(() => {
     const value = asString(props.bookingPayload.booking_time);
 
-    if (!value) {
+    if (! value) {
         return '-';
     }
 
     return `${value} WIB`;
 });
 
-const submitLabel = computed(() => {
-    return paymentType.value === 'onsite' ? 'Konfirmasi Booking' : 'Konfirmasi Pembayaran';
+const selectedPaymentLabel = computed(() => {
+    return paymentType.value === 'dp50' ? 'DP 50%' : 'Full Lunas';
 });
+
+const payableAmount = computed(() => {
+    return paymentType.value === 'dp50' ? dpAmount.value : totalPrice.value;
+});
+
+const submitLabel = computed(() => {
+    if (!manualPaymentEnabled.value) {
+        return 'Pembayaran Belum Tersedia';
+    }
+
+    return paymentType.value === 'dp50'
+        ? 'Kirim Bukti DP 50%'
+        : 'Kirim Bukti Full Lunas';
+});
+
+const hasTransferProof = computed(() => transferProofName.value !== '');
 
 const canSubmit = computed(() => {
-    return paymentType.value === 'full' ? onlinePaymentEnabled.value : onsitePaymentEnabled.value;
+    return manualPaymentEnabled.value
+        && qrImageUrl.value !== ''
+        && ['full', 'dp50'].includes(paymentType.value)
+        && hasTransferProof.value;
 });
 
-if (!onlinePaymentEnabled.value && paymentType.value === 'full') {
-    paymentType.value = 'onsite';
-}
-
-if (!onsitePaymentEnabled.value && paymentType.value === 'onsite') {
-    paymentType.value = 'full';
+if (! ['full', 'dp50'].includes(paymentType.value)) {
+    paymentType.value = defaultPaymentType;
 }
 
 const countdownLabel = computed(() => {
     const min = String(mins.value).padStart(2, '0');
     const sec = String(secs.value).padStart(2, '0');
+
     return `${min}:${sec} tersisa`;
 });
+
+const clearTransferProofPreview = () => {
+    if (transferProofPreviewUrl.value.startsWith('blob:')) {
+        URL.revokeObjectURL(transferProofPreviewUrl.value);
+    }
+
+    transferProofPreviewUrl.value = '';
+};
+
+const handleTransferProofChange = (event) => {
+    const file = event?.target?.files?.[0] ?? null;
+
+    clearTransferProofPreview();
+
+    if (! file) {
+        transferProofName.value = '';
+        return;
+    }
+
+    transferProofName.value = file.name;
+
+    if (String(file.type || '').startsWith('image/')) {
+        transferProofPreviewUrl.value = URL.createObjectURL(file);
+    }
+};
 
 const handleSubmit = (event) => {
     if (!canSubmit.value) {
@@ -184,6 +272,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    clearTransferProofPreview();
+
     if (countdownTimer) {
         window.clearInterval(countdownTimer);
         countdownTimer = null;
@@ -254,7 +344,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div class="space-y-3 p-6">
-                        <div class="flex justify-between text-sm" v-if="props.package">
+                        <div v-if="props.package" class="flex justify-between text-sm">
                             <span class="flex items-center gap-1.5 text-gray-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8l7-5h8l7 5z" />
@@ -306,21 +396,28 @@ onBeforeUnmount(() => {
                                 <span class="text-[#1F2937]">{{ formatRupiah(addon.price * addon.qty) }}</span>
                             </div>
 
-                            <div class="flex justify-between border-t border-gray-100 pt-2">
-                                <span class="text-gray-600" style="font-weight: 500;">
-                                    {{ paymentType === 'onsite' ? 'Bayar di Tempat' : 'Total' }}
-                                </span>
+                            <div class="flex justify-between border-t border-gray-100 pt-2 text-sm">
+                                <span class="text-gray-600" style="font-weight: 500;">Total Booking</span>
+                                <span class="text-[#1F2937]">{{ formatRupiah(totalPrice) }}</span>
+                            </div>
+
+                            <div class="flex justify-between">
+                                <span class="text-gray-600" style="font-weight: 500;">{{ selectedPaymentLabel }}</span>
                                 <span class="text-[#1F2937]" style="font-size: 1.25rem; font-weight: 700;">
-                                    {{ formatRupiah(totalPrice) }}
+                                    {{ formatRupiah(payableAmount) }}
                                 </span>
+                            </div>
+
+                            <div v-if="paymentType === 'dp50'" class="flex justify-between text-sm">
+                                <span class="text-gray-500">Sisa Pelunasan</span>
+                                <span class="text-[#1F2937]">{{ formatRupiah(remainingAfterDp) }}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div v-if="onlinePaymentEnabled || onsitePaymentEnabled" class="mb-6 grid gap-3" :class="onlinePaymentEnabled && onsitePaymentEnabled ? 'grid-cols-2' : 'grid-cols-1'">
+                <div v-if="manualPaymentEnabled" class="mb-6 grid grid-cols-2 gap-3">
                     <button
-                        v-if="onlinePaymentEnabled"
                         type="button"
                         class="rounded-xl border-2 p-4 text-left transition-all duration-200"
                         :class="paymentType === 'full'
@@ -328,95 +425,67 @@ onBeforeUnmount(() => {
                             : 'border-slate-300 bg-white hover:border-slate-400'"
                         @click="paymentType = 'full'"
                     >
-                        <p class="text-sm" :class="paymentType === 'full' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">Bayar Online</p>
-                        <p class="mt-0.5 text-xs text-gray-500">Midtrans • {{ formatRupiah(totalPrice) }}</p>
+                        <p class="text-sm" :class="paymentType === 'full' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">Full Lunas</p>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ qrLabel }} - {{ formatRupiah(totalPrice) }}</p>
                     </button>
 
                     <button
-                        v-if="onsitePaymentEnabled"
                         type="button"
                         class="rounded-xl border-2 p-4 text-left transition-all duration-200"
-                        :class="paymentType === 'onsite'
+                        :class="paymentType === 'dp50'
                             ? 'border-[#2563EB] bg-[#2563EB]/5 shadow-sm'
                             : 'border-slate-300 bg-white hover:border-slate-400'"
-                        @click="paymentType = 'onsite'"
+                        @click="paymentType = 'dp50'"
                     >
-                        <p class="text-sm" :class="paymentType === 'onsite' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">Bayar di Tempat</p>
-                        <p class="mt-0.5 text-xs text-gray-500">Bayar saat datang</p>
+                        <p class="text-sm" :class="paymentType === 'dp50' ? 'text-[#2563EB]' : 'text-[#1F2937]'" style="font-weight: 600;">DP 50%</p>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ qrLabel }} - {{ formatRupiah(dpAmount) }}</p>
                     </button>
                 </div>
 
-                <div v-else class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                    Metode pembayaran belum tersedia saat ini. Silakan hubungi admin studio.
+                <div v-if="paymentAvailabilityMessage" class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    {{ paymentAvailabilityMessage }}
                 </div>
 
-                <div v-if="paymentType !== 'onsite'" class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
+                <div v-if="manualPaymentEnabled && qrImageUrl" class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
                     <div class="border-b border-slate-300 px-6 pb-6 pt-6">
                         <h3 class="flex items-center gap-2 text-[#1F2937]" style="font-weight: 600;">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#2563EB]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <rect x="3" y="3" width="5" height="5" />
-                                <rect x="16" y="3" width="5" height="5" />
-                                <rect x="3" y="16" width="5" height="5" />
-                                <path d="M21 16h-3v3" />
-                                <path d="M21 21h-3" />
-                                <path d="M14 14h1" />
-                                <path d="M10 3h4" />
-                                <path d="M10 7h4" />
-                                <path d="M3 10h4" />
-                                <path d="M7 14h4" />
-                                <path d="M10 18h1" />
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <path d="M7 7h3v3H7z" />
+                                <path d="M14 7h3v3h-3z" />
+                                <path d="M7 14h3v3H7z" />
+                                <path d="M13 13h1" />
+                                <path d="M16 13h1" />
+                                <path d="M13 16h1" />
+                                <path d="M16 16h1" />
                             </svg>
-                            Bayar Online via Midtrans
+                            {{ selectedPaymentLabel }} via {{ qrLabel }}
                         </h3>
                     </div>
 
                     <div class="flex flex-col items-center p-6">
-                        <div class="mb-4 flex h-52 w-52 items-center justify-center rounded-2xl border border-gray-100 bg-gray-50">
-                            <div class="grid grid-cols-5 gap-1">
-                                <div
-                                    v-for="index in 25"
-                                    :key="`qr-grid-${index}`"
-                                    class="h-8 w-8 rounded-sm"
-                                    :class="[1, 2, 3, 5, 6, 7, 9, 11, 15, 17, 19, 20, 21, 23, 24, 25].includes(index)
-                                        ? 'bg-[#1F2937]'
-                                        : 'bg-white'"
-                                />
-                            </div>
-                        </div>
-                        <p class="mb-2 text-[#1F2937]" style="font-size: 1.125rem; font-weight: 700;">{{ formatRupiah(totalPrice) }}</p>
-                        <div class="flex items-center gap-1.5 text-xs text-gray-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V6l8-4 8 4z" />
-                                <path d="M9 12l2 2 4-4" />
-                            </svg>
-                            Kamu akan diarahkan ke halaman pembayaran Midtrans
-                        </div>
-                    </div>
-                </div>
-
-                <div v-else class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
-                    <div class="flex flex-col items-center p-6 text-center">
-                        <div class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#22C55E]/10">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-[#22C55E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" />
-                                <circle cx="12" cy="10" r="3" />
-                            </svg>
-                        </div>
-                        <p class="text-[#1F2937]" style="font-weight: 600;">Bayar di Tempat</p>
-                        <p class="mt-1 max-w-xs text-sm text-gray-500">
-                            Lakukan pembayaran langsung di studio saat kamu datang. Tunjukkan kode booking untuk konfirmasi.
+                        <img
+                            :src="qrImageUrl"
+                            :alt="qrLabel"
+                            class="mb-4 h-64 w-64 rounded-2xl border border-gray-100 bg-gray-50 object-contain p-2"
+                        >
+                        <p class="mb-2 text-[#1F2937]" style="font-size: 1.125rem; font-weight: 700;">{{ formatRupiah(payableAmount) }}</p>
+                        <p v-if="paymentType === 'dp50'" class="mb-2 text-center text-xs text-gray-500">
+                            Sisa pelunasan setelah DP: {{ formatRupiah(remainingAfterDp) }}
                         </p>
-                        <div class="mt-4 flex items-center gap-2 rounded-lg bg-[#F59E0B]/10 px-3 py-2 text-xs text-[#F59E0B]">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 6v6l4 2" />
-                            </svg>
-                            Harap datang 10 menit sebelum jadwal
-                        </div>
+                        <p class="max-w-sm text-center text-sm text-gray-500">
+                            {{ paymentInstructions }}
+                        </p>
                     </div>
                 </div>
 
-                <form :action="props.routes.store" method="post" @submit="handleSubmit">
+                <form
+                    v-if="manualPaymentEnabled && qrImageUrl"
+                    :action="props.routes.store"
+                    method="post"
+                    enctype="multipart/form-data"
+                    @submit="handleSubmit"
+                >
                     <input type="hidden" name="_token" :value="props.csrfToken">
                     <input type="hidden" name="branch_id" :value="props.bookingPayload.branch_id">
                     <input type="hidden" name="package_id" :value="props.bookingPayload.package_id">
@@ -429,6 +498,49 @@ onBeforeUnmount(() => {
                     <input type="hidden" name="notes" :value="props.bookingPayload.notes || ''">
                     <input type="hidden" name="payment_type" :value="paymentType">
                     <input type="hidden" name="addons_payload" :value="addonsPayloadJson">
+
+                    <div class="mb-6 overflow-hidden rounded-xl border-0 bg-white shadow-sm">
+                        <div class="border-b border-slate-300 px-6 pb-6 pt-6">
+                            <h3 class="flex items-center gap-2 text-[#1F2937]" style="font-weight: 600;">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#2563EB]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                Upload Bukti Pembayaran
+                            </h3>
+                        </div>
+
+                        <div class="space-y-4 p-6">
+                            <label class="block text-sm text-[#475569]">
+                                Foto bukti pembayaran
+                                <input
+                                    type="file"
+                                    name="transfer_proof"
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    required
+                                    class="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-[#334155] file:mr-3 file:rounded-lg file:border-0 file:bg-[#2563EB]/10 file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#2563EB]"
+                                    @change="handleTransferProofChange"
+                                >
+                            </label>
+
+                            <p class="text-xs text-gray-500">
+                                Format yang didukung: JPG, PNG, WEBP. Unggah screenshot atau foto bukti transfer yang jelas.
+                            </p>
+
+                            <div v-if="transferProofName" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <p class="text-sm text-[#1F2937]" style="font-weight: 600;">File dipilih</p>
+                                <p class="mt-1 text-sm text-gray-500">{{ transferProofName }}</p>
+
+                                <img
+                                    v-if="transferProofPreviewUrl"
+                                    :src="transferProofPreviewUrl"
+                                    alt="Preview bukti pembayaran"
+                                    class="mt-3 max-h-64 w-full rounded-xl border border-slate-200 object-contain bg-white p-2"
+                                >
+                            </div>
+                        </div>
+                    </div>
 
                     <button
                         type="submit"
@@ -443,6 +555,14 @@ onBeforeUnmount(() => {
                         <span v-else>{{ submitLabel }}</span>
                     </button>
                 </form>
+
+                <a
+                    v-else
+                    :href="props.routes.back"
+                    class="inline-flex h-12 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-medium text-[#334155] transition hover:bg-slate-50"
+                >
+                    Kembali Ubah Booking
+                </a>
 
                 <div class="h-20 md:hidden" />
             </div>
