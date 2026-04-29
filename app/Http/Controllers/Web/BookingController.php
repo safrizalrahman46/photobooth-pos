@@ -6,18 +6,16 @@ use App\Enums\BookingSource;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SlotAvailabilityRequest;
 use App\Http\Requests\StoreBookingRequest;
-use App\Models\AddOn;
 use App\Models\Booking;
 use App\Models\Branch;
 use App\Models\DesignCatalog;
 use App\Models\Package;
 use App\Services\BookingService;
+use App\Services\BookingPaymentService;
 use App\Services\SlotService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
 
@@ -25,67 +23,15 @@ class BookingController extends Controller
 {
     public function __construct(
         private readonly BookingService $bookingService,
+        private readonly BookingPaymentService $bookingPaymentService,
         private readonly SlotService $slotService,
     ) {}
 
-    public function customer(Request $request): View
+    public function create(): View
     {
-        $prefill = $request->session()->get('booking.prefill_customer', []);
-
-        if (! is_array($prefill)) {
-            $prefill = [];
-        }
-
-        return view('web.booking-customer', [
-            'oldValues' => [
-                'customer_name' => old('customer_name', (string) ($prefill['customer_name'] ?? '')),
-                'customer_phone' => old('customer_phone', (string) ($prefill['customer_phone'] ?? '')),
-                'customer_email' => old('customer_email', (string) ($prefill['customer_email'] ?? '')),
-                'notes' => old('notes', (string) ($prefill['notes'] ?? '')),
-                'terms_accepted' => old('terms_accepted', 0),
-            ],
-        ]);
-    }
-
-    public function storeCustomer(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'customer_name' => ['required', 'string', 'max:120'],
-            'customer_phone' => ['required', 'string', 'max:30', 'regex:/^[0-9]+$/'],
-            'customer_email' => ['nullable', 'email', 'max:120'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'terms_accepted' => ['accepted'],
-        ]);
-
-        $request->session()->put('booking.prefill_customer', [
-            'customer_name' => trim((string) ($validated['customer_name'] ?? '')),
-            'customer_phone' => preg_replace('/\D+/', '', (string) ($validated['customer_phone'] ?? '')),
-            'customer_email' => trim((string) ($validated['customer_email'] ?? '')),
-            'notes' => trim((string) ($validated['notes'] ?? '')),
-        ]);
-
-        return redirect()->route('booking.create');
-    }
-
-    public function create(Request $request): View|RedirectResponse
-    {
-        $prefill = $request->session()->get('booking.prefill_customer', []);
-
-        if (! is_array($prefill)) {
-            $prefill = [];
-        }
-
-        $hasPrefillCustomer = filled($prefill['customer_name'] ?? null) && filled($prefill['customer_phone'] ?? null);
-        $hasOldCustomer = filled(old('customer_name')) && filled(old('customer_phone'));
-
-        if (! $hasPrefillCustomer && ! $hasOldCustomer) {
-            return redirect()->route('booking.customer');
-        }
-
         $branches = collect();
         $packages = collect();
         $designCatalogs = collect();
-        $addOns = collect();
 
         try {
             $branches = Branch::query()
@@ -97,30 +43,13 @@ class BookingController extends Controller
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'name', 'description', 'sample_photos', 'duration_minutes', 'base_price', 'branch_id'])
-                ->map(function (Package $package): array {
-                    return [
-                        'id' => (int) $package->id,
-                        'name' => (string) $package->name,
-                        'description' => (string) ($package->description ?? ''),
-                        'sample_photos' => $package->resolvedSamplePhotos(),
-                        'duration_minutes' => (int) $package->duration_minutes,
-                        'base_price' => (float) $package->base_price,
-                        'branch_id' => $package->branch_id ? (int) $package->branch_id : null,
-                    ];
-                });
+                ->get(['id', 'name', 'description', 'duration_minutes', 'base_price', 'branch_id']);
 
             $designCatalogs = DesignCatalog::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'package_id', 'name', 'theme', 'preview_url']);
-
-            $addOns = AddOn::query()
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'package_id', 'code', 'name', 'description', 'price', 'max_qty']);
         } catch (Throwable) {
         }
 
@@ -128,8 +57,6 @@ class BookingController extends Controller
             'branches' => $branches,
             'packages' => $packages,
             'designCatalogs' => $designCatalogs,
-            'addOns' => $addOns,
-            'prefillCustomer' => $prefill,
         ]);
     }
 
@@ -159,8 +86,6 @@ class BookingController extends Controller
                     'end_label' => substr((string) $slot['end_time'], 0, 5),
                     'remaining_slots' => $slot['remaining_slots'],
                     'is_available' => $slot['is_available'],
-                    'unavailable_reason' => $slot['unavailable_reason'] ?? null,
-                    'unavailable_reason_label' => $slot['unavailable_reason_label'] ?? null,
                 ];
             })
             ->values();
@@ -220,7 +145,6 @@ class BookingController extends Controller
             'designCatalog' => $designCatalog,
             'oldValues' => [
                 'payment_type' => old('payment_type', 'full'),
-                'transfer_reference' => old('transfer_reference', ''),
             ],
         ]);
     }
@@ -236,27 +160,31 @@ class BookingController extends Controller
         }
 
         $payload['source'] = BookingSource::Web;
-        $transferProofPath = null;
 
         try {
-            $transferProofFile = $request->file('transfer_proof');
-
-            if ($transferProofFile) {
-                $transferProofPath = $transferProofFile->store('booking-transfer-proofs', 'public');
-            }
-
-            $payload['payment_gateway'] = 'manual_qr_bri';
-            $payload['payment_reference'] = $payload['transfer_reference'] ?? null;
-            $payload['transfer_proof_path'] = $transferProofPath;
-            $payload['transfer_proof_uploaded_at'] = now();
-            $payload['payment_payload'] = [
-                'channel' => 'manual_qr_bri',
-                'transfer_reference' => $payload['transfer_reference'] ?? null,
-                'declared_payment_type' => $payload['payment_type'] ?? 'full',
-            ];
-
             $booking = $this->bookingService->create($payload);
-            session()->flash('booking_payment_notice', 'Booking berhasil. Bukti transfer QR sudah diterima dan menunggu verifikasi admin.');
+
+            if (($payload['payment_type'] ?? 'onsite') === 'full') {
+                try {
+                    $booking = $this->bookingPaymentService->startOnlinePayment($booking);
+
+                    $request->session()->forget('booking.payment_payload');
+
+                    return redirect()->away($booking->payment_url);
+                } catch (RuntimeException $exception) {
+                    $booking->forceFill([
+                        'payment_type' => 'onsite',
+                        'payment_gateway' => null,
+                        'payment_reference' => null,
+                        'payment_token' => null,
+                        'payment_url' => null,
+                        'payment_payload' => null,
+                        'payment_expires_at' => null,
+                    ])->save();
+
+                    session()->flash('booking_payment_notice', 'Pembayaran online belum tersedia. Booking diproses dengan metode bayar di studio.');
+                }
+            }
 
             $request->session()->forget('booking.payment_payload');
 
@@ -264,10 +192,6 @@ class BookingController extends Controller
                 ->route('booking.success', $booking->booking_code)
                 ->with('booking_created', true);
         } catch (RuntimeException $exception) {
-            if ($transferProofPath) {
-                Storage::disk('public')->delete($transferProofPath);
-            }
-
             if (isset($booking) && $booking instanceof Booking) {
                 $booking->delete();
             }

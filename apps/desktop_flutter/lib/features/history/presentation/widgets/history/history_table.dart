@@ -26,13 +26,14 @@ class HistoryTable extends StatelessWidget {
   final void Function(Transaction) onRowAction;
 
   // Lebar kolom — harus sinkron dengan HistoryRow
-  static const double _colId = 130;
-  static const double _colWaktu = 100;
-  static const double _colNama = 140;
-  static const double _colPaket = 160;
-  static const double _colTotal = 110;
-  static const double _colStatus = 110;
-  static const double _colAction = 48;
+  // Flex factors untuk masing-masing kolom agar proporsional
+  static const int _flexId = 2;
+  static const int _flexWaktu = 2;
+  static const int _flexNama = 3;
+  static const int _flexPaket = 4;
+  static const int _flexTotal = 2;
+  static const int _flexStatus = 2;
+  static const double _colAction = 140; // Action column width
 
   const HistoryTable({
     super.key,
@@ -85,29 +86,28 @@ class HistoryTable extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
         children: [
-          _headerCell('ID TRANSAKSI', _colId),
-          _headerCell('WAKTU', _colWaktu),
-          _headerCell('NAMA\nPELANGGAN', _colNama),
-          _headerCell('PAKET &\nADD-ONS', _colPaket),
-          _headerCell('TOTAL\nBAYAR', _colTotal),
-          _headerCell('STATUS', _colStatus),
-          SizedBox(width: _colAction), // spacer untuk kolom action
+          _headerCell('ID TRANSAKSI', _flexId),
+          _headerCell('WAKTU', _flexWaktu),
+          _headerCell('NAMA PELANGGAN', _flexNama),
+          _headerCell('PAKET & ADD-ONS', _flexPaket),
+          _headerCell('TOTAL BAYAR', _flexTotal),
+          _headerCell('STATUS', _flexStatus),
+          const SizedBox(width: _colAction), // spacer untuk kolom action
         ],
       ),
     );
   }
 
-  Widget _headerCell(String label, double width) {
-    return SizedBox(
-      width: width,
+  Widget _headerCell(String label, int flex) {
+    return Expanded(
+      flex: flex,
       child: Text(
         label,
         style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF9CA3AF), // gray-400
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF6B7280), // gray-500
           letterSpacing: 0.5,
-          height: 1.4,
         ),
       ),
     );

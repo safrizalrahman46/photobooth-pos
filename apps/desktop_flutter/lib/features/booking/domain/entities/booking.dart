@@ -6,6 +6,8 @@ class Booking {
   final String time;
   final String status;
   final int queueNumber;
+  final String? email;
+  final String? note;
 
   const Booking({
     required this.id,
@@ -14,6 +16,8 @@ class Booking {
     required this.time,
     required this.status,
     required this.queueNumber,
+    this.email,
+    this.note,
   });
 }
 
@@ -22,11 +26,15 @@ class Customer {
   final String name;
   final String whatsapp;
   final int jumlahOrang;
+  final String? email;
+  final String? note;
 
   const Customer({
     required this.name,
     required this.whatsapp,
     required this.jumlahOrang,
+    this.email,
+    this.note,
   });
 }
 

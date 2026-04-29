@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/layout/sidebar/sidebar.dart';
-import '../../../../shared/layout/header/app_header.dart';
-
+import 'package:desktop_flutter/app/theme/app_text_styles.dart';
 import '../../application/history_controller.dart';
 import '../sections/history_header_section.dart';
 import '../sections/history_table_section.dart';
@@ -15,87 +13,75 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  int _selectedNavIndex = 1; // sesuaikan index menu
   late final HistoryController _controller;
 
   @override
   void initState() {
     super.initState();
     _controller = HistoryController();
-    _controller.addListener(() => setState(() {}));
+    _controller.addListener(_onControllerUpdate);
+  }
+
+  void _onControllerUpdate() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onControllerUpdate);
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      body: Row(
-        children: [
-          // ── Main Content ─────────────────────────
-          Expanded(
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Title
-                        const Text(
-                          'History Transaksi',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Header (search, filter, export)
-                        HistoryHeaderSection(
-                          searchQuery: _controller.searchQuery,
-                          onSearchChanged: _controller.onSearchChanged,
-                          selectedStatus: _controller.statusFilter,
-                          onStatusFilterChanged:
-                              _controller.onStatusFilterChanged,
-                          onExport: _controller.onExport,
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Table
-                        HistoryTableSection(
-                          transactions: _controller.pagedTransactions,
-                          onRowAction: _controller.onRowAction,
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Pagination
-                        HistoryPaginationSection(
-                          currentPage: _controller.currentPage,
-                          totalPages: _controller.totalPages,
-                          paginationLabel: _controller.paginationLabel,
-                          onPageChanged: _controller.goToPage,
-                          onPrev: _controller.prevPage,
-                          onNext: _controller.nextPage,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+    return Container(
+      color: const Color(0xFFF8FAFC),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(40, 60, 40, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title Premium
+            Text('History Transaksi', style: AppTextStyles.h1),
+            const SizedBox(height: 8),
+            Text(
+              'Kelola dan tinjau seluruh riwayat transaksi photobooth.',
+              style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 40),
+
+            // Header (Integrated Logic)
+            HistoryHeaderSection(
+              searchQuery: _controller.searchQuery,
+              onSearchChanged: _controller.onSearchChanged,
+              selectedStatus: _controller.statusFilter,
+              onStatusFilterChanged: _controller.onStatusFilterChanged,
+              onExport: _controller.onExport,
+            ),
+
+            const SizedBox(height: 24),
+
+            // Table Premium with logic
+            HistoryTableSection(
+              transactions: _controller.pagedTransactions,
+              onRowAction: _controller.onRowAction,
+            ),
+
+            const SizedBox(height: 32),
+
+            // Pagination Logic
+            HistoryPaginationSection(
+              currentPage: _controller.currentPage,
+              totalPages: _controller.totalPages,
+              paginationLabel: _controller.paginationLabel,
+              onPageChanged: _controller.goToPage,
+              onPrev: _controller.prevPage,
+              onNext: _controller.nextPage,
+            ),
+          ],
+        ),
       ),
     );
   }

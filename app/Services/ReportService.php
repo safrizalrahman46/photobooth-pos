@@ -23,6 +23,7 @@ class ReportService
                 Carbon::parse($from)->startOfDay(),
                 Carbon::parse($to)->endOfDay(),
             ])
+            ->where('payment_type', 'full')
             ->where('status', 'paid');
 
         if ($branchId) {

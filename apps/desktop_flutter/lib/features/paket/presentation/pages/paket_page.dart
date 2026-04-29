@@ -18,126 +18,103 @@ class PaketPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.sidebarBg,
-      body: Column(
-        children: [
-          // Top bar
-          _TopBar(
-            onSearchChanged: (q) =>
-                ref.read(searchQueryProvider.notifier).state = q,
-          ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(50, 60, 50, 50), // Padding lega tapi nge-fit
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Section (Title & Search)
+            _PageHeader(
+              onSearchChanged: (q) =>
+                  ref.read(searchQueryProvider.notifier).state = q,
+            ),
 
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 28),
+            const SizedBox(height: 28),
 
-                  // Read-only mode badge
-                  _ReadOnlyBadge(),
+            // Read-only mode badge
+            _ReadOnlyBadge(),
 
-                  const SizedBox(height: 28),
+            const SizedBox(height: 32),
 
-                  // Package cards
-                  filteredAsync.when(
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(40),
-                        child: CircularProgressIndicator(
-                          color: AppColors.primaryBlue,
-                          strokeWidth: 2,
-                        ),
-                      ),
+            // Package cards (Responsive & Equal Height - FULL WIDTH)
+            filteredAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(60),
+                  child: CircularProgressIndicator(
+                    color: AppColors.primaryBlue,
+                    strokeWidth: 3,
+                  ),
+                ),
+              ),
+              error: (e, _) => Center(
+                child: Text('Gagal memuat data: $e'),
+              ),
+              data: (list) {
+                if (list.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: Text('Paket tidak ditemukan.'),
                     ),
-                    error: (e, _) => Center(
-                      child: Text(
-                        'Gagal memuat data: $e',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                    data: (list) {
-                      if (list.isEmpty) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(40),
-                            child: Text(
-                              'Paket tidak ditemukan.',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: AppColors.textMuted,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        );
-                      }
+                  );
+                }
 
-                      return SizedBox(
-                        height: 380,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: list.map((paket) {
-                            final isHighlighted = paket.isHighlighted;
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 16),
-                              child: isHighlighted
-                                  ? Transform.translate(
-                                      offset: const Offset(0, -12),
-                                      child: PaketCardWidget(paket: paket),
-                                    )
-                                  : PaketCardWidget(paket: paket),
-                            );
-                          }).toList(),
+                // Menggunakan Row dengan IntrinsicHeight agar semua kartu sejajar tinggi
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: list.map((paket) {
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: PaketCardWidget(paket: paket),
                         ),
                       );
-                    },
+                    }).toList(),
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // Info banner
-                  const InfoBannerWidget(),
-                ],
-              ),
+                );
+              },
             ),
-          ),
-        ],
+
+            const SizedBox(height: 40),
+
+            // Info banner (Sekarang melebar penuh)
+            const SizedBox(
+              width: double.infinity,
+              child: InfoBannerWidget(),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _TopBar extends StatelessWidget {
+class _PageHeader extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
 
-  const _TopBar({required this.onSearchChanged});
+  const _PageHeader({required this.onSearchChanged});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-      decoration: BoxDecoration(
-        color: AppColors.sidebarBg,
-        border: Border(bottom: BorderSide(color: AppColors.divider, width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Daftar Paket Foto',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-              letterSpacing: -0.4,
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Daftar Paket Foto',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.5,
           ),
-          PaketSearchBar(onChanged: onSearchChanged),
-        ],
-      ),
+        ),
+        SizedBox(
+          width: 300,
+          child: PaketSearchBar(onChanged: onSearchChanged),
+        ),
+      ],
     );
   }
 }
@@ -155,14 +132,14 @@ class _ReadOnlyBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.info_outline, size: 13, color: AppColors.textMuted),
-          const SizedBox(width: 6),
+          const Icon(Icons.info_outline, size: 14, color: AppColors.textMuted),
+          const SizedBox(width: 8),
           Text(
             'MODE PENINJAUAN (READ-ONLY)',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
               color: AppColors.textSecondary,
             ),
           ),

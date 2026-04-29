@@ -2,7 +2,6 @@ import './bootstrap';
 import { createApp } from 'vue';
 import AdminDashboardApp from './admin/AdminDashboardApp.vue';
 import BookingApp from './booking/BookingApp.vue';
-import BookingCustomerApp from './booking/BookingCustomerApp.vue';
 import PaymentApp from './booking/PaymentApp.vue';
 import BookingSuccessApp from './booking/BookingSuccessApp.vue';
 
@@ -31,18 +30,6 @@ const mountBookingApp = () => {
 	const props = parseProps('booking-app-props');
 
 	createApp(BookingApp, props).mount(mountNode);
-};
-
-const mountBookingCustomerApp = () => {
-	const mountNode = document.getElementById('booking-customer-app');
-
-	if (!mountNode) {
-		return;
-	}
-
-	const props = parseProps('booking-customer-app-props');
-
-	createApp(BookingCustomerApp, props).mount(mountNode);
 };
 
 const mountPaymentApp = () => {
@@ -80,9 +67,7 @@ const mountAdminDashboardApp = () => {
 
 	createApp(AdminDashboardApp, props).mount(mountNode);
 };
-
 const mountApps = () => {
-	mountBookingCustomerApp();
 	mountBookingApp();
 	mountPaymentApp();
 	mountBookingSuccessApp();

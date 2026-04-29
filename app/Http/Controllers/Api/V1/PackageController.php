@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePackageRequest;
 use App\Http\Requests\UpdatePackageRequest;
-use App\Http\Requests\PackageIndexRequest;
 use App\Http\Resources\PackageResource;
 use App\Models\Package;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 
 class PackageController extends Controller
 {
@@ -89,7 +89,6 @@ class PackageController extends Controller
             'code' => $payload['code'],
             'name' => $payload['name'],
             'description' => $payload['description'] ?? null,
-            'sample_photos' => $payload['sample_photos'] ?? [],
             'duration_minutes' => $payload['duration_minutes'],
             'base_price' => $payload['base_price'],
             'is_active' => $payload['is_active'] ?? true,
@@ -108,7 +107,6 @@ class PackageController extends Controller
             'code' => $payload['code'],
             'name' => $payload['name'],
             'description' => $payload['description'] ?? null,
-            'sample_photos' => $payload['sample_photos'] ?? [],
             'duration_minutes' => $payload['duration_minutes'],
             'base_price' => $payload['base_price'],
             'is_active' => $payload['is_active'] ?? true,
@@ -118,5 +116,18 @@ class PackageController extends Controller
         $package->save();
 
         return $this->responder->success(new PackageResource($package), 'Paket berhasil diperbarui.');
+    }
+
+    public function destroy(Request $request, Package $package): JsonResponse
+    {
+        abort_unless($request->user()?->can('catalog.manage') || $request->user()?->hasRole('owner'), 403);
+
+        try {
+            $package->delete();
+        } catch (QueryException $exception) {
+            return $this->responder->error('Paket tidak dapat dihapus karena masih dipakai data booking/transaksi.', 422);
+        }
+
+        return $this->responder->success(null, 'Paket berhasil dihapus.');
     }
 }
