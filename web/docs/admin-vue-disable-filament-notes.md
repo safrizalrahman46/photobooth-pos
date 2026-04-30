@@ -65,7 +65,12 @@
 - `POST /admin/add-ons`
 - `PUT /admin/add-ons/{addOn}`
 - `DELETE /admin/add-ons/{addOn}`
-- `POST /admin/add-ons/{addOn}/stock-movement`
+- `GET /admin/stock`
+- `GET /admin/stock-data`
+- `POST /admin/inventory-items`
+- `PUT /admin/inventory-items/{inventoryItem}`
+- `DELETE /admin/inventory-items/{inventoryItem}`
+- `POST /admin/inventory-items/{inventoryItem}/movement`
 - `GET /admin/design-catalogs`
 - `GET /admin/designs-data`
 - `POST /admin/designs`
@@ -122,13 +127,13 @@
 2. `QueueCallNextRequest::authorize()` currently allows all authenticated users.
 3. Admin login flow still needs explicit `is_active` guard in Vue auth flow.
 4. User module policy is not yet consistent between read and write paths.
-5. Physical add-on stock is not enforced when booking uses add-ons.
-6. Public booking payload still carries add-on price from client and must not be trusted.
+5. Physical add-on stock and client-side add-on price trust were closed by the 2026-04-30 inventory item flow.
 
 ## Inventory Problem Statement (Add-ons)
 - Users are confused because stock in/out is mixed into Add-ons master page.
-- Current UI has stock movement action, but no dedicated stock ledger module.
+- The legacy Add-ons stock movement action is removed; Stock is now the dedicated stock ledger module.
 - Physical add-ons (keychain, paper, props, etc.) need operational tracking that is clear and auditable.
+- Status 2026-04-30: implemented with `inventory_items`, consumption mappings, and `inventory_movements`.
 
 ## Agreed UX Direction: Add Sidebar `Stock`
 - Keep `Add-ons` for master catalog only.
@@ -144,21 +149,23 @@
 
 ### 2) Stock API endpoints
 - `GET /admin/stock-data`
-  - returns physical add-on rows, low-stock summary, movement ledger (paginated/filterable).
-- `POST /admin/stock/{addOn}/movement`
-  - can alias existing movement action or reuse current add-on stock movement endpoint.
+  - returns inventory item rows and movement ledger.
+- `POST /admin/inventory-items`
+- `PUT /admin/inventory-items/{inventoryItem}`
+- `DELETE /admin/inventory-items/{inventoryItem}`
+- `POST /admin/inventory-items/{inventoryItem}/movement`
 
 ### 3) Stock page UI
 - Create `resources/js/admin/pages/StockPage.vue`.
 - Minimum features:
-  - summary cards: physical items, low stock, out of stock.
-  - table of physical add-ons with current stock and threshold status.
+  - summary cards: inventory items, low stock, out of stock.
+  - table of inventory items with current stock and threshold status.
   - stock in/out form with notes.
   - movement history table with filters (date, item, type, actor).
 
 ### 4) Inventory hardening in booking flow
-- Add server-side guard for physical add-ons:
-  - validate qty against `available_stock`.
+- Add server-side guard for package and add-on inventory mappings:
+  - validate qty against `inventory_items.available_stock`.
   - use row lock (`lockForUpdate`) during critical updates.
 - Define stock deduction point (recommended): when booking payment is confirmed.
 - Record automatic stock movement with reference to booking code.
@@ -172,8 +179,8 @@
 ### Backend
 - `routes/web.php`
 - `app/Http/Controllers/Web/AdminDashboardController.php`
-- `app/Http/Controllers/Web/AdminStockController.php` (new)
-- `app/Services/AdminStockService.php` (new)
+- `app/Http/Controllers/Web/AdminInventoryController.php` (new)
+- `app/Services/InventoryService.php` (new)
 - `app/Services/AdminBookingManagementService.php`
 - `app/Services/BookingService.php`
 - `app/Http/Requests/QueueCallNextRequest.php`
@@ -183,7 +190,7 @@
 ### Frontend
 - `resources/js/admin/AdminDashboardApp.vue`
 - `resources/js/admin/pages/StockPage.vue` (new)
-- `resources/js/admin/pages/AddOnsPage.vue` (quick-link/label adjustment only, optional)
+- `resources/js/admin/pages/AddOnsPage.vue` (inventory mapping and effective availability)
 - `resources/js/admin/pages/BookingsPage.vue` (stock-aware add-on picker hints)
 - `resources/js/booking/BookingApp.vue` (stock-aware addon UX, optional)
 

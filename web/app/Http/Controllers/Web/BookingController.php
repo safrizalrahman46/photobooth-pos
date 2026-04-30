@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SlotAvailabilityRequest;
 use App\Http\Requests\StoreBookingRequest;
 use App\Models\Booking;
+use App\Models\AddOn;
 use App\Models\Branch;
 use App\Models\DesignCatalog;
 use App\Models\Package;
@@ -32,6 +33,7 @@ class BookingController extends Controller
         $branches = collect();
         $packages = collect();
         $designCatalogs = collect();
+        $addOns = collect();
 
         try {
             $branches = Branch::query()
@@ -50,6 +52,12 @@ class BookingController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'package_id', 'name', 'theme', 'preview_url']);
+
+            $addOns = AddOn::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'package_id', 'code', 'name', 'price', 'max_qty']);
         } catch (Throwable) {
         }
 
@@ -57,6 +65,7 @@ class BookingController extends Controller
             'branches' => $branches,
             'packages' => $packages,
             'designCatalogs' => $designCatalogs,
+            'addOns' => $addOns,
         ]);
     }
 
@@ -105,6 +114,17 @@ class BookingController extends Controller
 
         if ($validation instanceof RedirectResponse) {
             return $validation;
+        }
+
+        try {
+            $payload['addons'] = $this->bookingService->resolveAddOnsForPackage(
+                (int) $payload['package_id'],
+                $payload['addons'] ?? []
+            );
+        } catch (RuntimeException $exception) {
+            return back()
+                ->withErrors(['addons' => $exception->getMessage()])
+                ->withInput();
         }
 
         $request->session()->put('booking.payment_payload', $payload);

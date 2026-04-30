@@ -1,22 +1,42 @@
 <script setup>
 import { computed, reactive, ref } from 'vue';
-import { RefreshCw, Package, TrendingUp, TrendingDown, CheckCircle } from 'lucide-vue-next';
+import { CheckCircle, Pencil, Plus, RefreshCw, Trash2, TrendingDown, TrendingUp } from 'lucide-vue-next';
 
 const props = defineProps({
-    addOnRows: { type: Array, default: () => [] },
+    inventoryItems: { type: Array, default: () => [] },
+    inventoryMovements: { type: Array, default: () => [] },
     loading: { type: Boolean, default: false },
     saving: { type: Boolean, default: false },
+    deletingInventoryItemId: { type: [Number, String, null], default: null },
     errorMessage: { type: String, default: '' },
 });
 
-const emit = defineEmits(['refresh-add-ons', 'move-stock']);
+const emit = defineEmits([
+    'refresh-stock',
+    'create-inventory-item',
+    'update-inventory-item',
+    'delete-inventory-item',
+    'move-stock',
+]);
 
-// ─── Modal state ───────────────────────────────────────────────
+const itemModalOpen = ref(false);
+const itemModalMode = ref('create');
+const editingItemId = ref(null);
 const stockModalOpen = ref(false);
-const stockModalError = ref('');
 const stockTarget = ref(null);
+const localError = ref('');
 const toastVisible = ref(false);
 let toastTimer = null;
+
+const itemForm = reactive({
+    code: '',
+    name: '',
+    unit: 'pcs',
+    available_stock: 0,
+    low_stock_threshold: 0,
+    is_active: true,
+    sort_order: 0,
+});
 
 const stockForm = reactive({
     movement_type: 'in',
@@ -24,339 +44,368 @@ const stockForm = reactive({
     notes: '',
 });
 
-// ─── Data ──────────────────────────────────────────────────────
-const stockRows = computed(() => props.addOnRows.filter(i => i.is_physical));
-
 const stats = computed(() => {
-    const total = stockRows.value.length;
-    const low = stockRows.value.filter(i => i.available_stock > 0 && i.available_stock <= i.low_stock_threshold).length;
-    const out = stockRows.value.filter(i => i.available_stock <= 0).length;
+    const total = props.inventoryItems.length;
+    const low = props.inventoryItems.filter((item) => Number(item.available_stock || 0) > 0 && Number(item.available_stock || 0) <= Number(item.low_stock_threshold || 0)).length;
+    const out = props.inventoryItems.filter((item) => Number(item.available_stock || 0) <= 0).length;
+
     return { total, low, out };
 });
 
-// ─── Helpers ───────────────────────────────────────────────────
 const resolveStockTone = (row) => {
     const stock = Number(row?.available_stock ?? 0);
     const threshold = Number(row?.low_stock_threshold ?? 0);
 
-    if (stock <= 0) return { label: 'Out of stock', variant: 'out' };
-    if (stock <= threshold) return { label: 'Low stock', variant: 'low' };
-    return { label: 'Ready', variant: 'ready' };
+    if (stock <= 0) return { label: 'Out of stock', variant: 'out', style: { background: '#FEF2F2', color: '#B91C1C' } };
+    if (stock <= threshold) return { label: 'Low stock', variant: 'low', style: { background: '#FFF7ED', color: '#C2410C' } };
+    return { label: 'Ready', variant: 'ready', style: { background: '#ECFDF5', color: '#047857' } };
 };
 
-/**
- * Progress bar width (0–100).
- * Full = stock ≥ 3× threshold; scales down linearly below that.
- */
-const stockProgress = (row) => {
-    const stock = Number(row?.available_stock ?? 0);
-    const max = Math.max(stock, Number(row?.low_stock_threshold ?? 0) * 3, 1);
-    return Math.min(100, Math.round((stock / max) * 100));
+const resetItemForm = () => {
+    itemForm.code = '';
+    itemForm.name = '';
+    itemForm.unit = 'pcs';
+    itemForm.available_stock = 0;
+    itemForm.low_stock_threshold = 0;
+    itemForm.is_active = true;
+    itemForm.sort_order = 0;
+    editingItemId.value = null;
+    localError.value = '';
 };
 
-const projectedStock = computed(() => {
-    if (!stockTarget.value) return null;
-    const current = stockTarget.value.available_stock;
-    const qty = Number(stockForm.qty) || 0;
-    return stockForm.movement_type === 'in' ? current + qty : current - qty;
-});
-
-// ─── Toast ─────────────────────────────────────────────────────
-const showToast = () => {
-    toastVisible.value = true;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toastVisible.value = false; }, 2500);
+const openCreateItemModal = () => {
+    resetItemForm();
+    itemModalMode.value = 'create';
+    itemModalOpen.value = true;
 };
 
-// ─── Modal ─────────────────────────────────────────────────────
+const openEditItemModal = (item) => {
+    itemModalMode.value = 'edit';
+    editingItemId.value = Number(item.id || 0);
+    itemForm.code = String(item.code || '');
+    itemForm.name = String(item.name || '');
+    itemForm.unit = String(item.unit || 'pcs');
+    itemForm.available_stock = Math.max(0, Number(item.available_stock || 0));
+    itemForm.low_stock_threshold = Math.max(0, Number(item.low_stock_threshold || 0));
+    itemForm.is_active = Boolean(item.is_active);
+    itemForm.sort_order = Math.max(0, Number(item.sort_order || 0));
+    localError.value = '';
+    itemModalOpen.value = true;
+};
+
+const closeItemModal = () => {
+    itemModalOpen.value = false;
+    localError.value = '';
+};
+
+const submitItemForm = async () => {
+    if (!String(itemForm.name || '').trim()) {
+        localError.value = 'Nama barang wajib diisi.';
+        return;
+    }
+
+    const payload = {
+        code: String(itemForm.code || '').trim(),
+        name: String(itemForm.name || '').trim(),
+        unit: String(itemForm.unit || 'pcs').trim() || 'pcs',
+        available_stock: Math.max(0, Number(itemForm.available_stock || 0)),
+        low_stock_threshold: Math.max(0, Number(itemForm.low_stock_threshold || 0)),
+        is_active: Boolean(itemForm.is_active),
+        sort_order: Math.max(0, Number(itemForm.sort_order || 0)),
+    };
+
+    try {
+        if (itemModalMode.value === 'create') {
+            await emit('create-inventory-item', payload);
+        } else {
+            await emit('update-inventory-item', { id: editingItemId.value, payload });
+        }
+
+        closeItemModal();
+    } catch {
+        // Parent surfaces request errors.
+    }
+};
+
 const openStockModal = (row) => {
     stockTarget.value = row;
     stockForm.movement_type = 'in';
     stockForm.qty = 1;
     stockForm.notes = '';
-    stockModalError.value = '';
+    localError.value = '';
     stockModalOpen.value = true;
 };
 
 const closeStockModal = () => {
     stockModalOpen.value = false;
     stockTarget.value = null;
+    localError.value = '';
 };
 
-// ─── Validation & submit ───────────────────────────────────────
-const validate = () => {
-    if (!stockTarget.value) return false;
-    if (stockForm.qty < 1) {
-        stockModalError.value = 'Jumlah minimal 1.';
-        return false;
-    }
-    if (stockForm.movement_type === 'out' && stockForm.qty > stockTarget.value.available_stock) {
-        stockModalError.value = 'Stok tidak mencukupi untuk dikeluarkan.';
-        return false;
-    }
-    stockModalError.value = '';
-    return true;
+const projectedStock = computed(() => {
+    if (!stockTarget.value) return null;
+
+    const current = Math.max(0, Number(stockTarget.value.available_stock || 0));
+    const qty = Math.max(1, Number(stockForm.qty || 1));
+
+    return stockForm.movement_type === 'out' ? current - qty : current + qty;
+});
+
+const showToast = () => {
+    toastVisible.value = true;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastVisible.value = false; }, 2500);
 };
 
-const submit = async () => {
-    if (!validate()) return;
+const submitMovement = async () => {
+    if (!stockTarget.value?.id) return;
 
-    await emit('move-stock', {
-        id: stockTarget.value.id,
-        payload: {
-            movement_type: stockForm.movement_type,
-            qty: stockForm.qty,
-            notes: stockForm.notes,
-        },
-    });
+    if (Number(stockForm.qty || 0) < 1) {
+        localError.value = 'Jumlah minimal 1.';
+        return;
+    }
 
-    closeStockModal();
-    showToast();
+    if (stockForm.movement_type === 'out' && Number(stockForm.qty || 0) > Number(stockTarget.value.available_stock || 0)) {
+        localError.value = 'Stok tidak mencukupi untuk dikeluarkan.';
+        return;
+    }
+
+    try {
+        await emit('move-stock', {
+            id: Number(stockTarget.value.id),
+            payload: {
+                movement_type: stockForm.movement_type,
+                qty: Math.max(1, Number(stockForm.qty || 1)),
+                notes: String(stockForm.notes || '').trim(),
+            },
+        });
+
+        closeStockModal();
+        showToast();
+    } catch {
+        // Parent surfaces request errors.
+    }
+};
+
+const requestDelete = async (item) => {
+    const confirmed = window.confirm(`Delete ${String(item.name || 'this item')}? This action cannot be undone.`);
+
+    if (!confirmed) return;
+
+    try {
+        await emit('delete-inventory-item', Number(item.id || 0));
+    } catch {
+        // Parent surfaces request errors.
+    }
 };
 </script>
 
 <template>
-    <div class="sm-wrapper">
-
-        <!-- ── TOAST ─────────────────────────────────────────────── -->
+    <div class="space-y-5">
         <Transition name="toast">
-            <div v-if="toastVisible" class="sm-toast">
-                <CheckCircle class="sm-toast__icon" />
+            <div v-if="toastVisible" class="fixed right-5 top-5 z-[9999] flex items-center gap-2 rounded-xl px-4 py-2 text-sm text-white shadow-lg" style="background: #0F766E;">
+                <CheckCircle class="h-4 w-4" />
                 Stok berhasil diperbarui
             </div>
         </Transition>
 
-        <!-- ── HEADER ─────────────────────────────────────────────── -->
-        <div class="sm-header">
-            <div class="sm-header__left">
-                <span class="sm-header__eyebrow">
-                    <Package class="sm-header__eyebrow-icon" />
-                    Inventory Management
-                </span>
-                <h2 class="sm-header__title">Stock Add-on</h2>
-                <p class="sm-header__sub">Barang fisik — update stok masuk &amp; keluar</p>
+        <section class="rounded-2xl px-6 py-5" style="background: linear-gradient(135deg, #0F766E, #059669); box-shadow: 0 6px 24px rgba(15,118,110,0.18);">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs font-medium" style="color: rgba(255,255,255,0.72);">Inventory Management</p>
+                    <h2 class="text-[1.35rem] font-bold text-white">Stock Barang</h2>
+                    <p class="text-sm" style="color: rgba(255,255,255,0.72);">Kelola barang fisik, stok, dan riwayat pergerakan.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="rounded-xl border px-3 py-2 text-sm font-semibold text-white" style="border-color: rgba(255,255,255,0.34); background: rgba(255,255,255,0.1);" :disabled="loading" @click="emit('refresh-stock')">
+                        <RefreshCw class="mr-1.5 inline h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
+                        Refresh
+                    </button>
+                    <button type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #0F766E;" @click="openCreateItemModal">
+                        <Plus class="mr-1 inline h-3.5 w-3.5" />
+                        Tambah Barang
+                    </button>
+                </div>
             </div>
-            <button class="sm-btn-refresh" :disabled="loading" @click="emit('refresh-add-ons')">
-                <RefreshCw class="sm-btn-refresh__icon" :class="{ 'sm-spin': loading }" />
-                Refresh
-            </button>
-        </div>
+        </section>
 
-        <!-- ── ERROR BANNER ───────────────────────────────────────── -->
-        <div v-if="errorMessage" class="sm-error-banner">
-            <span class="sm-error-banner__icon">⚠</span>
+        <p v-if="errorMessage" class="rounded-xl border px-4 py-3 text-sm" style="border-color: #FECACA; background: #FEF2F2; color: #B91C1C;">
             {{ errorMessage }}
+        </p>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <article class="rounded-2xl border px-4 py-3.5" style="border-color: #E6EBF4; background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,0.06);">
+                <p class="text-sm text-[#94A3B8]">Total barang</p>
+                <p class="mt-0.5 text-[2rem] font-bold text-[#0F766E]">{{ stats.total }}</p>
+            </article>
+            <article class="rounded-2xl border px-4 py-3.5" style="border-color: #E6EBF4; background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,0.06);">
+                <p class="text-sm text-[#94A3B8]">Low stock</p>
+                <p class="mt-0.5 text-[2rem] font-bold text-[#D97706]">{{ stats.low }}</p>
+            </article>
+            <article class="rounded-2xl border px-4 py-3.5" style="border-color: #E6EBF4; background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,0.06);">
+                <p class="text-sm text-[#94A3B8]">Out of stock</p>
+                <p class="mt-0.5 text-[2rem] font-bold text-[#DC2626]">{{ stats.out }}</p>
+            </article>
         </div>
 
-        <!-- ── STAT CARDS ─────────────────────────────────────────── -->
-        <div class="sm-stats">
-            <div class="sm-stat sm-stat--blue">
-                <p class="sm-stat__label">Total item</p>
-                <p class="sm-stat__val">{{ stats.total }}</p>
-                <div class="sm-stat__bar">
-                    <div class="sm-stat__bar-fill" style="width: 100%" />
-                </div>
+        <div class="overflow-hidden rounded-2xl border bg-white" style="border-color: #DBEAFE; box-shadow: 0 1px 3px rgba(37,99,235,0.08), 0 6px 18px rgba(37,99,235,0.08);">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead style="background: #ECFDF5; color: #334155;">
+                        <tr>
+                            <th class="whitespace-nowrap px-3 py-2 text-left font-semibold">Kode</th>
+                            <th class="whitespace-nowrap px-3 py-2 text-left font-semibold">Barang</th>
+                            <th class="whitespace-nowrap px-3 py-2 text-center font-semibold">Stok</th>
+                            <th class="whitespace-nowrap px-3 py-2 text-center font-semibold">Status</th>
+                            <th class="whitespace-nowrap px-3 py-2 text-center font-semibold">Aktif</th>
+                            <th class="whitespace-nowrap px-3 py-2 text-right font-semibold">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-if="loading">
+                            <td colspan="6" class="px-4 py-8 text-center text-sm text-[#94A3B8]">Loading stock data...</td>
+                        </tr>
+                        <tr v-for="row in inventoryItems" v-else :key="`inventory-row-${row.id}`" class="border-t hover:bg-[#FAFCFF]" style="border-color: #E2E8F0;">
+                            <td class="px-3 py-2 text-[#475569]">{{ row.code }}</td>
+                            <td class="px-3 py-2">
+                                <p class="font-semibold text-[#1E293B]">{{ row.name }}</p>
+                                <p class="text-xs text-[#64748B]">Unit: {{ row.unit }}</p>
+                            </td>
+                            <td class="px-3 py-2 text-center">
+                                <p class="font-semibold text-[#0F172A]">{{ Number(row.available_stock || 0) }}</p>
+                                <p class="text-[11px] text-[#64748B]">Low: {{ Number(row.low_stock_threshold || 0) }}</p>
+                            </td>
+                            <td class="px-3 py-2 text-center">
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold" :style="resolveStockTone(row).style">
+                                    {{ resolveStockTone(row).label }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-2 text-center">
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold" :style="row.is_active ? { background: '#ECFDF5', color: '#059669' } : { background: '#F8FAFC', color: '#64748B' }">
+                                    {{ row.is_active ? 'active' : 'inactive' }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-2">
+                                <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                    <button type="button" class="rounded-lg border px-2.5 py-1 text-xs font-semibold" style="border-color: #0EA5E9; color: #0369A1;" @click="openStockModal(row)">Stock</button>
+                                    <button type="button" class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold" style="border-color: #2563EB; color: #2563EB;" @click="openEditItemModal(row)">
+                                        <Pencil class="h-3.5 w-3.5" /> Edit
+                                    </button>
+                                    <button type="button" class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold" style="border-color: #FECACA; color: #EF4444;" :disabled="Number(deletingInventoryItemId || 0) === Number(row.id)" @click="requestDelete(row)">
+                                        <Trash2 class="h-3.5 w-3.5" /> Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="!loading && !inventoryItems.length">
+                            <td colspan="6" class="px-4 py-8 text-center text-sm text-[#94A3B8]">Belum ada barang stok.</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="sm-stat sm-stat--amber">
-                <p class="sm-stat__label">Low stock</p>
-                <p class="sm-stat__val">{{ stats.low }}</p>
-                <div class="sm-stat__bar">
-                    <div class="sm-stat__bar-fill"
-                        :style="{ width: stats.total ? Math.round((stats.low / stats.total) * 100) + '%' : '0%' }" />
-                </div>
+        </div>
+
+        <section class="overflow-hidden rounded-2xl border bg-white" style="border-color: #E2E8F0;">
+            <header class="border-b px-4 py-3" style="border-color: #E2E8F0; background: #F8FAFC;">
+                <h3 class="text-sm font-semibold text-[#1E293B]">Riwayat Movement</h3>
+                <p class="text-xs text-[#64748B]">Termasuk stok manual dan auto deduction dari booking terverifikasi.</p>
+            </header>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead style="background: #F8FAFC; color: #475569;">
+                        <tr>
+                            <th class="px-3 py-2 text-left">Waktu</th>
+                            <th class="px-3 py-2 text-left">Barang</th>
+                            <th class="px-3 py-2 text-center">Type</th>
+                            <th class="px-3 py-2 text-center">Qty</th>
+                            <th class="px-3 py-2 text-center">Before</th>
+                            <th class="px-3 py-2 text-center">After</th>
+                            <th class="px-3 py-2 text-left">Source</th>
+                            <th class="px-3 py-2 text-left">Actor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="movement in inventoryMovements" :key="`movement-${movement.id}`" class="border-t" style="border-color: #E2E8F0;">
+                            <td class="px-3 py-2 text-[#64748B]">{{ movement.created_at_text }}</td>
+                            <td class="px-3 py-2">
+                                <p class="font-semibold text-[#1E293B]">{{ movement.inventory_item_name }}</p>
+                                <p class="text-xs text-[#64748B]">{{ movement.inventory_item_code }}</p>
+                            </td>
+                            <td class="px-3 py-2 text-center">
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold" :style="movement.movement_type === 'in' ? { background: '#ECFDF5', color: '#047857' } : { background: '#FEF2F2', color: '#B91C1C' }">
+                                    {{ movement.movement_type === 'in' ? 'IN' : 'OUT' }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-2 text-center font-semibold text-[#0F172A]">{{ movement.qty }} {{ movement.unit }}</td>
+                            <td class="px-3 py-2 text-center text-[#64748B]">{{ movement.stock_before }}</td>
+                            <td class="px-3 py-2 text-center text-[#64748B]">{{ movement.stock_after }}</td>
+                            <td class="px-3 py-2 text-[#64748B]">{{ movement.source_ref || movement.source_type || 'manual' }}</td>
+                            <td class="px-3 py-2 text-[#64748B]">{{ movement.actor_name }}</td>
+                        </tr>
+                        <tr v-if="!inventoryMovements.length">
+                            <td colspan="8" class="px-4 py-8 text-center text-sm text-[#94A3B8]">Belum ada riwayat movement.</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="sm-stat sm-stat--red">
-                <p class="sm-stat__label">Out of stock</p>
-                <p class="sm-stat__val">{{ stats.out }}</p>
-                <div class="sm-stat__bar">
-                    <div class="sm-stat__bar-fill"
-                        :style="{ width: stats.total ? Math.round((stats.out / stats.total) * 100) + '%' : '0%' }" />
+        </section>
+
+        <div v-if="itemModalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
+            <div class="w-full max-w-2xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-[#0F172A]">{{ itemModalMode === 'create' ? 'Tambah Barang' : 'Edit Barang' }}</h3>
+                    <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeItemModal">Close</button>
+                </div>
+                <p v-if="localError" class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #FECACA; background: #FEF2F2; color: #B91C1C;">{{ localError }}</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label class="text-sm text-[#475569]">Kode (optional)<input v-model="itemForm.code" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
+                    <label class="text-sm text-[#475569]">Nama Barang<input v-model="itemForm.name" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
+                    <label class="text-sm text-[#475569]">Unit<input v-model="itemForm.unit" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
+                    <label class="text-sm text-[#475569]">Stok Awal<input v-model.number="itemForm.available_stock" type="number" min="0" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
+                    <label class="text-sm text-[#475569]">Low-stock Threshold<input v-model.number="itemForm.low_stock_threshold" type="number" min="0" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
+                    <label class="text-sm text-[#475569]">Sort Order<input v-model.number="itemForm.sort_order" type="number" min="0" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
+                </div>
+                <label class="mt-3 inline-flex items-center gap-2 text-sm text-[#475569]"><input v-model="itemForm.is_active" type="checkbox"> Active item</label>
+                <div class="mt-5 flex items-center justify-end gap-2">
+                    <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeItemModal">Cancel</button>
+                    <button type="button" class="rounded-xl px-4 py-2 text-sm font-semibold text-white" style="background: #0F766E;" :disabled="saving" @click="submitItemForm">
+                        {{ saving ? 'Saving...' : 'Save' }}
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- ── TABLE ──────────────────────────────────────────────── -->
-        <div class="sm-table-card">
-            <table class="sm-table">
-                <thead>
-                    <tr>
-                        <th class="sm-th sm-th--left">Item</th>
-                        <th class="sm-th sm-th--center">Stok tersedia</th>
-                        <th class="sm-th sm-th--center">Status</th>
-                        <th class="sm-th sm-th--right">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- empty state -->
-                    <tr v-if="stockRows.length === 0">
-                        <td colspan="4" class="sm-empty">Tidak ada item fisik.</td>
-                    </tr>
-
-                    <tr v-for="row in stockRows" :key="row.id" class="sm-row">
-                        <!-- item -->
-                        <td class="sm-td">
-                            <p class="sm-item__name">{{ row.name }}</p>
-                            <p class="sm-item__sku">{{ row.sku }}</p>
-                        </td>
-
-                        <!-- stock number + threshold -->
-                        <td class="sm-td sm-td--center">
-                            <p class="sm-stock__num">{{ row.available_stock }}</p>
-                            <p class="sm-stock__threshold">threshold: {{ row.low_stock_threshold }}</p>
-                        </td>
-
-                        <!-- status badge + mini progress -->
-                        <td class="sm-td sm-td--center">
-                            <span class="sm-badge" :class="`sm-badge--${resolveStockTone(row).variant}`">
-                                <span class="sm-badge__dot" />
-                                {{ resolveStockTone(row).label }}
-                            </span>
-                            <div class="sm-prog">
-                                <div class="sm-prog__fill" :class="`sm-prog__fill--${resolveStockTone(row).variant}`"
-                                    :style="{ width: stockProgress(row) + '%' }" />
-                            </div>
-                        </td>
-
-                        <!-- action -->
-                        <td class="sm-td sm-td--right">
-                            <button class="sm-btn-update" @click="openStockModal(row)">
-                                Update stok
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- ── MODAL ──────────────────────────────────────────────── -->
-        <Transition name="modal">
-            <div v-if="stockModalOpen" class="sm-modal-bg" @click.self="closeStockModal">
-                <div class="sm-modal" role="dialog" aria-modal="true"
-                    :aria-labelledby="'modal-title-' + stockTarget?.id">
-
-                    <!-- header -->
-                    <div class="sm-modal__header">
-                        <div>
-                            <p :id="'modal-title-' + stockTarget?.id" class="sm-modal__title">
-                                {{ stockTarget?.name }}
-                            </p>
-                            <p class="sm-modal__sub">{{ stockTarget?.sku }}</p>
-                        </div>
-                        <button class="sm-modal__close" @click="closeStockModal" aria-label="Tutup modal">×</button>
-                    </div>
-
-                    <!-- info boxes -->
-                    <div class="sm-modal__info-row">
-                        <div class="sm-modal__info-box">
-                            <p class="sm-ib__label">Stok sekarang</p>
-                            <p class="sm-ib__val">{{ stockTarget?.available_stock }}</p>
-                        </div>
-                        <div class="sm-modal__info-box">
-                            <p class="sm-ib__label">Threshold</p>
-                            <p class="sm-ib__val">{{ stockTarget?.low_stock_threshold }}</p>
-                        </div>
-                        <div class="sm-modal__info-box">
-                            <p class="sm-ib__label">Setelah disimpan</p>
-                            <p class="sm-ib__val" :class="{
-                                'sm-ib__val--danger': projectedStock !== null && projectedStock < 0,
-                                'sm-ib__val--warning': projectedStock !== null && projectedStock >= 0 && projectedStock <= (stockTarget?.low_stock_threshold ?? 0),
-                                'sm-ib__val--success': projectedStock !== null && projectedStock > (stockTarget?.low_stock_threshold ?? 0),
-                            }">
-                                {{ projectedStock ?? '—' }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- movement type toggle -->
-                    <div class="sm-form__group">
-                        <label class="sm-form__label">Tipe pergerakan</label>
-                        <div class="sm-toggle-row">
-                            <button class="sm-toggle" :class="stockForm.movement_type === 'in' ? 'sm-toggle--in' : ''"
-                                @click="stockForm.movement_type = 'in'">
-                                <TrendingUp class="sm-toggle__icon" />
-                                <span>Stock In</span>
-                                <span class="sm-toggle__hint">Tambah stok</span>
-                            </button>
-                            <button class="sm-toggle" :class="stockForm.movement_type === 'out' ? 'sm-toggle--out' : ''"
-                                @click="stockForm.movement_type = 'out'">
-                                <TrendingDown class="sm-toggle__icon" />
-                                <span>Stock Out</span>
-                                <span class="sm-toggle__hint">Kurangi stok</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- qty -->
-                    <div class="sm-form__group">
-                        <label class="sm-form__label" for="sm-qty">Jumlah</label>
-                        <input id="sm-qty" v-model.number="stockForm.qty" type="number" min="1" class="sm-form__input"
-                            placeholder="Masukkan jumlah" />
-                    </div>
-
-                    <!-- notes -->
-                    <div class="sm-form__group">
-                        <label class="sm-form__label" for="sm-notes">Catatan <span
-                                class="sm-form__optional">(opsional)</span></label>
-                        <input id="sm-notes" v-model="stockForm.notes" type="text" class="sm-form__input"
-                            placeholder="Mis: restock dari supplier" />
-                    </div>
-
-                    <!-- validation error -->
-                    <div v-if="stockModalError" class="sm-modal__error">
-                        <span>⚠</span> {{ stockModalError }}
-                    </div>
-
-                    <!-- footer -->
-                    <div class="sm-modal__footer">
-                        <button class="sm-btn-cancel" @click="closeStockModal">Batal</button>
-                        <button class="sm-btn-save" :disabled="saving" @click="submit">
-                            {{ saving ? 'Menyimpan…' : 'Simpan perubahan' }}
-                        </button>
-                    </div>
-
+        <div v-if="stockModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
+            <div class="w-full max-w-xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-[#0F172A]">Stock Movement - {{ stockTarget?.name || '-' }}</h3>
+                    <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeStockModal">Close</button>
+                </div>
+                <p class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #BFDBFE; background: #EFF6FF; color: #1E3A8A;">Stock saat ini: <strong>{{ Number(stockTarget?.available_stock || 0) }}</strong> {{ stockTarget?.unit || 'pcs' }}</p>
+                <p v-if="localError" class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #FECACA; background: #FEF2F2; color: #B91C1C;">{{ localError }}</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <button type="button" class="rounded-xl border px-4 py-3 text-left" :style="stockForm.movement_type === 'in' ? { borderColor: '#0F766E', background: '#ECFDF5', color: '#0F766E' } : { borderColor: '#E2E8F0', color: '#475569' }" @click="stockForm.movement_type = 'in'">
+                        <TrendingUp class="mb-1 h-4 w-4" /> Stock In
+                    </button>
+                    <button type="button" class="rounded-xl border px-4 py-3 text-left" :style="stockForm.movement_type === 'out' ? { borderColor: '#DC2626', background: '#FEF2F2', color: '#B91C1C' } : { borderColor: '#E2E8F0', color: '#475569' }" @click="stockForm.movement_type = 'out'">
+                        <TrendingDown class="mb-1 h-4 w-4" /> Stock Out
+                    </button>
+                </div>
+                <label class="mt-3 block text-sm text-[#475569]">Jumlah<input v-model.number="stockForm.qty" type="number" min="1" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
+                <label class="mt-3 block text-sm text-[#475569]">Catatan<input v-model="stockForm.notes" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" placeholder="Mis: restock supplier / adjustment"></label>
+                <p class="mt-3 text-sm text-[#475569]">Proyeksi setelah disimpan: <strong class="text-[#0F172A]">{{ projectedStock }}</strong></p>
+                <div class="mt-5 flex items-center justify-end gap-2">
+                    <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeStockModal">Cancel</button>
+                    <button type="button" class="rounded-xl px-4 py-2 text-sm font-semibold text-white" style="background: #0F766E;" :disabled="saving" @click="submitMovement">
+                        {{ saving ? 'Saving...' : 'Save Stock Movement' }}
+                    </button>
                 </div>
             </div>
-        </Transition>
-
+        </div>
     </div>
 </template>
 
 <style scoped>
-/* ─────────────────────────────────────────────────
-   Layout wrapper
-───────────────────────────────────────────────── */
-.sm-wrapper {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    font-family: inherit;
-}
-
-/* ─────────────────────────────────────────────────
-   Toast
-───────────────────────────────────────────────── */
-.sm-toast {
-    position: fixed;
-    top: 1.25rem;
-    right: 1.25rem;
-    z-index: 9999;
-    background: #3B6D11;
-    color: #EAF3DE;
-    padding: 10px 16px;
-    border-radius: 10px;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.sm-toast__icon {
-    width: 15px;
-    height: 15px;
-}
-
 .toast-enter-active,
 .toast-leave-active {
     transition: opacity 0.3s, transform 0.3s;
@@ -366,650 +415,5 @@ const submit = async () => {
 .toast-leave-to {
     opacity: 0;
     transform: translateY(-8px);
-}
-
-/* ─────────────────────────────────────────────────
-   Header
-───────────────────────────────────────────────── */
-.sm-header {
-    background: linear-gradient(135deg, #0F766E, #059669);
-    border-radius: 14px;
-    padding: 1.25rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-}
-
-.sm-header__left {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.sm-header__eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.7);
-}
-
-.sm-header__eyebrow-icon {
-    width: 13px;
-    height: 13px;
-}
-
-.sm-header__title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #fff;
-    margin: 0;
-}
-
-.sm-header__sub {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.65);
-    margin: 0;
-}
-
-.sm-btn-refresh {
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #fff;
-    border-radius: 8px;
-    padding: 8px 14px;
-    font-size: 13px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background 0.15s;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.sm-btn-refresh:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.25);
-}
-
-.sm-btn-refresh:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.sm-btn-refresh__icon {
-    width: 14px;
-    height: 14px;
-}
-
-.sm-spin {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* ─────────────────────────────────────────────────
-   Error banner
-───────────────────────────────────────────────── */
-.sm-error-banner {
-    background: #FCEBEB;
-    color: #A32D2D;
-    border: 1px solid #F7C1C1;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.sm-error-banner__icon {
-    font-size: 15px;
-}
-
-/* ─────────────────────────────────────────────────
-   Stats
-───────────────────────────────────────────────── */
-.sm-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
-.sm-stat {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-}
-
-.sm-stat__label {
-    font-size: 12px;
-    color: #6b7280;
-    margin: 0 0 4px;
-}
-
-.sm-stat__val {
-    font-size: 26px;
-    font-weight: 600;
-    margin: 0 0 8px;
-}
-
-.sm-stat__bar {
-    height: 3px;
-    border-radius: 2px;
-    background: #e5e7eb;
-    overflow: hidden;
-}
-
-.sm-stat__bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    transition: width 0.4s;
-}
-
-.sm-stat--blue .sm-stat__val {
-    color: #185FA5;
-}
-
-.sm-stat--blue .sm-stat__bar-fill {
-    background: #378ADD;
-}
-
-.sm-stat--amber .sm-stat__val {
-    color: #BA7517;
-}
-
-.sm-stat--amber .sm-stat__bar-fill {
-    background: #BA7517;
-}
-
-.sm-stat--red .sm-stat__val {
-    color: #A32D2D;
-}
-
-.sm-stat--red .sm-stat__bar-fill {
-    background: #E24B4A;
-}
-
-/* ─────────────────────────────────────────────────
-   Table card
-───────────────────────────────────────────────── */
-.sm-table-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    overflow: hidden;
-}
-
-.sm-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-
-.sm-th {
-    padding: 10px 14px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #6b7280;
-    background: #f9fafb;
-    text-align: left;
-    letter-spacing: 0.02em;
-}
-
-.sm-th--center {
-    text-align: center;
-}
-
-.sm-th--right {
-    text-align: right;
-}
-
-.sm-row {
-    border-top: 1px solid #f3f4f6;
-    transition: background 0.1s;
-}
-
-.sm-row:hover {
-    background: #fafafa;
-}
-
-.sm-td {
-    padding: 12px 14px;
-    vertical-align: middle;
-}
-
-.sm-td--center {
-    text-align: center;
-}
-
-.sm-td--right {
-    text-align: right;
-}
-
-.sm-item__name {
-    font-weight: 600;
-    font-size: 14px;
-    color: #111827;
-    margin: 0;
-}
-
-.sm-item__sku {
-    font-size: 11px;
-    color: #9ca3af;
-    margin: 2px 0 0;
-}
-
-.sm-stock__num {
-    font-size: 15px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0;
-}
-
-.sm-stock__threshold {
-    font-size: 11px;
-    color: #9ca3af;
-    margin: 2px 0 0;
-}
-
-.sm-empty {
-    padding: 3rem;
-    text-align: center;
-    color: #9ca3af;
-    font-size: 14px;
-}
-
-/* ─────────────────────────────────────────────────
-   Status badge
-───────────────────────────────────────────────── */
-.sm-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.sm-badge__dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.sm-badge--ready {
-    background: #EAF3DE;
-    color: #3B6D11;
-}
-
-.sm-badge--ready .sm-badge__dot {
-    background: #639922;
-}
-
-.sm-badge--low {
-    background: #FAEEDA;
-    color: #854F0B;
-}
-
-.sm-badge--low .sm-badge__dot {
-    background: #BA7517;
-}
-
-.sm-badge--out {
-    background: #FCEBEB;
-    color: #A32D2D;
-}
-
-.sm-badge--out .sm-badge__dot {
-    background: #E24B4A;
-}
-
-/* ─────────────────────────────────────────────────
-   Mini progress bar
-───────────────────────────────────────────────── */
-.sm-prog {
-    width: 72px;
-    height: 3px;
-    background: #e5e7eb;
-    border-radius: 2px;
-    overflow: hidden;
-    margin: 6px auto 0;
-}
-
-.sm-prog__fill {
-    height: 100%;
-    border-radius: 2px;
-    transition: width 0.4s;
-}
-
-.sm-prog__fill--ready {
-    background: #639922;
-}
-
-.sm-prog__fill--low {
-    background: #BA7517;
-}
-
-.sm-prog__fill--out {
-    background: #E24B4A;
-}
-
-/* ─────────────────────────────────────────────────
-   Update button
-───────────────────────────────────────────────── */
-.sm-btn-update {
-    background: #f9fafb;
-    border: 1px solid #d1d5db;
-    color: #374151;
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-
-.sm-btn-update:hover {
-    background: #f3f4f6;
-    border-color: #9ca3af;
-}
-
-/* ─────────────────────────────────────────────────
-   Modal overlay
-───────────────────────────────────────────────── */
-.sm-modal-bg {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 1rem;
-}
-
-.modal-enter-active,
-.modal-leave-active {
-    transition: opacity 0.2s;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-    opacity: 0;
-}
-
-.modal-enter-active .sm-modal,
-.modal-leave-active .sm-modal {
-    transition: transform 0.2s;
-}
-
-.modal-enter-from .sm-modal {
-    transform: translateY(10px);
-}
-
-.modal-leave-to .sm-modal {
-    transform: translateY(10px);
-}
-
-.sm-modal {
-    background: #fff;
-    border-radius: 16px;
-    border: 1px solid #e5e7eb;
-    padding: 1.5rem;
-    width: 100%;
-    max-width: 400px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-}
-
-/* modal header */
-.sm-modal__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.sm-modal__title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0;
-}
-
-.sm-modal__sub {
-    font-size: 12px;
-    color: #9ca3af;
-    margin: 2px 0 0;
-}
-
-.sm-modal__close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: #9ca3af;
-    line-height: 1;
-    padding: 2px 6px;
-    border-radius: 6px;
-    transition: background 0.1s, color 0.1s;
-}
-
-.sm-modal__close:hover {
-    background: #f3f4f6;
-    color: #374151;
-}
-
-/* info boxes */
-.sm-modal__info-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 1.25rem;
-}
-
-.sm-modal__info-box {
-    background: #f9fafb;
-    border: 1px solid #f3f4f6;
-    border-radius: 8px;
-    padding: 10px 12px;
-}
-
-.sm-ib__label {
-    font-size: 11px;
-    color: #6b7280;
-    margin: 0 0 4px;
-}
-
-.sm-ib__val {
-    font-size: 18px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0;
-    transition: color 0.2s;
-}
-
-.sm-ib__val--success {
-    color: #3B6D11;
-}
-
-.sm-ib__val--warning {
-    color: #854F0B;
-}
-
-.sm-ib__val--danger {
-    color: #A32D2D;
-}
-
-/* toggle */
-.sm-toggle-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
-
-.sm-toggle {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 10px;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    background: #f9fafb;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    color: #6b7280;
-    transition: all 0.15s;
-}
-
-.sm-toggle:hover {
-    border-color: #d1d5db;
-    background: #f3f4f6;
-}
-
-.sm-toggle__icon {
-    width: 18px;
-    height: 18px;
-}
-
-.sm-toggle__hint {
-    font-size: 11px;
-    font-weight: 400;
-    color: #9ca3af;
-}
-
-.sm-toggle--in {
-    border-color: #0F6E56;
-    background: #E1F5EE;
-    color: #085041;
-}
-
-.sm-toggle--in .sm-toggle__hint {
-    color: #3B6D11;
-}
-
-.sm-toggle--out {
-    border-color: #993C1D;
-    background: #FAECE7;
-    color: #4A1B0C;
-}
-
-.sm-toggle--out .sm-toggle__hint {
-    color: #854F0B;
-}
-
-/* form */
-.sm-form__group {
-    margin-bottom: 14px;
-}
-
-.sm-form__label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #374151;
-    display: block;
-    margin-bottom: 5px;
-}
-
-.sm-form__optional {
-    font-weight: 400;
-    color: #9ca3af;
-}
-
-.sm-form__input {
-    width: 100%;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    padding: 9px 11px;
-    font-size: 13px;
-    color: #111827;
-    background: #fff;
-    outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.sm-form__input:focus {
-    border-color: #0F6E56;
-    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
-}
-
-/* error */
-.sm-modal__error {
-    background: #FCEBEB;
-    color: #A32D2D;
-    border: 1px solid #F7C1C1;
-    border-radius: 8px;
-    padding: 9px 12px;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 12px;
-}
-
-/* modal footer */
-.sm-modal__footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding-top: 4px;
-}
-
-.sm-btn-cancel {
-    background: none;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-size: 13px;
-    cursor: pointer;
-    color: #374151;
-    transition: all 0.15s;
-}
-
-.sm-btn-cancel:hover {
-    background: #f3f4f6;
-}
-
-.sm-btn-save {
-    background: #0F766E;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    color: #fff;
-    transition: background 0.15s;
-}
-
-.sm-btn-save:hover:not(:disabled) {
-    background: #0F6E56;
-}
-
-.sm-btn-save:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* ─────────────────────────────────────────────────
-   Responsive
-───────────────────────────────────────────────── */
-@media (max-width: 640px) {
-    .sm-stats {
-        grid-template-columns: 1fr;
-    }
-
-    .sm-modal__info-row {
-        grid-template-columns: 1fr 1fr;
-    }
 }
 </style>

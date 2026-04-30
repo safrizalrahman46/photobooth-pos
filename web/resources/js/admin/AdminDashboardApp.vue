@@ -130,6 +130,18 @@ const props = defineProps({
         type: String,
         default: '/admin/add-ons',
     },
+    stockDataUrl: {
+        type: String,
+        default: '',
+    },
+    inventoryItemStoreUrl: {
+        type: String,
+        default: '',
+    },
+    inventoryItemBaseUrl: {
+        type: String,
+        default: '/admin/inventory-items',
+    },
     designsDataUrl: {
         type: String,
         default: '',
@@ -318,6 +330,14 @@ const props = defineProps({
         default: () => [],
     },
     initialPaymentTransactionOptions: {
+        type: Array,
+        default: () => [],
+    },
+    initialInventoryItems: {
+        type: Array,
+        default: () => [],
+    },
+    initialInventoryMovements: {
         type: Array,
         default: () => [],
     },
@@ -1116,8 +1136,26 @@ const packageCards = computed(() => {
                 description: String(addOn?.description || ''),
                 price: Number(addOn?.price || 0),
                 max_qty: Math.max(1, Number(addOn?.max_qty || 1)),
+                is_physical: Boolean(addOn?.is_physical),
                 is_active: Boolean(addOn?.is_active),
                 sort_order: Number(addOn?.sort_order || 0),
+                inventory_items: Array.isArray(addOn?.inventory_items)
+                    ? addOn.inventory_items.map((row) => ({
+                        inventory_item_id: Number(row?.inventory_item_id || 0),
+                        code: String(row?.code || ''),
+                        name: String(row?.name || ''),
+                        unit: String(row?.unit || 'pcs'),
+                        available_stock: Math.max(0, Number(row?.available_stock || 0)),
+                        low_stock_threshold: Math.max(0, Number(row?.low_stock_threshold || 0)),
+                        is_active: Boolean(row?.is_active),
+                        qty_per_unit: Math.max(1, Number(row?.qty_per_unit || 1)),
+                    })).filter((row) => row.inventory_item_id > 0)
+                    : [],
+                effective_available_stock: addOn?.effective_available_stock === null || addOn?.effective_available_stock === undefined
+                    ? null
+                    : Math.max(0, Number(addOn?.effective_available_stock || 0)),
+                effective_stock_status: String(addOn?.effective_stock_status || 'untracked'),
+                effective_stock_label: String(addOn?.effective_stock_label || 'Not mapped'),
             }))
             : [];
 
@@ -1140,6 +1178,15 @@ const packageCards = computed(() => {
             completed: Number(item.completed_bookings || 0),
             add_ons_count: Number(item.add_ons_count || addOns.length || 0),
             add_ons: addOns,
+            inventory_items: Array.isArray(item.inventory_items)
+                ? item.inventory_items.map((row) => ({
+                    inventory_item_id: Number(row?.inventory_item_id || 0),
+                    code: String(row?.code || ''),
+                    name: String(row?.name || ''),
+                    unit: String(row?.unit || 'pcs'),
+                    qty_per_booking: Math.max(1, Number(row?.qty_per_booking || 1)),
+                })).filter((row) => row.inventory_item_id > 0)
+                : [],
             revenue,
             revenueText: formatRupiah(revenue),
         };
@@ -1151,6 +1198,50 @@ const packageOptions = computed(() => {
         id: Number(item.id || 0),
         name: String(item.name || '-'),
     }));
+});
+
+const inventoryItemRows = computed(() => {
+    return (inventoryItems.value || []).map((item) => ({
+        id: Number(item.id || 0),
+        code: String(item.code || ''),
+        name: String(item.name || '-'),
+        unit: String(item.unit || 'pcs'),
+        available_stock: Math.max(0, Number(item.available_stock || 0)),
+        low_stock_threshold: Math.max(0, Number(item.low_stock_threshold || 0)),
+        is_active: Boolean(item.is_active),
+        sort_order: Number(item.sort_order || 0),
+        updated_at: item.updated_at || null,
+    }));
+});
+
+const inventoryMovementRows = computed(() => {
+    return (inventoryMovements.value || []).map((item) => ({
+        id: Number(item.id || 0),
+        inventory_item_id: Number(item.inventory_item_id || 0),
+        inventory_item_code: String(item.inventory_item_code || ''),
+        inventory_item_name: String(item.inventory_item_name || '-'),
+        unit: String(item.unit || 'pcs'),
+        movement_type: String(item.movement_type || ''),
+        qty: Math.max(0, Number(item.qty || 0)),
+        stock_before: Math.max(0, Number(item.stock_before || 0)),
+        stock_after: Math.max(0, Number(item.stock_after || 0)),
+        source_type: String(item.source_type || ''),
+        source_ref: String(item.source_ref || ''),
+        notes: String(item.notes || ''),
+        actor_name: String(item.actor_name || 'System'),
+        created_at_text: String(item.created_at_text || '-'),
+    }));
+});
+
+const inventoryItemOptions = computed(() => {
+    return inventoryItemRows.value
+        .filter((item) => item.is_active)
+        .map((item) => ({
+            id: Number(item.id || 0),
+            code: String(item.code || ''),
+            name: String(item.name || '-'),
+            unit: String(item.unit || 'pcs'),
+        }));
 });
 
 const designCards = computed(() => {
@@ -1281,6 +1372,8 @@ const reportError = ref('');
 const reportData = ref(null);
 const packages = ref(Array.isArray(props.initialPackages) ? props.initialPackages : []);
 const addOns = ref(Array.isArray(props.initialAddOns) ? props.initialAddOns : []);
+const inventoryItems = ref(Array.isArray(props.initialInventoryItems) ? props.initialInventoryItems : []);
+const inventoryMovements = ref(Array.isArray(props.initialInventoryMovements) ? props.initialInventoryMovements : []);
 const designs = ref(Array.isArray(props.initialDesigns) ? props.initialDesigns : []);
 const users = ref(Array.isArray(props.initialUsers) ? props.initialUsers : []);
 const userRoles = ref(Array.isArray(props.initialUserRoles) ? props.initialUserRoles : []);
@@ -1305,6 +1398,10 @@ const addOnLoading = ref(false);
 const addOnSaving = ref(false);
 const addOnError = ref('');
 const deletingAddOnId = ref(null);
+const stockLoading = ref(false);
+const stockSaving = ref(false);
+const stockError = ref('');
+const deletingInventoryItemId = ref(null);
 const designLoading = ref(false);
 const designSaving = ref(false);
 const designError = ref('');
@@ -1574,6 +1671,19 @@ const applyAddOnsPayload = (payload) => {
 
     if (Array.isArray(nextAddOns)) {
         addOns.value = nextAddOns;
+    }
+};
+
+const applyInventoryPayload = (payload) => {
+    const nextItems = payload?.data?.inventory_items;
+    const nextMovements = payload?.data?.inventory_movements;
+
+    if (Array.isArray(nextItems)) {
+        inventoryItems.value = nextItems;
+    }
+
+    if (Array.isArray(nextMovements)) {
+        inventoryMovements.value = nextMovements;
     }
 };
 
@@ -2141,16 +2251,146 @@ const updateAddOn = async ({ id, payload }) => {
     }
 };
 
-const moveAddOnStock = async ({ id, payload }) => {
-    if (!id || !props.addOnBaseUrl) {
+const fetchStockData = async () => {
+    if (!props.stockDataUrl) {
         return;
     }
 
-    addOnSaving.value = true;
-    addOnError.value = '';
+    stockLoading.value = true;
+    stockError.value = '';
 
     try {
-        const response = await fetch(`${props.addOnBaseUrl}/${id}/stock-movement`, {
+        const response = await fetch(props.stockDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyInventoryPayload(payload);
+    } catch (error) {
+        stockError.value = error instanceof Error ? error.message : 'Failed to load stock data.';
+    } finally {
+        stockLoading.value = false;
+    }
+};
+
+const createInventoryItem = async (formPayload) => {
+    if (!props.inventoryItemStoreUrl) {
+        return;
+    }
+
+    stockSaving.value = true;
+    stockError.value = '';
+
+    try {
+        const response = await fetch(props.inventoryItemStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyInventoryPayload(payload);
+    } catch (error) {
+        stockError.value = error instanceof Error ? error.message : 'Failed to create inventory item.';
+        throw error;
+    } finally {
+        stockSaving.value = false;
+    }
+};
+
+const updateInventoryItem = async ({ id, payload }) => {
+    if (!id || !props.inventoryItemBaseUrl) {
+        return;
+    }
+
+    stockSaving.value = true;
+    stockError.value = '';
+
+    try {
+        const response = await fetch(`${props.inventoryItemBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyInventoryPayload(result);
+    } catch (error) {
+        stockError.value = error instanceof Error ? error.message : 'Failed to update inventory item.';
+        throw error;
+    } finally {
+        stockSaving.value = false;
+    }
+};
+
+const deleteInventoryItem = async (id) => {
+    if (!id || !props.inventoryItemBaseUrl) {
+        return;
+    }
+
+    deletingInventoryItemId.value = Number(id);
+    stockError.value = '';
+
+    try {
+        const response = await fetch(`${props.inventoryItemBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyInventoryPayload(payload);
+    } catch (error) {
+        stockError.value = error instanceof Error ? error.message : 'Failed to delete inventory item.';
+        throw error;
+    } finally {
+        deletingInventoryItemId.value = null;
+    }
+};
+
+const moveInventoryStock = async ({ id, payload }) => {
+    if (!id || !props.inventoryItemBaseUrl) {
+        return;
+    }
+
+    stockSaving.value = true;
+    stockError.value = '';
+
+    try {
+        const response = await fetch(`${props.inventoryItemBaseUrl}/${id}/movement`, {
             method: 'POST',
             headers: {
                 Accept: 'application/json',
@@ -2166,12 +2406,12 @@ const moveAddOnStock = async ({ id, payload }) => {
         }
 
         const result = await response.json();
-        applyAddOnsPayload(result);
+        applyInventoryPayload(result);
     } catch (error) {
-        addOnError.value = error instanceof Error ? error.message : 'Failed to update add-on stock.';
+        stockError.value = error instanceof Error ? error.message : 'Failed to update stock.';
         throw error;
     } finally {
-        addOnSaving.value = false;
+        stockSaving.value = false;
     }
 };
 
@@ -2219,8 +2459,23 @@ const addOnRows = computed(() => {
         price_text: String(item.price_text || formatRupiah(Number(item.price || 0))),
         max_qty: Math.max(1, Number(item.max_qty || 1)),
         is_physical: Boolean(item.is_physical),
-        available_stock: Math.max(0, Number(item.available_stock || 0)),
-        low_stock_threshold: Math.max(0, Number(item.low_stock_threshold || 0)),
+        inventory_items: Array.isArray(item.inventory_items)
+            ? item.inventory_items.map((row) => ({
+                inventory_item_id: Number(row?.inventory_item_id || 0),
+                code: String(row?.code || ''),
+                name: String(row?.name || ''),
+                unit: String(row?.unit || 'pcs'),
+                available_stock: Math.max(0, Number(row?.available_stock || 0)),
+                low_stock_threshold: Math.max(0, Number(row?.low_stock_threshold || 0)),
+                is_active: Boolean(row?.is_active),
+                qty_per_unit: Math.max(1, Number(row?.qty_per_unit || 1)),
+            })).filter((row) => row.inventory_item_id > 0)
+            : [],
+        effective_available_stock: item.effective_available_stock === null || item.effective_available_stock === undefined
+            ? null
+            : Math.max(0, Number(item.effective_available_stock || 0)),
+        effective_stock_status: String(item.effective_stock_status || 'untracked'),
+        effective_stock_label: String(item.effective_stock_label || 'Not mapped'),
         type_label: String(item.type_label || (item.is_physical ? 'Physical' : 'Non-physical')),
         is_active: Boolean(item.is_active),
         sort_order: Number(item.sort_order || 0),
@@ -3138,6 +3393,16 @@ watch(activeModuleId, (nextValue) => {
 }, { immediate: true });
 
 watch(activeModuleId, (nextValue) => {
+    if (nextValue !== 'stock') {
+        return;
+    }
+
+    if (!stockLoading.value) {
+        fetchStockData();
+    }
+}, { immediate: true });
+
+watch(activeModuleId, (nextValue) => {
     if (nextValue !== 'designs') {
         return;
     }
@@ -3323,19 +3588,23 @@ onBeforeUnmount(() => {
 
                         <PackagesPage v-else-if="activeModuleId === 'packages'" :package-cards="packageCards"
                             :branch-options="branchOptionsForManagement" :panel-base-url="panelBaseUrl"
-                            :format-rupiah="formatRupiah" :loading="packageLoading" :saving="packageSaving"
+                            :inventory-options="inventoryItemOptions" :format-rupiah="formatRupiah" :loading="packageLoading" :saving="packageSaving"
                             :deleting-package-id="deletingPackageId" :error-message="packageError"
                             @refresh-packages="fetchPackagesData" @create-package="createPackage"
                             @update-package="updatePackage" @delete-package="deletePackage" />
 
                         <AddOnsPage v-else-if="activeModuleId === 'add-ons'" :add-on-rows="addOnRows"
-                            :package-options="packageOptions" :format-rupiah="formatRupiah" :loading="addOnLoading"
+                            :package-options="packageOptions" :inventory-options="inventoryItemOptions" :format-rupiah="formatRupiah" :loading="addOnLoading"
                             :saving="addOnSaving" :deleting-add-on-id="deletingAddOnId" :error-message="addOnError"
                             @refresh-add-ons="fetchAddOnsData" @create-add-on="createAddOn" @update-add-on="updateAddOn"
-                            @move-stock="moveAddOnStock" @delete-add-on="deleteAddOn" />
+                            @delete-add-on="deleteAddOn" />
 
-                        <StockPage v-else-if="activeModuleId === 'stock'" :addOnRows="addOnRows" :loading="addOnLoading"
-                            :saving="addOnSaving" :errorMessage="addOnError" @move-stock="moveAddOnStock" />
+                        <StockPage v-else-if="activeModuleId === 'stock'" :inventory-items="inventoryItemRows"
+                            :inventory-movements="inventoryMovementRows" :loading="stockLoading" :saving="stockSaving"
+                            :deleting-inventory-item-id="deletingInventoryItemId" :error-message="stockError"
+                            @refresh-stock="fetchStockData" @create-inventory-item="createInventoryItem"
+                            @update-inventory-item="updateInventoryItem" @delete-inventory-item="deleteInventoryItem"
+                            @move-stock="moveInventoryStock" />
 
                         <DesignsPage v-else-if="activeModuleId === 'designs'" :design-cards="designCards"
                             :panel-base-url="panelBaseUrl" :package-options="packageOptions" :loading="designLoading"

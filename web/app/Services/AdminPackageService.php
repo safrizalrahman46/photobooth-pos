@@ -11,6 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class AdminPackageService
 {
+    public function __construct(
+        private readonly InventoryService $inventoryService,
+    ) {}
+
     public function create(array $payload): Package
     {
         return DB::transaction(function () use ($payload): Package {
@@ -30,6 +34,10 @@ class AdminPackageService
 
             if (array_key_exists('add_ons', $payload)) {
                 $this->syncPackageAddOns($package, $payload['add_ons'] ?? []);
+            }
+
+            if (array_key_exists('inventory_items', $payload) || (bool) ($payload['inventory_items_present'] ?? false)) {
+                $this->inventoryService->syncPackageConsumptions($package, $payload['inventory_items'] ?? []);
             }
 
             return $package->refresh();
@@ -54,6 +62,10 @@ class AdminPackageService
 
             if (array_key_exists('add_ons', $payload)) {
                 $this->syncPackageAddOns($package, $payload['add_ons'] ?? []);
+            }
+
+            if (array_key_exists('inventory_items', $payload) || (bool) ($payload['inventory_items_present'] ?? false)) {
+                $this->inventoryService->syncPackageConsumptions($package, $payload['inventory_items'] ?? []);
             }
 
             return $package->refresh();

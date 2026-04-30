@@ -6,16 +6,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class AddOnStockMovement extends Model
+class InventoryMovement extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'add_on_id',
+        'inventory_item_id',
         'movement_type',
         'qty',
         'stock_before',
         'stock_after',
+        'source_type',
+        'source_id',
+        'source_ref',
         'notes',
         'moved_by',
     ];
@@ -26,13 +29,14 @@ class AddOnStockMovement extends Model
             'qty' => 'integer',
             'stock_before' => 'integer',
             'stock_after' => 'integer',
+            'source_id' => 'integer',
             'moved_by' => 'integer',
         ];
     }
 
-    public function addOn(): BelongsTo
+    public function inventoryItem(): BelongsTo
     {
-        return $this->belongsTo(AddOn::class);
+        return $this->belongsTo(InventoryItem::class);
     }
 
     public function actor(): BelongsTo

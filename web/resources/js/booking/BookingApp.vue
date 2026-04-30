@@ -16,6 +16,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    addOns: {
+        type: Array,
+        default: () => [],
+    },
     oldValues: {
         type: Object,
         default: () => ({}),
@@ -39,26 +43,6 @@ const props = defineProps({
 });
 
 const stepLabels = ['Paket', 'Tanggal', 'Waktu', 'Add-on'];
-
-const addOnCatalog = [
-    { id: 'extra-person', label: '+ 1 orang (include cetak 1 4R)', price: 15000 },
-    { id: 'extra-print', label: '+ 1 cetak 4R', price: 15000 },
-    { id: 'extra-time', label: '+ 5 menit durasi foto', price: 20000 },
-    { id: 'costume', label: 'Sewa 1 kostum', price: 10000 },
-    { id: 'ganci-bening', label: 'Ganci bening 1 pcs', price: 10000 },
-    { id: 'ganci-besi', label: 'Ganci besi 1 pcs', price: 20000 },
-    { id: 'diy', label: 'DIY 1 pcs', price: 5000 },
-];
-
-const addOnMax = {
-    'extra-person': 5,
-    'extra-print': 10,
-    'extra-time': 3,
-    costume: 5,
-    'ganci-bening': 10,
-    'ganci-besi': 10,
-    diy: 10,
-};
 
 const packageAccentTokens = ['#2563eb', '#ec4899', '#22c55e', '#f59e0b', '#0ea5e9', '#8b5cf6'];
 
@@ -217,13 +201,40 @@ const selectedBranch = computed(() => {
     return props.branches.find((item) => asString(item.id) === asString(branchId.value)) ?? null;
 });
 
+const addOnCatalog = computed(() => {
+    const currentPackageId = Number(packageId.value || 0);
+
+    return props.addOns
+        .filter((item) => {
+            const addOnPackageId = item.package_id ? Number(item.package_id) : null;
+
+            return addOnPackageId === null || !currentPackageId || addOnPackageId === currentPackageId;
+        })
+        .map((item) => ({
+            id: Number(item.id || 0),
+            code: asString(item.code),
+            label: asString(item.name || item.label || '-'),
+            price: Number(item.price || 0),
+            max_qty: Math.max(1, Number(item.max_qty || 1)),
+        }))
+        .filter((item) => item.id > 0);
+});
+
+const addOnMax = computed(() => {
+    return addOnCatalog.value.reduce((map, item) => ({
+        ...map,
+        [item.id]: item.max_qty,
+    }), {});
+});
+
 const activeAddons = computed(() => {
-    return addOnCatalog.filter((item) => Number(addonQty.value[item.id] || 0) > 0);
+    return addOnCatalog.value.filter((item) => Number(addonQty.value[item.id] || 0) > 0);
 });
 
 const selectedAddonsPayload = computed(() => {
     return activeAddons.value.map((addon) => ({
         id: addon.id,
+        add_on_id: addon.id,
         label: addon.label,
         qty: Number(addonQty.value[addon.id] || 0),
         price: Number(addon.price || 0),
@@ -242,7 +253,11 @@ const basePrice = computed(() => Number(selectedPackage.value?.base_price || 0))
 
 const totalPrice = computed(() => basePrice.value + addOnTotal.value);
 
-const totalPeople = computed(() => 2 + Number(addonQty.value['extra-person'] || 0));
+const extraPersonAddOn = computed(() => {
+    return addOnCatalog.value.find((item) => item.code === 'AON-EXTRA-PERSON') ?? null;
+});
+
+const totalPeople = computed(() => 2 + Number(addonQty.value[extraPersonAddOn.value?.id] || 0));
 
 const canSubmit = computed(() => {
     return Boolean(
@@ -446,7 +461,7 @@ const incAddon = (addonId) => {
     const current = Number(addonQty.value[addonId] || 0);
     addonQty.value = {
         ...addonQty.value,
-        [addonId]: Math.min(current + 1, Number(addOnMax[addonId] || 5)),
+        [addonId]: Math.min(current + 1, Number(addOnMax.value[addonId] || 5)),
     };
 };
 
@@ -550,6 +565,11 @@ watch(packageId, () => {
     if (!designAllowed) {
         designCatalogId.value = '';
     }
+
+    const allowedAddOnIds = new Set(addOnCatalog.value.map((item) => Number(item.id)));
+    addonQty.value = Object.fromEntries(
+        Object.entries(addonQty.value).filter(([id]) => allowedAddOnIds.has(Number(id)))
+    );
 
     submitError.value = '';
 });
