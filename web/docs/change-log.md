@@ -1,5 +1,16 @@
 # Change Log
 
+## 2026-04-30 - Inventory Item Stock Flow
+
+- Memisahkan tracking stok dari `add_ons` ke master `inventory_items`.
+- Menambahkan mapping konsumsi barang untuk package dan add-on.
+- Menambahkan ledger `inventory_movements` untuk stok manual dan auto deduction booking.
+- Mengurangi stok otomatis saat booking diverifikasi, termasuk DP, dengan guard stok cukup dan anti double-deduction.
+- Mengubah UI Stock agar menampilkan barang fisik, bukan nama add-on.
+- Menambahkan mapping konsumsi barang pada UI Packages dan Add-ons tanpa mengubah style visual utama.
+- Menghapus input dan endpoint stock movement legacy dari Add-ons; availability add-on sekarang read-only dari mapping `inventory_items`.
+- Mengamankan booking publik agar harga add-on diambil dari database, bukan dari payload frontend.
+
 ## 2026-04-25
 
 ### Booking Verification, Queue Automation, and Payment Flow Hardening

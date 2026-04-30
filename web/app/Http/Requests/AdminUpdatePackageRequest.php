@@ -36,6 +36,10 @@ class AdminUpdatePackageRequest extends FormRequest
             'add_ons.*.max_qty' => ['required', 'integer', 'min:1', 'max:99'],
             'add_ons.*.is_active' => ['nullable', 'boolean'],
             'add_ons.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'inventory_items' => ['sometimes', 'array'],
+            'inventory_items_present' => ['nullable', 'boolean'],
+            'inventory_items.*.inventory_item_id' => ['required', 'integer', 'exists:inventory_items,id'],
+            'inventory_items.*.qty_per_booking' => ['required', 'integer', 'min:1', 'max:999999'],
         ];
     }
 }

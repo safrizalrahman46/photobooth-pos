@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AddOn extends Model
 {
@@ -53,8 +52,10 @@ class AddOn extends Model
             ->withTimestamps();
     }
 
-    public function stockMovements(): HasMany
+    public function inventoryItems(): BelongsToMany
     {
-        return $this->hasMany(AddOnStockMovement::class);
+        return $this->belongsToMany(InventoryItem::class, 'add_on_inventory_items')
+            ->withPivot(['qty_per_unit'])
+            ->withTimestamps();
     }
 }

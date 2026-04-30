@@ -5,6 +5,7 @@ import { Camera, Clock3, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-vue-next
 const props = defineProps({
     packageCards: { type: Array, default: () => [] },
     branchOptions: { type: Array, default: () => [] },
+    inventoryOptions: { type: Array, default: () => [] },
     panelBaseUrl: { type: String, default: '/admin' },
     formatRupiah: { type: Function, required: true },
     loading: { type: Boolean, default: false },
@@ -69,6 +70,7 @@ const form = reactive({
     description: '',
     duration_minutes: 30,
     base_price: 0,
+    inventory_items: [],
     is_active: true,
     sort_order: 0,
 });
@@ -182,6 +184,7 @@ const resetForm = () => {
     form.description = '';
     form.duration_minutes = 30;
     form.base_price = 0;
+    form.inventory_items = [];
     form.is_active = true;
     form.sort_order = 0;
     existingSamplePhotos.value = [];
@@ -208,6 +211,12 @@ const openEditModal = (pkg) => {
     resetNewSamplePhotoState();
     form.duration_minutes = Number(pkg.duration_minutes || 30);
     form.base_price = Number(pkg.base_price || 0);
+    form.inventory_items = Array.isArray(pkg.inventory_items)
+        ? pkg.inventory_items.map((row) => ({
+            inventory_item_id: Number(row.inventory_item_id || 0),
+            qty_per_booking: Math.max(1, Number(row.qty_per_booking || 1)),
+        })).filter((row) => row.inventory_item_id > 0)
+        : [];
     form.is_active = Boolean(pkg.is_active);
     form.sort_order = Number(pkg.sort_order || 0);
     localError.value = '';
@@ -245,6 +254,17 @@ const validateForm = () => {
     return true;
 };
 
+const addInventoryConsumption = () => {
+    form.inventory_items = [
+        ...form.inventory_items,
+        { inventory_item_id: '', qty_per_booking: 1 },
+    ];
+};
+
+const removeInventoryConsumption = (index) => {
+    form.inventory_items = form.inventory_items.filter((_, rowIndex) => rowIndex !== index);
+};
+
 const submitForm = async () => {
     if (!validateForm()) {
         return;
@@ -259,6 +279,18 @@ const submitForm = async () => {
     payload.append('is_active', form.is_active ? '1' : '0');
     payload.append('sort_order', String(Number(form.sort_order || 0)));
     payload.append('sample_photos_keep_present', '1');
+    payload.append('inventory_items_present', '1');
+
+    form.inventory_items
+        .map((row) => ({
+            inventory_item_id: Number(row.inventory_item_id || 0),
+            qty_per_booking: Math.max(1, Number(row.qty_per_booking || 1)),
+        }))
+        .filter((row) => row.inventory_item_id > 0)
+        .forEach((row, index) => {
+            payload.append(`inventory_items[${index}][inventory_item_id]`, String(row.inventory_item_id));
+            payload.append(`inventory_items[${index}][qty_per_booking]`, String(row.qty_per_booking));
+        });
 
     existingSamplePhotos.value.forEach((photoUrl) => {
         payload.append('sample_photos_keep[]', String(photoUrl || '').trim());
@@ -441,7 +473,7 @@ const requestDelete = async (pkg) => {
         </div>
 
         <div v-if="modalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="w-full max-w-xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+            <div class="w-full max-w-3xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#0F172A]">{{ modalMode === 'create' ? 'Add Package' : 'Edit Package' }}</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeModal">Close</button>
@@ -487,6 +519,41 @@ const requestDelete = async (pkg) => {
                     Description / Features (one feature per line)
                     <textarea v-model="form.description" rows="5" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></textarea>
                 </label>
+
+                <div class="mt-3 rounded-xl border p-3" style="border-color: #E2E8F0; background: #F8FAFC;">
+                    <div class="mb-2 flex items-start justify-between gap-2">
+                        <div>
+                            <p class="text-sm font-semibold text-[#0F172A]">Konsumsi Barang Paket</p>
+                            <p class="text-xs text-[#64748B]">Stok ini otomatis berkurang saat booking paket diverifikasi.</p>
+                        </div>
+                        <button type="button" class="rounded-lg border px-3 py-2 text-xs font-semibold text-[#2563EB]" style="border-color: #BFDBFE; background: #FFFFFF;" @click="addInventoryConsumption">
+                            <Plus class="mr-1 inline h-3.5 w-3.5" />
+                            Tambah
+                        </button>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div
+                            v-for="(row, rowIndex) in form.inventory_items"
+                            :key="`pkg-inventory-row-${rowIndex}`"
+                            class="grid grid-cols-[1fr_120px_auto] gap-2"
+                        >
+                            <select v-model="row.inventory_item_id" class="rounded-lg border bg-white px-3 py-2 text-sm" style="border-color: #E2E8F0;">
+                                <option value="">Pilih barang</option>
+                                <option v-for="item in inventoryOptions" :key="`pkg-inv-option-${item.id}`" :value="Number(item.id)">
+                                    {{ item.name }} ({{ item.unit }})
+                                </option>
+                            </select>
+                            <input v-model.number="row.qty_per_booking" type="number" min="1" class="rounded-lg border bg-white px-3 py-2 text-sm" style="border-color: #E2E8F0;" placeholder="Qty" >
+                            <button type="button" class="rounded-lg border px-3 py-2 text-xs font-semibold text-[#DC2626]" style="border-color: #FECACA; background: #FFFFFF;" @click="removeInventoryConsumption(rowIndex)">
+                                Hapus
+                            </button>
+                        </div>
+                        <p v-if="!form.inventory_items.length" class="rounded-lg border border-dashed px-3 py-2 text-xs text-[#94A3B8]" style="border-color: #CBD5E1; background: #FFFFFF;">
+                            Belum ada mapping. Tambahkan misalnya 1 Kertas Foto 4R per booking paket.
+                        </p>
+                    </div>
+                </div>
 
                 <label class="mt-3 block text-sm text-[#475569]">
                     Foto Contoh Hasil (Upload Gambar)
