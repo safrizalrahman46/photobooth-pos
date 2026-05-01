@@ -6,6 +6,9 @@ class TransactionRecord {
     required this.id,
     required this.transactionCode,
     required this.branchId,
+    required this.branchName,
+    required this.customerName,
+    required this.customerPhone,
     required this.status,
     required this.totalAmount,
     required this.paidAmount,
@@ -18,6 +21,9 @@ class TransactionRecord {
   final int id;
   final String transactionCode;
   final int branchId;
+  final String branchName;
+  final String customerName;
+  final String customerPhone;
   final String status;
   final double totalAmount;
   final double paidAmount;
@@ -34,6 +40,9 @@ class TransactionRecord {
       id: (json['id'] as num?)?.toInt() ?? 0,
       transactionCode: json['transaction_code']?.toString() ?? '-',
       branchId: (json['branch_id'] as num?)?.toInt() ?? 0,
+      branchName: json['branch_name']?.toString() ?? '-',
+      customerName: json['customer_name']?.toString() ?? '',
+      customerPhone: json['customer_phone']?.toString() ?? '',
       status: json['status']?.toString() ?? 'unpaid',
       totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
       paidAmount: (json['paid_amount'] as num?)?.toDouble() ?? 0,

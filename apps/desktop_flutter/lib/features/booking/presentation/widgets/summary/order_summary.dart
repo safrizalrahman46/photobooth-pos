@@ -5,8 +5,9 @@ import '../../../application/booking_controller.dart';
 
 class OrderSummaryPanel extends StatelessWidget {
   final BookingController controller;
+  final Future<void> Function()? onConfirm;
 
-  const OrderSummaryPanel({super.key, required this.controller});
+  const OrderSummaryPanel({super.key, required this.controller, this.onConfirm});
 
   String _formatPrice(double price) {
     final int p = price.toInt();
@@ -218,7 +219,11 @@ class OrderSummaryPanel extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
             child: GestureDetector(
-              onTap: () {},
+              onTap: controller.isSubmitting || onConfirm == null
+                  ? null
+                  : () {
+                      onConfirm!();
+                    },
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -234,7 +239,7 @@ class OrderSummaryPanel extends StatelessWidget {
                   ],
                 ),
                 child: Text(
-                  'KONFIRMASI &\nCETAK',
+                  controller.isSubmitting ? 'MEMPROSES...' : 'KONFIRMASI &\nCETAK',
                   style: AppTextStyles.h4.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,

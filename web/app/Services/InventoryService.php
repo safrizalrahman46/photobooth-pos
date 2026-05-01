@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\InventoryItem;
 use App\Models\InventoryMovement;
 use App\Models\Package;
+use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -14,6 +15,7 @@ use Illuminate\Validation\ValidationException;
 class InventoryService
 {
     public const SOURCE_BOOKING_VERIFICATION = 'booking_verification';
+    public const SOURCE_POS_WALK_IN_TRANSACTION = 'pos_walk_in_transaction';
 
     public function syncAddOnConsumptions(AddOn $addOn, array $rows): void
     {
@@ -164,6 +166,90 @@ class InventoryService
         });
     }
 
+    public function deductForTransaction(Transaction $transaction, ?int $actorId = null, string $sourceType = self::SOURCE_POS_WALK_IN_TRANSACTION): void
+    {
+        DB::transaction(function () use ($transaction, $actorId, $sourceType): void {
+            /** @var Transaction $lockedTransaction */
+            $lockedTransaction = Transaction::query()->whereKey($transaction->id)->lockForUpdate()->firstOrFail();
+
+            $alreadyDeducted = InventoryMovement::query()
+                ->where('source_type', $sourceType)
+                ->where('source_id', (int) $lockedTransaction->id)
+                ->exists();
+
+            if ($alreadyDeducted) {
+                return;
+            }
+
+            $lockedTransaction->load(['items']);
+            $requirements = $this->transactionRequirements($lockedTransaction);
+
+            if ($requirements->isEmpty()) {
+                return;
+            }
+
+            $items = InventoryItem::query()
+                ->whereIn('id', $requirements->keys()->all())
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            $shortages = [];
+
+            foreach ($requirements as $itemId => $requiredQty) {
+                /** @var InventoryItem|null $item */
+                $item = $items->get((int) $itemId);
+
+                if (! $item || ! $item->is_active) {
+                    $shortages[] = 'Barang stok tidak aktif/tidak ditemukan';
+                    continue;
+                }
+
+                $available = max(0, (int) $item->available_stock);
+
+                if ($requiredQty > $available) {
+                    $shortages[] = sprintf(
+                        '%s butuh %d %s, tersedia %d %s',
+                        (string) $item->name,
+                        (int) $requiredQty,
+                        (string) $item->unit,
+                        $available,
+                        (string) $item->unit
+                    );
+                }
+            }
+
+            if ($shortages !== []) {
+                throw ValidationException::withMessages([
+                    'inventory' => 'Stok tidak mencukupi: '.implode('; ', $shortages),
+                ]);
+            }
+
+            foreach ($requirements as $itemId => $requiredQty) {
+                /** @var InventoryItem $item */
+                $item = $items->get((int) $itemId);
+                $beforeStock = max(0, (int) $item->available_stock);
+                $afterStock = $beforeStock - (int) $requiredQty;
+
+                $item->update([
+                    'available_stock' => $afterStock,
+                ]);
+
+                $item->movements()->create([
+                    'movement_type' => 'out',
+                    'qty' => (int) $requiredQty,
+                    'stock_before' => $beforeStock,
+                    'stock_after' => $afterStock,
+                    'source_type' => $sourceType,
+                    'source_id' => (int) $lockedTransaction->id,
+                    'source_ref' => (string) $lockedTransaction->transaction_code,
+                    'notes' => 'Auto deduction from POS walk-in transaction.',
+                    'moved_by' => $actorId,
+                ]);
+            }
+        });
+    }
+
     private function normalizeConsumptionRows(array $rows, string $qtyColumn): array
     {
         return collect($rows)
@@ -214,6 +300,67 @@ class InventoryService
 
                 if ($requiredQty > 0) {
                     $requirements->put((int) $item->id, (int) $requirements->get((int) $item->id, 0) + $requiredQty);
+                }
+            }
+        }
+
+        return $requirements;
+    }
+
+    private function transactionRequirements(Transaction $transaction): Collection
+    {
+        $requirements = collect();
+        $packageIds = collect($transaction->items ?? [])
+            ->filter(fn ($item): bool => in_array((string) $item->item_type, ['package', 'booking'], true) && (int) $item->item_ref_id > 0)
+            ->pluck('item_ref_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values();
+        $addOnIds = collect($transaction->items ?? [])
+            ->filter(fn ($item): bool => (string) $item->item_type === 'add_on' && (int) $item->item_ref_id > 0)
+            ->pluck('item_ref_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values();
+
+        $packages = Package::query()
+            ->with('inventoryItems')
+            ->whereIn('id', $packageIds->all())
+            ->get()
+            ->keyBy('id');
+        $addOns = AddOn::query()
+            ->with('inventoryItems')
+            ->whereIn('id', $addOnIds->all())
+            ->get()
+            ->keyBy('id');
+
+        foreach ($transaction->items ?? [] as $line) {
+            $lineType = (string) $line->item_type;
+            $lineQty = max(1, (int) $line->qty);
+
+            if (in_array($lineType, ['package', 'booking'], true)) {
+                /** @var Package|null $package */
+                $package = $packages->get((int) $line->item_ref_id);
+
+                foreach ($package?->inventoryItems ?? [] as $item) {
+                    $qty = $lineQty * max(0, (int) ($item->pivot?->qty_per_booking ?? 0));
+
+                    if ($qty > 0) {
+                        $requirements->put((int) $item->id, (int) $requirements->get((int) $item->id, 0) + $qty);
+                    }
+                }
+            }
+
+            if ($lineType === 'add_on') {
+                /** @var AddOn|null $addOn */
+                $addOn = $addOns->get((int) $line->item_ref_id);
+
+                foreach ($addOn?->inventoryItems ?? [] as $item) {
+                    $qty = $lineQty * max(0, (int) ($item->pivot?->qty_per_unit ?? 0));
+
+                    if ($qty > 0) {
+                        $requirements->put((int) $item->id, (int) $requirements->get((int) $item->id, 0) + $qty);
+                    }
                 }
             }
         }

@@ -2,12 +2,14 @@ import 'dart:convert';
 
 import 'package:desktop_flutter/core/config/app_config.dart';
 import 'package:desktop_flutter/shared/models/app_settings_payload.dart';
+import 'package:desktop_flutter/shared/models/add_on_catalog_item.dart';
 import 'package:desktop_flutter/shared/models/booking_item.dart';
 import 'package:desktop_flutter/shared/models/branch_management_item.dart';
 import 'package:desktop_flutter/shared/models/branch_option.dart';
 import 'package:desktop_flutter/shared/models/cashier_session_item.dart';
 import 'package:desktop_flutter/shared/models/package_management_item.dart';
 import 'package:desktop_flutter/shared/models/payment_record.dart';
+import 'package:desktop_flutter/shared/models/pos_walk_in_checkout_result.dart';
 import 'package:desktop_flutter/shared/models/printer_setting_item.dart';
 import 'package:desktop_flutter/shared/models/queue_ticket_item.dart';
 import 'package:desktop_flutter/shared/models/report_summary.dart';
@@ -257,6 +259,63 @@ class ApiClient {
     return data
         .whereType<Map<String, dynamic>>()
         .map(PackageManagementItem.fromJson)
+        .toList();
+  }
+
+  Future<List<PackageManagementItem>> fetchPackages({
+    int? branchId,
+    int perPage = 200,
+  }) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/packages',
+      authenticated: false,
+      query: {
+        'per_page': '$perPage',
+        if (branchId != null) 'branch_id': '$branchId',
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! List) {
+      return <PackageManagementItem>[];
+    }
+
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(PackageManagementItem.fromJson)
+        .toList();
+  }
+
+  Future<List<AddOnCatalogItem>> fetchAddOns({
+    int? packageId,
+    bool manage = false,
+    bool includeInactive = false,
+    String? search,
+    int perPage = 200,
+  }) async {
+    final payload = await _send(
+      method: 'GET',
+      path: manage ? '/manage/add-ons' : '/add-ons',
+      authenticated: manage,
+      query: {
+        'per_page': '$perPage',
+        if (packageId != null) 'package_id': '$packageId',
+        if (includeInactive) 'include_inactive': '1',
+        if (search != null && search.isNotEmpty) 'search': search,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! List) {
+      return <AddOnCatalogItem>[];
+    }
+
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(AddOnCatalogItem.fromJson)
         .toList();
   }
 
@@ -692,6 +751,124 @@ class ApiClient {
     }
 
     return BookingItem.fromJson(data);
+  }
+
+  Future<BookingItem> confirmBookingPayment({
+    required int bookingId,
+    required String method,
+    double? amount,
+    String? referenceNo,
+    String? notes,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/bookings/$bookingId/confirm-payment',
+      authenticated: true,
+      body: {
+        'method': method,
+        if (amount != null) 'amount': amount,
+        if (referenceNo != null && referenceNo.isNotEmpty)
+          'reference_no': referenceNo,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is Map<String, dynamic>) {
+      final booking = data['booking'];
+
+      if (booking is Map<String, dynamic>) {
+        return BookingItem.fromJson(booking);
+      }
+    }
+
+    throw ApiException('Respons konfirmasi pembayaran booking tidak valid.');
+  }
+
+  Future<BookingItem> confirmBooking({
+    required int bookingId,
+    String? reason,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/bookings/$bookingId/confirm',
+      authenticated: true,
+      body: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons verifikasi booking tidak valid.');
+    }
+
+    return BookingItem.fromJson(data);
+  }
+
+  Future<BookingItem> declineBooking({
+    required int bookingId,
+    String? reason,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/bookings/$bookingId/decline',
+      authenticated: true,
+      body: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons decline booking tidak valid.');
+    }
+
+    return BookingItem.fromJson(data);
+  }
+
+  Future<PosWalkInCheckoutResult> checkoutWalkIn({
+    required int branchId,
+    required int packageId,
+    required String customerName,
+    String? customerPhone,
+    String? queueDate,
+    required String paymentMethod,
+    double? paidAmount,
+    String? referenceNo,
+    double discountAmount = 0,
+    double taxAmount = 0,
+    String? notes,
+    List<Map<String, dynamic>> addons = const <Map<String, dynamic>>[],
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/pos/walk-in/checkout',
+      authenticated: true,
+      body: {
+        'branch_id': branchId,
+        'package_id': packageId,
+        'customer_name': customerName,
+        if (customerPhone != null && customerPhone.isNotEmpty)
+          'customer_phone': customerPhone,
+        if (queueDate != null && queueDate.isNotEmpty) 'queue_date': queueDate,
+        'payment_method': paymentMethod,
+        if (paidAmount != null) 'paid_amount': paidAmount,
+        if (referenceNo != null && referenceNo.isNotEmpty)
+          'reference_no': referenceNo,
+        'discount_amount': discountAmount,
+        'tax_amount': taxAmount,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+        'addons': addons,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons checkout walk-in tidak valid.');
+    }
+
+    return PosWalkInCheckoutResult.fromJson(data);
   }
 
   Future<QueueTicketItem?> callNext({

@@ -1,4 +1,5 @@
 import 'package:desktop_flutter/core/network/api_client.dart';
+import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/core/session/session_store.dart';
 import 'package:desktop_flutter/features/auth/presentation/login_page.dart';
 import 'package:desktop_flutter/features/home/presentation/desktop_home_page.dart';
@@ -42,8 +43,10 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
         );
 
         await _sessionStore.save(session);
+        ApiSession.set(session);
       } on ApiException {
         await _sessionStore.clear();
+        ApiSession.clear();
         session = null;
       }
     }
@@ -60,6 +63,7 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
 
   Future<void> _handleLogin(DesktopSession session) async {
     await _sessionStore.save(session);
+    ApiSession.set(session);
 
     if (!mounted) {
       return;
@@ -81,6 +85,7 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
     }
 
     await _sessionStore.clear();
+    ApiSession.clear();
 
     if (!mounted) {
       return;

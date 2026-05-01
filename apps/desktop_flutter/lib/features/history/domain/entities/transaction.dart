@@ -1,7 +1,7 @@
 // features/history/domain/entities/transaction.dart
 
 /// Enum untuk status transaksi
-enum TransactionStatus { lunas, batal }
+enum TransactionStatus { lunas, pending, batal }
 
 /// Extension untuk label & warna status
 extension TransactionStatusX on TransactionStatus {
@@ -9,6 +9,8 @@ extension TransactionStatusX on TransactionStatus {
     switch (this) {
       case TransactionStatus.lunas:
         return 'Lunas';
+      case TransactionStatus.pending:
+        return 'Pending';
       case TransactionStatus.batal:
         return 'Batal';
     }

@@ -63,11 +63,22 @@ class _HistoryPageState extends State<HistoryPage> {
 
             const SizedBox(height: 24),
 
+            if (_controller.errorMessage != null) ...[
+              Text(
+                _controller.errorMessage!,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Table Premium with logic
-            HistoryTableSection(
-              transactions: _controller.pagedTransactions,
-              onRowAction: _controller.onRowAction,
-            ),
+            if (_controller.isLoading)
+              const Center(child: CircularProgressIndicator())
+            else
+              HistoryTableSection(
+                transactions: _controller.pagedTransactions,
+                onRowAction: _controller.onRowAction,
+              ),
 
             const SizedBox(height: 32),
 

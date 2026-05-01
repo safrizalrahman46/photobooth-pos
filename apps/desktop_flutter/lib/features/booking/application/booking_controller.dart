@@ -1,122 +1,52 @@
+import 'package:desktop_flutter/core/session/api_session.dart';
+import 'package:desktop_flutter/shared/models/booking_item.dart' as api;
+import 'package:desktop_flutter/shared/models/pos_walk_in_checkout_result.dart';
 import 'package:flutter/material.dart';
 import '../domain/entities/booking.dart';
 
 class BookingController extends ChangeNotifier {
+  BookingController() {
+    loadInitialData();
+  }
+
+  bool isLoading = false;
+  bool isSubmitting = false;
+  String? errorMessage;
+  int? selectedBranchId;
+  String selectedBranchName = '-';
+  PosWalkInCheckoutResult? lastCheckoutResult;
+
   // Customer
-  String customerName = 'Budi Santoso';
-  String whatsapp = '081199881234';
-  String email = 'budisantoso@gmail.com';
-  String note = 'Acara Ulang Tahun';
-  int jumlahOrang = 4;
+  String customerName = '';
+  String whatsapp = '';
+  String email = '';
+  String note = '';
+  int jumlahOrang = 1;
 
   // Queue list
-  List<Booking> queues = [
-    Booking(
-      id: 'TB-9821',
-      customerName: 'Sarah Johnson',
-      phone: '+62 812-3344-xxxx',
-      time: '10:30 AM',
-      status: 'PILIH PAKET',
-      queueNumber: 1,
-    ),
-    Booking(
-      id: 'TB-9822',
-      customerName: 'Budi Santoso',
-      phone: '+62 811-9988-xxxx',
-      time: 'NOW',
-      status: 'SEDANG SESI',
-      queueNumber: 2,
-    ),
-    Booking(
-      id: 'TB-9823',
-      customerName: 'Amanda Clarissa',
-      phone: '+62 819-2211-xxxx',
-      time: '11:15 AM',
-      status: 'ANTREAN 2',
-      queueNumber: 3,
-    ),
-    Booking(
-      id: 'TB-9824',
-      customerName: 'Dimas Pratama',
-      phone: '+62 857-4455-xxxx',
-      time: '11:45 AM',
-      status: 'ANTREAN 3',
-      queueNumber: 4,
-    ),
-    Booking(
-      id: 'TB-9825',
-      customerName: 'Citra Lestari',
-      phone: '+62 822-6677-xxxx',
-      time: '12:15 PM',
-      status: 'ANTREAN 4',
-      queueNumber: 5,
-    ),
-  ];
+  List<Booking> queues = [];
 
-  int selectedQueueIndex = 1;
+  int selectedQueueIndex = 0;
 
   // Packages
-  List<Package> packages = [
-    Package(
-      id: 'basic',
-      name: 'Basic',
-      duration: '15 Menit',
-      prints: '2 Print',
-      price: 50000,
-    ),
-    Package(
-      id: 'mandi_bola',
-      name: 'MANDI BOLA',
-      duration: '20 Menit',
-      prints: '4 Print',
-      price: 85000,
-    ),
-    Package(
-      id: 'minimarket',
-      name: 'Minimarket',
-      duration: '25 Menit',
-      prints: '6 Print',
-      price: 120000,
-    ),
-  ];
+  List<Package> packages = [];
 
-  int selectedPackageIndex = 1;
+  int selectedPackageIndex = 0;
 
   // Addons
-  List<Addon> addons = [
-    Addon(
-      id: 'cetak_4r',
-      name: 'Cetak Foto 4R',
-      subtitle: 'Sisa Stok: 45',
-      price: 15000,
-      stock: 45,
-      quantity: 2,
-    ),
-    Addon(
-      id: 'frame_custom',
-      name: 'Frame Custom',
-      subtitle: 'Varian Exclusive Wood',
-      price: 25000,
-      quantity: 0,
-    ),
-    Addon(
-      id: 'extra_person',
-      name: 'Extra Person',
-      subtitle: 'Max 2 person additional',
-      price: 10000,
-      quantity: 0,
-    ),
-  ];
+  List<Addon> addons = [];
 
   // Voucher
-  String voucherCode = 'KODEPROMO';
+  String voucherCode = '';
   bool voucherApplied = false;
 
   // Payment
   String selectedPayment = 'TUNAI'; // 'TUNAI' or 'QRIS'
 
   // Computed
-  Package get selectedPackage => packages[selectedPackageIndex];
+  Package get selectedPackage => packages.isEmpty
+      ? const Package(id: '0', name: '-', duration: '-', prints: '-', price: 0)
+      : packages[selectedPackageIndex.clamp(0, packages.length - 1).toInt()];
 
   List<Addon> get selectedAddons =>
       addons.where((a) => a.quantity > 0).toList();
@@ -128,6 +58,81 @@ class BookingController extends ChangeNotifier {
 
   double get grandTotal => packagePrice + addonsTotal;
 
+  Future<void> loadInitialData() async {
+    final client = ApiSession.client;
+
+    if (client == null) {
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final branches = await client.fetchBranches();
+
+      if (branches.isNotEmpty) {
+        final branch = branches.first;
+        selectedBranchId = branch.id;
+        selectedBranchName = branch.name;
+      }
+
+      final packageRows = await client.fetchPackages(branchId: selectedBranchId);
+
+      packages = packageRows.map((row) {
+        return Package(
+          id: row.id.toString(),
+          name: row.name,
+          duration: '${row.durationMinutes} Menit',
+          prints: 'Package',
+          price: row.basePrice,
+        );
+      }).toList();
+
+      selectedPackageIndex = packages.isEmpty
+          ? 0
+          : selectedPackageIndex.clamp(0, packages.length - 1).toInt();
+
+      await _loadAddOnsForSelectedPackage();
+
+      final bookingRows = await client.fetchBookings(
+        branchId: selectedBranchId,
+        perPage: 100,
+      );
+
+      queues = bookingRows.asMap().entries.map((entry) {
+        final booking = entry.value;
+        return Booking(
+          recordId: booking.id,
+          id: booking.bookingCode,
+          customerName: booking.customerName,
+          phone: booking.customerPhone,
+          time: _formatBookingTime(booking.startAt),
+          status: booking.status,
+          paymentType: booking.paymentType,
+          paymentStatus: booking.paymentStatus,
+          queueNumber: entry.key + 1,
+          totalAmount: booking.totalAmount,
+          depositAmount: booking.depositAmount,
+          canConfirmPayment: booking.canConfirmPayment,
+          canConfirmBooking: booking.canConfirmBooking,
+          canDeclineBooking: booking.canDeclineBooking,
+          email: booking.customerEmail,
+          note: booking.packageName,
+        );
+      }).toList();
+      selectedQueueIndex = queues.isEmpty
+          ? 0
+          : selectedQueueIndex.clamp(0, queues.length - 1).toInt();
+    } catch (error) {
+      errorMessage = error.toString();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
   // Methods
   void selectQueue(int index) {
     selectedQueueIndex = index;
@@ -136,10 +141,20 @@ class BookingController extends ChangeNotifier {
 
   void selectPackage(int index) {
     selectedPackageIndex = index;
+    for (final addon in addons) {
+      addon.quantity = 0;
+    }
     notifyListeners();
+    _loadAddOnsForSelectedPackage();
   }
 
   void incrementAddon(int index) {
+    final stock = addons[index].stock;
+
+    if (stock != null && addons[index].quantity >= stock) {
+      return;
+    }
+
     addons[index].quantity++;
     notifyListeners();
   }
@@ -156,8 +171,29 @@ class BookingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateCustomerName(String val) {
+    customerName = val;
+    notifyListeners();
+  }
+
+  void updateWhatsapp(String val) {
+    whatsapp = val;
+    notifyListeners();
+  }
+
   void updateEmail(String val) {
     email = val;
+    notifyListeners();
+  }
+
+  void updateJumlahOrang(String val) {
+    final parsed = int.tryParse(val);
+
+    if (parsed == null || parsed < 1) {
+      return;
+    }
+
+    jumlahOrang = parsed;
     notifyListeners();
   }
 
@@ -171,20 +207,76 @@ class BookingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void accBooking() {
+  Future<void> accBooking() async {
+    final client = ApiSession.client;
+
+    if (client == null ||
+        selectedQueueIndex < 0 ||
+        selectedQueueIndex >= queues.length) {
+      return;
+    }
+
+    final booking = queues[selectedQueueIndex];
+
+    if (booking.recordId == null) {
+      return;
+    }
+
+    try {
+      if (booking.canConfirmPayment) {
+        final paymentAmount = booking.paymentType == 'dp50'
+            ? booking.depositAmount > 0
+                ? booking.depositAmount
+                : booking.totalAmount * 0.5
+            : booking.totalAmount;
+
+        await client.confirmBookingPayment(
+          bookingId: booking.recordId!,
+          method: 'transfer',
+          amount: paymentAmount,
+          notes: 'Verified from desktop app.',
+        );
+      } else if (booking.canConfirmBooking) {
+        await client.confirmBooking(
+          bookingId: booking.recordId!,
+          reason: 'Verified from desktop app.',
+        );
+      }
+
+      await loadInitialData();
+    } catch (error) {
+      errorMessage = error.toString();
+      notifyListeners();
+    }
+
     if (selectedQueueIndex >= 0 && selectedQueueIndex < queues.length) {
-      // Mock: change status to 'TERKONFIRMASI' or similar
-      // In real app, this might move it to the actual queue
       notifyListeners();
     }
   }
 
-  void cancelBooking() {
-    if (selectedQueueIndex >= 0 && selectedQueueIndex < queues.length) {
-      queues.removeAt(selectedQueueIndex);
-      if (selectedQueueIndex >= queues.length) {
-        selectedQueueIndex = queues.length - 1;
-      }
+  Future<void> cancelBooking() async {
+    final client = ApiSession.client;
+
+    if (client == null ||
+        selectedQueueIndex < 0 ||
+        selectedQueueIndex >= queues.length) {
+      return;
+    }
+
+    final booking = queues[selectedQueueIndex];
+
+    if (booking.recordId == null || !booking.canDeclineBooking) {
+      return;
+    }
+
+    try {
+      await client.declineBooking(
+        bookingId: booking.recordId!,
+        reason: 'Declined from desktop app.',
+      );
+      await loadInitialData();
+    } catch (error) {
+      errorMessage = error.toString();
       notifyListeners();
     }
   }
@@ -197,5 +289,105 @@ class BookingController extends ChangeNotifier {
       }
       notifyListeners();
     }
+  }
+
+  Future<PosWalkInCheckoutResult?> checkoutWalkIn() async {
+    final client = ApiSession.client;
+    final branchId = selectedBranchId;
+
+    if (client == null || branchId == null || packages.isEmpty) {
+      errorMessage = 'Data cabang/paket belum siap.';
+      notifyListeners();
+      return null;
+    }
+
+    if (customerName.trim().isEmpty || whatsapp.trim().isEmpty) {
+      errorMessage = 'Nama pelanggan dan WhatsApp wajib diisi.';
+      notifyListeners();
+      return null;
+    }
+
+    isSubmitting = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await client.checkoutWalkIn(
+        branchId: branchId,
+        packageId: int.parse(selectedPackage.id),
+        customerName: customerName.trim(),
+        customerPhone: whatsapp.trim(),
+        paymentMethod: selectedPayment == 'QRIS' ? 'qris' : 'cash',
+        paidAmount: grandTotal,
+        notes: note.trim().isEmpty ? null : note.trim(),
+        addons: selectedAddons
+            .map((addon) => {
+                  'add_on_id': int.parse(addon.id),
+                  'qty': addon.quantity,
+                })
+            .toList(),
+      );
+
+      lastCheckoutResult = result;
+      await loadInitialData();
+      return result;
+    } catch (error) {
+      errorMessage = error.toString();
+      notifyListeners();
+      return null;
+    } finally {
+      isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadAddOnsForSelectedPackage() async {
+    final client = ApiSession.client;
+    final packageId = int.tryParse(selectedPackage.id);
+
+    if (client == null || packageId == null || packageId <= 0) {
+      addons = [];
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final addOnRows = await client.fetchAddOns(packageId: packageId);
+
+      addons = addOnRows.map((item) {
+        final stock = item.effectiveAvailableStock;
+        final maxQty = item.maxQty < 1 ? 1 : item.maxQty;
+        final stockLimit = stock == null || stock > maxQty ? maxQty : stock;
+
+        return Addon(
+          id: item.id.toString(),
+          name: item.name,
+          subtitle: stock == null ? 'Maks $maxQty item' : 'Sisa stok: $stock',
+          price: item.price,
+          stock: stockLimit,
+          maxQty: maxQty,
+        );
+      }).toList();
+    } catch (error) {
+      errorMessage = error.toString();
+      addons = [];
+    }
+
+    notifyListeners();
+  }
+
+  String _formatBookingTime(String? value) {
+    if (value == null || value.isEmpty) {
+      return '-';
+    }
+
+    final parsed = DateTime.tryParse(value);
+
+    if (parsed == null) {
+      return value;
+    }
+
+    final local = parsed.toLocal();
+    return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
   }
 }
