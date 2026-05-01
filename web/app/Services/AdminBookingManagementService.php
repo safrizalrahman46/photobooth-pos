@@ -441,6 +441,18 @@ class AdminBookingManagementService
                 ]);
             }
 
+            // GAP 1: Validasi stok tersedia untuk add-on physical
+            if ($addOn->is_physical && (int) $addOn->available_stock < $qty) {
+                throw ValidationException::withMessages([
+                    'add_ons' => sprintf(
+                        'Stok add-on "%s" tidak mencukupi. Tersedia: %d, Diminta: %d.',
+                        (string) $addOn->name,
+                        (int) $addOn->available_stock,
+                        $qty
+                    ),
+                ]);
+            }
+
             $selected[] = [
                 'id' => (int) $addOn->id,
                 'name' => (string) $addOn->name,
@@ -633,5 +645,40 @@ class AdminBookingManagementService
             });
 
         return max($packageBasePrice + $addOnTotal, 0);
+    }
+
+    /**
+     * GAP 1: Kurangi stok add-on physical secara otomatis saat booking pertama kali diverifikasi.
+     * Hanya memproses add-on yang ada di pivot booking_add_ons (booking dari channel Admin).
+     * Menggunakan lockForUpdate via AdminAddOnService untuk mencegah race condition.
+     */
+    private function deductAddOnStocksForBooking(Booking $booking, ?int $actorId = null): void
+    {
+        $booking->loadMissing(['addOns']);
+
+        if ($booking->addOns->isEmpty()) {
+            return;
+        }
+
+        foreach ($booking->addOns as $addOn) {
+            if (! $addOn->is_physical) {
+                continue;
+            }
+
+            $qty = (int) ($addOn->pivot?->qty ?? 0);
+
+            if ($qty <= 0) {
+                continue;
+            }
+
+            $this->addOnService->recordStockMovement($addOn, [
+                'movement_type' => 'out',
+                'qty'           => $qty,
+                'notes'         => sprintf(
+                    'Auto-deducted saat verifikasi booking %s.',
+                    (string) $booking->booking_code
+                ),
+            ], $actorId);
+        }
     }
 }
