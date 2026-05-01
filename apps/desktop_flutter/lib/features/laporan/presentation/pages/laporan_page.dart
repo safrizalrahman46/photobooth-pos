@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:desktop_flutter/core/session/api_session.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -19,37 +20,6 @@ class LaporanPage extends StatelessWidget {
     final controller = Get.put(
       LaporanController(repository: LaporanRepositoryImpl()),
     );
-
-    // Dummy data untuk tabel laporan (hanya Lunas & Batal)
-    final List<Transaction> filteredTransactions = [
-      Transaction(
-        id: 'TRX-9402',
-        waktu: DateTime(2024, 10, 24, 14, 22),
-        namaPelanggan: 'Andi Pratama',
-        paket: 'Mandi Bola',
-        addOns: 'Cetak 4R',
-        totalBayar: 90000,
-        status: TransactionStatus.lunas,
-      ),
-      Transaction(
-        id: 'TRX-9401',
-        waktu: DateTime(2024, 10, 24, 13, 45),
-        namaPelanggan: 'Siska Amelia',
-        paket: 'Neon Splash',
-        addOns: 'USB Drive',
-        totalBayar: 125000,
-        status: TransactionStatus.lunas,
-      ),
-      Transaction(
-        id: 'TRX-9398',
-        waktu: DateTime(2024, 10, 24, 10, 15),
-        namaPelanggan: 'Dani Ramdan',
-        paket: 'Selfie Party',
-        addOns: null,
-        totalBayar: 35000,
-        status: TransactionStatus.batal,
-      ),
-    ];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -168,19 +138,35 @@ class LaporanPage extends StatelessWidget {
                     const SizedBox(height: 32),
 
                     /// ───────── CHART ─────────
-                    const CashflowChart(),
+                    CashflowChart(totalPendapatan: summary.totalPendapatan),
 
                     const SizedBox(height: 48),
 
                     /// ───────── LAPORAN TRANSAKSI ─────────
                     Text('Rincian Transaksi Terkonfirmasi', style: AppTextStyles.h3),
                     const SizedBox(height: 16),
-                    ReportTable(transactions: filteredTransactions),
+                    FutureBuilder<List<Transaction>>(
+                      future: _loadTransactions(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        if (snapshot.hasError) {
+                          return Text(
+                            snapshot.error.toString(),
+                            style: const TextStyle(color: Colors.redAccent),
+                          );
+                        }
+
+                        return ReportTable(transactions: snapshot.data ?? const <Transaction>[]);
+                      },
+                    ),
                     
                     const SizedBox(height: 24),
                     // Label info
                     Text(
-                      '* Hanya menampilkan transaksi berstatus Lunas atau Batal.',
+                      '* Menampilkan transaksi Lunas, Pending, dan Batal dari API.',
                       style: AppTextStyles.caption.copyWith(fontStyle: FontStyle.italic),
                     ),
                   ],
@@ -215,5 +201,38 @@ class LaporanPage extends StatelessWidget {
     if (picked != null) {
       controller.setDate(picked);
     }
+  }
+
+  Future<List<Transaction>> _loadTransactions() async {
+    final client = ApiSession.client;
+
+    if (client == null) {
+      return <Transaction>[];
+    }
+
+    final rows = await client.fetchTransactions(perPage: 50);
+
+    return rows.map((row) {
+      final packageItems = row.items.where((item) => item.itemType == 'package' || item.itemType == 'booking').toList();
+      final addOnItems = row.items.where((item) => item.itemType == 'add_on').toList();
+
+      return Transaction(
+        id: row.transactionCode,
+        waktu: DateTime.tryParse(row.createdAt ?? '') ?? DateTime.now(),
+        namaPelanggan: row.customerName.isEmpty ? '-' : row.customerName,
+        paket: packageItems.isNotEmpty ? packageItems.first.itemName : '-',
+        addOns: addOnItems.isEmpty ? null : addOnItems.map((item) => item.itemName).join(', '),
+        totalBayar: row.totalAmount.round(),
+        status: _mapTransactionStatus(row.status),
+      );
+    }).toList();
+  }
+
+  TransactionStatus _mapTransactionStatus(String status) {
+    return switch (status) {
+      'paid' => TransactionStatus.lunas,
+      'void' => TransactionStatus.batal,
+      _ => TransactionStatus.pending,
+    };
   }
 }

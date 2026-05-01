@@ -30,7 +30,7 @@ class QueueController extends Controller
         $perPage = min((int) $request->integer('per_page', 15), 100);
 
         $query = QueueTicket::query()
-            ->with(['booking'])
+            ->with(['branch', 'booking'])
             ->orderByDesc('queue_date')
             ->orderBy('queue_number');
 
@@ -70,7 +70,7 @@ class QueueController extends Controller
             return $this->responder->error($exception->getMessage(), 422);
         }
 
-        return $this->responder->success(new QueueTicketResource($ticket->load('booking')), 'Check-in booking berhasil.', 201);
+        return $this->responder->success(new QueueTicketResource($ticket->load('branch', 'booking')), 'Check-in booking berhasil.', 201);
     }
 
     public function walkIn(QueueWalkInRequest $request): JsonResponse
@@ -83,7 +83,7 @@ class QueueController extends Controller
             return $this->responder->error($exception->getMessage(), 422);
         }
 
-        return $this->responder->success(new QueueTicketResource($ticket), 'Antrean walk-in berhasil dibuat.', 201);
+        return $this->responder->success(new QueueTicketResource($ticket->load('branch')), 'Antrean walk-in berhasil dibuat.', 201);
     }
 
     public function transition(QueueTransitionRequest $request, QueueTicket $queueTicket): JsonResponse
@@ -98,7 +98,7 @@ class QueueController extends Controller
             return $this->responder->error($exception->getMessage(), 422);
         }
 
-        return $this->responder->success(new QueueTicketResource($ticket->load('booking')), 'Status antrean berhasil diperbarui.');
+        return $this->responder->success(new QueueTicketResource($ticket->load('branch', 'booking')), 'Status antrean berhasil diperbarui.');
     }
 
     public function callNext(Request $request): JsonResponse
@@ -122,6 +122,6 @@ class QueueController extends Controller
             return $this->responder->success(null, 'Tidak ada antrean menunggu saat ini.');
         }
 
-        return $this->responder->success(new QueueTicketResource($ticket->load('booking')), 'Antrean berikutnya berhasil dipanggil.');
+        return $this->responder->success(new QueueTicketResource($ticket->load('branch', 'booking')), 'Antrean berikutnya berhasil dipanggil.');
     }
 }

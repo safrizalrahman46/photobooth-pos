@@ -2,10 +2,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 class CashflowChart extends StatelessWidget {
-  const CashflowChart({super.key});
+  final double totalPendapatan;
+
+  const CashflowChart({super.key, required this.totalPendapatan});
 
   @override
   Widget build(BuildContext context) {
+    final hasRevenue = totalPendapatan > 0;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32),
@@ -30,7 +34,7 @@ class CashflowChart extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Distribusi Pendapatan',
+                    'Pendapatan Terkonfirmasi',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -39,7 +43,7 @@ class CashflowChart extends StatelessWidget {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Berdasarkan kategori produk & layanan',
+                    'Berdasarkan transaksi dan booking dari API',
                     style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
                   ),
                 ],
@@ -78,16 +82,17 @@ class CashflowChart extends StatelessWidget {
                         size: const Size(200, 200),
                         painter: _DonutChartPainter(
                           data: [
-                            _ChartData(color: const Color(0xFF6366F1), value: 65), // Indigo (Paket)
-                            _ChartData(color: const Color(0xFF10B981), value: 25), // Emerald (Add-ons)
-                            _ChartData(color: const Color(0xFFF59E0B), value: 10), // Amber (Lainnya)
+                            _ChartData(
+                              color: const Color(0xFF6366F1),
+                              value: hasRevenue ? 100 : 1,
+                            ),
                           ],
                         ),
                       ),
-                      const Column(
+                      Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
+                          const Text(
                             'TOTAL',
                             style: TextStyle(
                               fontSize: 11,
@@ -96,10 +101,10 @@ class CashflowChart extends StatelessWidget {
                               letterSpacing: 2,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            '100%',
-                            style: TextStyle(
+                            hasRevenue ? '100%' : '0%',
+                            style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
                               color: Color(0xFF1E293B),
@@ -113,29 +118,15 @@ class CashflowChart extends StatelessWidget {
               ),
               const SizedBox(width: 48),
               // Legend
-              const Expanded(
+              Expanded(
                 flex: 3,
                 child: Column(
                   children: [
                     _LegendItem(
-                      label: 'Penjualan Paket',
-                      percentage: '65%',
-                      color: Color(0xFF6366F1),
-                      amount: 'Rp 9.262.500',
-                    ),
-                    Divider(height: 32, color: Color(0xFFF1F5F9)),
-                    _LegendItem(
-                      label: 'Add-ons Service',
-                      percentage: '25%',
-                      color: Color(0xFF10B981),
-                      amount: 'Rp 3.562.500',
-                    ),
-                    Divider(height: 32, color: Color(0xFFF1F5F9)),
-                    _LegendItem(
-                      label: 'Layanan Lainnya',
-                      percentage: '10%',
-                      color: Color(0xFFF59E0B),
-                      amount: 'Rp 1.425.000',
+                      label: 'Pendapatan Terverifikasi',
+                      percentage: hasRevenue ? '100%' : '0%',
+                      color: const Color(0xFF6366F1),
+                      amount: _formatRupiah(totalPendapatan),
                     ),
                   ],
                 ),
@@ -145,6 +136,11 @@ class CashflowChart extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatRupiah(double value) {
+    final rounded = value.round();
+    return 'Rp ${rounded.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
   }
 }
 

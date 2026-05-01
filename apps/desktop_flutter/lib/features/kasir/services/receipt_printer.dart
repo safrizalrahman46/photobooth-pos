@@ -11,6 +11,7 @@ class ReceiptPrinter {
     required String brandName,
     required String branchName,
     required String cashierName,
+    String? queueCode,
     int? paperWidthMm,
   }) async {
     final bytes = await buildTransactionReceiptPdf(
@@ -18,6 +19,7 @@ class ReceiptPrinter {
       brandName: brandName,
       branchName: branchName,
       cashierName: cashierName,
+      queueCode: queueCode,
       paperWidthMm: paperWidthMm,
     );
 
@@ -32,6 +34,7 @@ class ReceiptPrinter {
     required String brandName,
     required String branchName,
     required String cashierName,
+    String? queueCode,
     int? paperWidthMm,
   }) async {
     final doc = pw.Document();
@@ -59,6 +62,8 @@ class ReceiptPrinter {
           ),
           pw.SizedBox(height: 10),
           _labelValue('No', transaction.transactionCode),
+          if (queueCode != null && queueCode.isNotEmpty)
+            _labelValue('Antrean', queueCode),
           _labelValue('Tanggal', createdAt),
           _labelValue('Kasir', cashierName),
           _labelValue('Status', transaction.status.toUpperCase()),

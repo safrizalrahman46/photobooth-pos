@@ -23,7 +23,7 @@ class AdminBookingManagementService
         private readonly BookingService $bookingService,
         private readonly TransactionService $transactionService,
         private readonly QueueService $queueService,
-        private readonly AdminAddOnService $addOnService,
+        private readonly InventoryService $inventoryService,
     ) {}
 
     public function create(array $payload): Booking
@@ -118,26 +118,25 @@ class AdminBookingManagementService
             ]);
         }
 
-        if ($status === BookingStatus::Pending) {
-            $this->bookingService->updateStatus(
-                $booking,
-                BookingStatus::Confirmed,
-                $actorId,
-                $reason ?: 'Confirmed from owner dashboard'
-            );
-        }
+        DB::transaction(function () use ($booking, $status, $actorId, $reason): void {
+            if ($booking->approved_at === null) {
+                $this->inventoryService->deductForVerifiedBooking($booking, $actorId);
 
-        $isFirstApproval = $booking->approved_at === null;
+                $booking->refresh()->update([
+                    'approved_by' => $actorId ?: $booking->approved_by,
+                    'approved_at' => now(),
+                ]);
+            }
 
-        if ($isFirstApproval) {
-            $booking->update([
-                'approved_by' => $actorId ?: $booking->approved_by,
-                'approved_at' => now(),
-            ]);
-
-            // GAP 1: Auto-deduct stok add-on physical pada saat pertama kali diverifikasi
-            $this->deductAddOnStocksForBooking($booking->refresh(), $actorId);
-        }
+            if ($status === BookingStatus::Pending) {
+                $this->bookingService->updateStatus(
+                    $booking,
+                    BookingStatus::Confirmed,
+                    $actorId,
+                    $reason ?: 'Confirmed from owner dashboard'
+                );
+            }
+        });
 
         $booking = $booking->refresh();
         $this->autoCheckInQueueAfterVerification($booking);

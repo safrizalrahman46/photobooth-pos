@@ -25,7 +25,7 @@ class TransactionController extends Controller
         $perPage = min((int) $request->integer('per_page', 15), 100);
 
         $query = Transaction::query()
-            ->with(['items', 'payments'])
+            ->with(['branch', 'booking', 'queueTicket', 'items', 'payments'])
             ->orderByDesc('created_at');
 
         if ($request->filled('branch_id')) {
@@ -51,7 +51,7 @@ class TransactionController extends Controller
         );
 
         return $this->responder->success(
-            new TransactionResource($transaction->load('items', 'payments')),
+            new TransactionResource($transaction->load('branch', 'booking', 'queueTicket', 'items', 'payments')),
             'Transaksi berhasil dibuat.',
             201
         );
@@ -61,6 +61,6 @@ class TransactionController extends Controller
     {
         abort_unless($request->user()?->can('transaction.view'), 403);
 
-        return $this->responder->success(new TransactionResource($transaction->load('items', 'payments')));
+        return $this->responder->success(new TransactionResource($transaction->load('branch', 'booking', 'queueTicket', 'items', 'payments')));
     }
 }

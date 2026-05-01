@@ -1,3 +1,5 @@
+import 'package:desktop_flutter/core/session/api_session.dart';
+import 'package:desktop_flutter/features/kasir/services/receipt_printer.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -43,6 +45,13 @@ class _WalkinPageState extends State<WalkinPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Walk-in Baru', style: AppTextStyles.h2),
+                  if (_controller.errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      _controller.errorMessage!,
+                      style: const TextStyle(color: Colors.redAccent),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   
                   // Customer info row (Stretched)
@@ -52,7 +61,10 @@ class _WalkinPageState extends State<WalkinPage> {
                   // Pilih Paket
                   Text('Pilih Paket', style: AppTextStyles.h3),
                   const SizedBox(height: 16),
-                  _PackageSection(controller: _controller),
+                  if (_controller.isLoading)
+                    const Center(child: CircularProgressIndicator())
+                  else
+                    _PackageSection(controller: _controller),
                   const SizedBox(height: 32),
 
                   // Add-ons
@@ -68,11 +80,56 @@ class _WalkinPageState extends State<WalkinPage> {
           Container(
             width: 320,
             padding: const EdgeInsets.all(16),
-            child: OrderSummaryPanel(controller: _controller),
+            child: OrderSummaryPanel(
+              controller: _controller,
+              onConfirm: () => _checkoutAndPrint(context),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _checkoutAndPrint(BuildContext context) async {
+    final result = await _controller.checkoutWalkIn();
+
+    if (!context.mounted || result == null) {
+      return;
+    }
+
+    final session = ApiSession.current;
+    final shouldPrint = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Checkout berhasil'),
+          content: Text(
+            'Transaksi ${result.transaction.transactionCode}\nAntrean ${result.queueTicket.queueCode}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Tutup'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Cetak Struk'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldPrint == true) {
+      await ReceiptPrinter.printTransactionReceipt(
+        transaction: result.transaction,
+        brandName: 'Ready To Pict',
+        branchName: _controller.selectedBranchName,
+        cashierName: session?.user.name ?? '-',
+        queueCode: result.queueTicket.queueCode,
+        paperWidthMm: 80,
+      );
+    }
   }
 }
 
@@ -88,15 +145,29 @@ class _CustomerInfoRow extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _InfoField(label: 'NAMA PELANGGAN', value: controller.customerName),
+              child: _InfoField(
+                label: 'NAMA PELANGGAN',
+                value: controller.customerName,
+                onChanged: controller.updateCustomerName,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _InfoField(label: 'WHATSAPP (WAJIB)', value: controller.whatsapp),
+              child: _InfoField(
+                label: 'WHATSAPP (WAJIB)',
+                value: controller.whatsapp,
+                keyboardType: TextInputType.phone,
+                onChanged: controller.updateWhatsapp,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _InfoField(label: 'GMAIL', value: controller.email),
+              child: _InfoField(
+                label: 'GMAIL',
+                value: controller.email,
+                keyboardType: TextInputType.emailAddress,
+                onChanged: controller.updateEmail,
+              ),
             ),
           ],
         ),
@@ -108,11 +179,17 @@ class _CustomerInfoRow extends StatelessWidget {
               child: _InfoField(
                 label: 'JUMLAH ORANG',
                 value: controller.jumlahOrang.toString(),
+                keyboardType: TextInputType.number,
+                onChanged: controller.updateJumlahOrang,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _InfoField(label: 'NOTE', value: controller.note),
+              child: _InfoField(
+                label: 'NOTE',
+                value: controller.note,
+                onChanged: controller.updateNote,
+              ),
             ),
           ],
         ),
@@ -124,8 +201,15 @@ class _CustomerInfoRow extends StatelessWidget {
 class _InfoField extends StatelessWidget {
   final String label;
   final String value;
+  final TextInputType? keyboardType;
+  final ValueChanged<String>? onChanged;
 
-  const _InfoField({required this.label, required this.value});
+  const _InfoField({
+    required this.label,
+    required this.value,
+    this.keyboardType,
+    this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +232,18 @@ class _InfoField extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: AppColors.cardBorder),
           ),
-          child: Text(value, style: AppTextStyles.bodyMedium),
+          child: TextFormField(
+            initialValue: value,
+            readOnly: onChanged == null,
+            keyboardType: keyboardType,
+            onChanged: onChanged,
+            style: AppTextStyles.bodyMedium,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
         ),
       ],
     );
@@ -162,18 +257,20 @@ class _PackageSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    if (controller.packages.isEmpty) {
+      return const Text('Belum ada paket aktif.');
+    }
+
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
       children: List.generate(controller.packages.length, (index) {
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              right: index == controller.packages.length - 1 ? 0 : 16,
-            ),
-            child: PackageCard(
-              package: controller.packages[index],
-              isSelected: controller.selectedPackageIndex == index,
-              onTap: () => controller.selectPackage(index),
-            ),
+        return SizedBox(
+          width: 220,
+          child: PackageCard(
+            package: controller.packages[index],
+            isSelected: controller.selectedPackageIndex == index,
+            onTap: () => controller.selectPackage(index),
           ),
         );
       }),
@@ -188,6 +285,10 @@ class _AddonSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (controller.addons.isEmpty) {
+      return const Text('Tidak ada add-on untuk paket ini.');
+    }
+
     return Column(
       children: List.generate(
         controller.addons.length,

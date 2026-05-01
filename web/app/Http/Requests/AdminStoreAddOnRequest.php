@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class AdminStoreAddOnRequest extends FormRequest
 {
@@ -22,10 +21,11 @@ class AdminStoreAddOnRequest extends FormRequest
             'price' => ['required', 'numeric', 'min:0'],
             'max_qty' => ['required', 'integer', 'min:1', 'max:99'],
             'is_physical' => ['nullable', 'boolean'],
-            'available_stock' => ['nullable', 'integer', 'min:0', 'max:999999'],
-            'low_stock_threshold' => ['nullable', 'integer', 'min:0', 'max:999999'],
             'is_active' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'inventory_items' => ['sometimes', 'array'],
+            'inventory_items.*.inventory_item_id' => ['required', 'integer', 'exists:inventory_items,id'],
+            'inventory_items.*.qty_per_unit' => ['required', 'integer', 'min:1', 'max:999999'],
         ];
     }
 }

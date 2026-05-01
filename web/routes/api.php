@@ -1,14 +1,17 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\AddOnController;
 use App\Http\Controllers\Api\V1\AppSettingController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\CashierSessionController;
 use App\Http\Controllers\Api\V1\DesignCatalogController;
+use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\MidtransWebhookController;
 use App\Http\Controllers\Api\V1\PackageController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PosController;
 use App\Http\Controllers\Api\V1\PrinterSettingController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\QueueController;
@@ -26,6 +29,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/branches/{branch}', [BranchController::class, 'show']);
     Route::get('/packages', [PackageController::class, 'index']);
     Route::get('/packages/{package}', [PackageController::class, 'show']);
+    Route::get('/add-ons', [AddOnController::class, 'index']);
     Route::get('/design-catalogs', [DesignCatalogController::class, 'index']);
     Route::get('/design-catalogs/{designCatalog}', [DesignCatalogController::class, 'show']);
     Route::post('/slots/availability', SlotAvailabilityController::class);
@@ -42,6 +46,8 @@ Route::prefix('v1')->group(function () {
         Route::put('/manage/branches/{branch}', [BranchController::class, 'update']);
         Route::delete('/manage/branches/{branch}', [BranchController::class, 'destroy']);
         Route::get('/manage/packages', [PackageController::class, 'adminIndex']);
+        Route::get('/manage/add-ons', [AddOnController::class, 'adminIndex']);
+        Route::get('/manage/inventory-items', [InventoryController::class, 'adminIndex']);
         Route::post('/manage/packages', [PackageController::class, 'store']);
         Route::put('/manage/packages/{package}', [PackageController::class, 'update']);
         Route::delete('/manage/packages/{package}', [PackageController::class, 'destroy']);
@@ -62,7 +68,13 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/bookings', [BookingController::class, 'index']);
         Route::get('/bookings/{booking}', [BookingController::class, 'show']);
+        Route::get('/bookings/{booking}/transfer-proof', [BookingController::class, 'transferProof'])->name('api.v1.bookings.transfer-proof');
         Route::patch('/bookings/{booking}/status', [BookingController::class, 'updateStatus']);
+        Route::post('/bookings/{booking}/confirm-payment', [BookingController::class, 'confirmPayment']);
+        Route::post('/bookings/{booking}/confirm', [BookingController::class, 'confirm']);
+        Route::post('/bookings/{booking}/decline', [BookingController::class, 'decline']);
+
+        Route::post('/pos/walk-in/checkout', [PosController::class, 'walkInCheckout']);
 
         Route::get('/queue-tickets', [QueueController::class, 'index']);
         Route::post('/queue-tickets/check-in', [QueueController::class, 'checkIn']);
