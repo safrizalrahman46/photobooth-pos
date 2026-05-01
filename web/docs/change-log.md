@@ -1,5 +1,19 @@
 # Change Log
 
+## 2026-05-02 - Admin Dashboard, History Perubahan, and Reports Refresh
+
+- Merapikan dashboard admin menjadi layout minimal yang fokus pada `Revenue Overview`, `Queue Monitor`, `Cashier Performance`, dan `Alert Operasional`.
+- Mengubah modul `Activity Logs` menjadi `History Perubahan` dengan data detail dari `activity_logs` dan retensi 90 hari.
+- Menambahkan logging perubahan pada flow backend booking, queue, payment/transaction, inventory, package, add-on, design, user, branch, time slot, blackout date, printer setting, dan app settings.
+- Menambahkan command + schedule purge mingguan untuk menghapus activity log yang lebih lama dari 90 hari.
+- Memperluas payload report dengan `cashier_daily_series` untuk stacked bar performa cashier per hari.
+- Menambahkan export report ke Excel berbasis `xlsx` dan chart frontend berbasis `chart.js`.
+- Mengubah badge/blink sidebar queue agar memakai total ticket `waiting`, tanpa mengubah aturan booking verified terlebih dahulu sebelum masuk antrean.
+- Memperluas payload transaksi terbaru agar halaman Transactions bisa menampilkan detail item dan riwayat pembayaran.
+- Menambahkan final UX polish pada dashboard/history/transactions/reports dan memecah load `report/export` dengan async page loading + dynamic import `chart.js`.
+- Mengubah `Revenue Overview` dashboard dari progress list menjadi chart kombinasi revenue + booking.
+- Menambahkan dokumentasi detail: `docs/admin-history-dashboard-reports-2026-05-02.md`.
+
 ## 2026-05-01 - Desktop POS API Integration
 
 - Menambahkan endpoint API desktop untuk add-on, inventory item, POS walk-in checkout, dan booking verification.

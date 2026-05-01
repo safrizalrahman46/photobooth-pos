@@ -11,6 +11,10 @@ use Throwable;
 
 class AppSettingService
 {
+    public function __construct(
+        private readonly ActivityLogger $activityLogger,
+    ) {}
+
     public function settingsPayload(): array
     {
         $bookingSettings = $this->bookingSettings();
@@ -51,6 +55,19 @@ class AppSettingService
 
         $this->set('booking', $bookingSettings, $userId);
 
+        $this->activityLogger->log(
+            'settings',
+            'default_branch_updated',
+            $userId,
+            Branch::class,
+            (int) $branch->id,
+            [
+                'message' => sprintf('Default branch diubah ke %s.', (string) $branch->name),
+                'label' => (string) $branch->code,
+                'branch_name' => (string) $branch->name,
+            ],
+        );
+
         return $this->settingsPayload();
     }
 
@@ -72,6 +89,20 @@ class AppSettingService
             $this->set('booking', $bookingSettings, $userId);
         }
 
+        $this->activityLogger->log(
+            'branches',
+            'created',
+            $userId,
+            Branch::class,
+            (int) $branch->id,
+            [
+                'message' => sprintf('Branch %s dibuat dari Settings.', (string) $branch->name),
+                'label' => (string) $branch->code,
+                'branch_name' => (string) $branch->name,
+                'timezone' => (string) $branch->timezone,
+            ],
+        );
+
         return $this->settingsPayload();
     }
 
@@ -85,6 +116,20 @@ class AppSettingService
         ]);
 
         $branch->save();
+
+        $this->activityLogger->log(
+            'branches',
+            'updated',
+            null,
+            Branch::class,
+            (int) $branch->id,
+            [
+                'message' => sprintf('Branch %s diperbarui dari Settings.', (string) $branch->name),
+                'label' => (string) $branch->code,
+                'branch_name' => (string) $branch->name,
+                'updated_fields' => array_keys($payload),
+            ],
+        );
 
         return $this->settingsPayload();
     }
@@ -115,6 +160,19 @@ class AppSettingService
             $bookingSettings['default_branch_id'] = $replacementId > 0 ? $replacementId : null;
             $this->set('booking', $bookingSettings, $userId);
         }
+
+        $this->activityLogger->log(
+            'branches',
+            'deactivated',
+            $userId,
+            Branch::class,
+            (int) $branch->id,
+            [
+                'message' => sprintf('Branch %s dinonaktifkan dari Settings.', (string) $branch->name),
+                'label' => (string) $branch->code,
+                'branch_name' => (string) $branch->name,
+            ],
+        );
 
         return $this->settingsPayload();
     }
@@ -171,7 +229,9 @@ class AppSettingService
 
     public function set(string $key, array $value, ?int $userId = null): AppSetting
     {
-        return AppSetting::query()->updateOrCreate(
+        $existing = AppSetting::query()->find($key);
+
+        $setting = AppSetting::query()->updateOrCreate(
             ['key' => $key],
             [
                 'value' => Arr::undot(Arr::dot($value)),
@@ -179,6 +239,21 @@ class AppSettingService
                 'updated_at' => now(),
             ]
         );
+
+        $this->activityLogger->log(
+            'app-settings',
+            $existing ? 'updated' : 'created',
+            $userId,
+            AppSetting::class,
+            null,
+            [
+                'message' => sprintf('Pengaturan aplikasi grup %s diperbarui.', $key),
+                'label' => $key,
+                'updated_fields' => array_keys(Arr::dot($value)),
+            ],
+        );
+
+        return $setting;
     }
 
     public function setMany(array $groups, ?int $userId = null): array

@@ -7,6 +7,10 @@ use Illuminate\Validation\ValidationException;
 
 class AdminBlackoutDateService
 {
+    public function __construct(
+        private readonly ActivityLogger $activityLogger,
+    ) {}
+
     public function rows(array $filters = []): array
     {
         $query = BlackoutDate::query()
@@ -41,12 +45,29 @@ class AdminBlackoutDateService
     {
         $this->ensureUnique((int) $payload['branch_id'], (string) $payload['blackout_date']);
 
-        return BlackoutDate::query()->create([
+        $blackoutDate = BlackoutDate::query()->create([
             'branch_id' => (int) $payload['branch_id'],
             'blackout_date' => (string) $payload['blackout_date'],
             'reason' => ! empty($payload['reason']) ? (string) $payload['reason'] : null,
             'is_closed' => (bool) ($payload['is_closed'] ?? true),
         ]);
+
+        $this->activityLogger->log(
+            'blackout-dates',
+            'created',
+            null,
+            BlackoutDate::class,
+            (int) $blackoutDate->id,
+            [
+                'message' => sprintf('Blackout date %s dibuat.', (string) $blackoutDate->blackout_date),
+                'label' => (string) $blackoutDate->blackout_date,
+                'branch_id' => (int) $blackoutDate->branch_id,
+                'reason' => (string) ($blackoutDate->reason ?? ''),
+                'is_closed' => (bool) $blackoutDate->is_closed,
+            ],
+        );
+
+        return $blackoutDate;
     }
 
     public function update(BlackoutDate $blackoutDate, array $payload): BlackoutDate
@@ -66,11 +87,40 @@ class AdminBlackoutDateService
 
         $blackoutDate->save();
 
+        $this->activityLogger->log(
+            'blackout-dates',
+            'updated',
+            null,
+            BlackoutDate::class,
+            (int) $blackoutDate->id,
+            [
+                'message' => sprintf('Blackout date %s diperbarui.', (string) $blackoutDate->blackout_date),
+                'label' => (string) $blackoutDate->blackout_date,
+                'branch_id' => (int) $blackoutDate->branch_id,
+                'reason' => (string) ($blackoutDate->reason ?? ''),
+                'is_closed' => (bool) $blackoutDate->is_closed,
+                'updated_fields' => array_keys($payload),
+            ],
+        );
+
         return $blackoutDate->refresh();
     }
 
     public function destroy(BlackoutDate $blackoutDate): void
     {
+        $this->activityLogger->log(
+            'blackout-dates',
+            'deleted',
+            null,
+            BlackoutDate::class,
+            (int) $blackoutDate->id,
+            [
+                'message' => sprintf('Blackout date %s dihapus.', (string) $blackoutDate->blackout_date),
+                'label' => (string) $blackoutDate->blackout_date,
+                'branch_id' => (int) $blackoutDate->branch_id,
+            ],
+        );
+
         $blackoutDate->delete();
     }
 
@@ -108,4 +158,3 @@ class AdminBlackoutDateService
         ];
     }
 }
-

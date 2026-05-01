@@ -24,6 +24,7 @@ class AdminBookingManagementService
         private readonly TransactionService $transactionService,
         private readonly QueueService $queueService,
         private readonly InventoryService $inventoryService,
+        private readonly ActivityLogger $activityLogger,
     ) {}
 
     public function create(array $payload): Booking
@@ -52,7 +53,29 @@ class AdminBookingManagementService
             $this->syncBookingTransactionItems($booking, $package, $selectedAddOns);
         });
 
-        return $booking->refresh();
+        $booking = $booking->refresh();
+
+        $this->activityLogger->log(
+            'bookings',
+            'created',
+            null,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf('Booking admin %s dibuat.', (string) $booking->booking_code),
+                'label' => (string) $booking->booking_code,
+                'customer_name' => (string) $booking->customer_name,
+                'branch_id' => (int) $booking->branch_id,
+                'package_id' => (int) $booking->package_id,
+                'booking_date' => $booking->booking_date?->toDateString(),
+                'payment_type' => (string) $booking->payment_type,
+                'total_amount' => (float) $booking->total_amount,
+                'add_ons_count' => count($selectedAddOns),
+                'source' => 'admin',
+            ],
+        );
+
+        return $booking;
     }
 
     public function update(Booking $booking, array $payload): Booking
@@ -82,11 +105,46 @@ class AdminBookingManagementService
             $this->syncBookingTransactionItems($booking, $package, $selectedAddOns);
         });
 
-        return $booking->refresh();
+        $booking = $booking->refresh();
+
+        $this->activityLogger->log(
+            'bookings',
+            'updated',
+            null,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf('Booking %s diperbarui.', (string) $booking->booking_code),
+                'label' => (string) $booking->booking_code,
+                'customer_name' => (string) $booking->customer_name,
+                'branch_id' => (int) $booking->branch_id,
+                'package_id' => (int) $booking->package_id,
+                'booking_date' => $booking->booking_date?->toDateString(),
+                'total_amount' => (float) $booking->total_amount,
+                'updated_fields' => array_values(array_keys($payload)),
+                'add_ons_count' => count($selectedAddOns),
+            ],
+        );
+
+        return $booking;
     }
 
     public function delete(Booking $booking): void
     {
+        $this->activityLogger->log(
+            'bookings',
+            'deleted',
+            null,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf('Booking %s dihapus.', (string) ($booking->booking_code ?? ('BK-' . $booking->id))),
+                'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                'customer_name' => (string) ($booking->customer_name ?? '-'),
+                'branch_id' => $booking->branch_id ? (int) $booking->branch_id : null,
+            ],
+        );
+
         $booking->delete();
     }
 
@@ -140,6 +198,21 @@ class AdminBookingManagementService
 
         $booking = $booking->refresh();
         $this->autoCheckInQueueAfterVerification($booking);
+
+        $this->activityLogger->log(
+            'bookings',
+            'verified',
+            $actorId,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf('Booking %s diverifikasi.', (string) $booking->booking_code),
+                'label' => (string) $booking->booking_code,
+                'approved_at' => $booking->approved_at?->toIso8601String(),
+                'status' => (string) ($booking->status?->value ?? $booking->status),
+                'reason' => $reason,
+            ],
+        );
 
         return $booking->refresh();
     }
@@ -215,6 +288,27 @@ class AdminBookingManagementService
             );
         }
 
+        $this->activityLogger->log(
+            'bookings',
+            'payment_confirmed',
+            $cashierId,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf(
+                    'Pembayaran booking %s dikonfirmasi.',
+                    (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                ),
+                'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                'transaction_code' => (string) ($updatedTransaction->transaction_code ?? ''),
+                'amount' => $amount,
+                'method' => (string) ($payload['method'] ?? ''),
+                'transaction_status' => (string) ($updatedTransaction->status?->value ?? $updatedTransaction->status),
+                'paid_amount' => (float) $updatedTransaction->paid_amount,
+                'total_amount' => (float) $updatedTransaction->total_amount,
+            ],
+        );
+
         return $updatedTransaction->refresh();
     }
 
@@ -259,6 +353,19 @@ class AdminBookingManagementService
             BookingStatus::Cancelled,
             $actorId,
             $reason ?: 'Declined from booking detail due to missing payment proof'
+        );
+
+        $this->activityLogger->log(
+            'bookings',
+            'declined',
+            $actorId,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf('Booking %s ditolak.', (string) ($booking->booking_code ?? ('BK-' . $booking->id))),
+                'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                'reason' => $reason,
+            ],
         );
 
         return $booking->refresh();
