@@ -31,7 +31,7 @@ class PaymentController extends Controller
         $latestPayment = $updatedTransaction->payments()->latest('id')->first();
 
         return $this->responder->success([
-            'transaction' => new TransactionResource($updatedTransaction->load('items', 'payments')),
+            'transaction' => new TransactionResource($updatedTransaction->load('branch', 'booking', 'queueTicket', 'items', 'payments')),
             'payment' => $latestPayment ? new PaymentResource($latestPayment) : null,
         ], 'Pembayaran berhasil ditambahkan.');
     }

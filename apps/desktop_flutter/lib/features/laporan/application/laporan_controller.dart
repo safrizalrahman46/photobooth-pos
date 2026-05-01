@@ -31,15 +31,9 @@ class LaporanController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      final results = await Future.wait([
-        repository.getLaporanSummary(),
-        repository.getCashflow(),
-        repository.getPaymentMethods(),
-      ]);
-
-      summary.value = results[0] as LaporanSummary;
-      cashflow.value = results[1] as Cashflow;
-      paymentMethods.value = results[2] as List<PaymentMethod>;
+      summary.value = await repository.getLaporanSummary();
+      cashflow.value = await repository.getCashflow();
+      paymentMethods.value = await repository.getPaymentMethods();
 
       _updateLastUpdated();
     } catch (e) {

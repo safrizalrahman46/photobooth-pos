@@ -1,5 +1,15 @@
 # Change Log
 
+## 2026-05-01 - Desktop POS API Integration
+
+- Menambahkan endpoint API desktop untuk add-on, inventory item, POS walk-in checkout, dan booking verification.
+- Menghubungkan Flutter desktop ke API Laravel melalui `ApiSession` dan `ApiClient` berbasis token login.
+- Mengubah data package, add-on, booking, antrean, history transaksi, dan ringkasan laporan dasar agar berasal dari API.
+- Menambahkan flow POS walk-in checkout yang otomatis membuat transaksi, pembayaran, antrean, dan deduction inventory.
+- Menambahkan flow verifikasi pembayaran/booking customer dari website `/booking` melalui desktop app.
+- Menambahkan print struk PDF via Windows print dialog setelah checkout walk-in berhasil.
+- Menambahkan dokumentasi detail: `docs/desktop-pos-api-integration-2026-05-01.md`.
+
 ## 2026-04-30 - Inventory Item Stock Flow
 
 - Memisahkan tracking stok dari `add_ons` ke master `inventory_items`.

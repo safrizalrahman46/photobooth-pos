@@ -67,9 +67,18 @@ class _PureBookingPageState extends State<PureBookingPage> {
                 ),
               ],
             ),
+            if (_controller.errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _controller.errorMessage!,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            ],
             const SizedBox(height: 24),
             Expanded(
-              child: _BookingTable(controller: _controller),
+              child: _controller.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _BookingTable(controller: _controller),
             ),
           ],
         ),
@@ -108,9 +117,18 @@ class _BookingTable extends StatelessWidget {
               itemBuilder: (context, index) {
                 return _BookingRow(
                   booking: controller.queues[index],
-                  onAcc: () => controller.accBooking(),
-                  onCancel: () => controller.cancelBooking(),
-                  onDelete: () => controller.deleteBooking(),
+                  onAcc: () async {
+                    controller.selectQueue(index);
+                    await controller.accBooking();
+                  },
+                  onCancel: () async {
+                    controller.selectQueue(index);
+                    await controller.cancelBooking();
+                  },
+                  onDelete: () {
+                    controller.selectQueue(index);
+                    controller.deleteBooking();
+                  },
                 );
               },
             ),
@@ -190,7 +208,7 @@ class _BookingRow extends StatelessWidget {
           Expanded(flex: 2, child: Text(booking.time, style: AppTextStyles.bodySmall)),
           Expanded(flex: 3, child: Text(booking.customerName, style: AppTextStyles.bodyMedium)),
           Expanded(flex: 3, child: Text(booking.phone, style: AppTextStyles.bodySmall)),
-          Expanded(flex: 2, child: Text('Rp 115.000', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700))),
+          Expanded(flex: 2, child: Text(_formatPrice(booking.totalAmount), style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700))),
           Expanded(
             flex: 2,
             child: Align(
@@ -230,6 +248,11 @@ class _BookingRow extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatPrice(double price) {
+  final int p = price.toInt();
+  return 'Rp ${p.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
 }
 
 class _MiniActionBtn extends StatelessWidget {

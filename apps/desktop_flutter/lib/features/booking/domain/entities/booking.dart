@@ -1,21 +1,37 @@
 // booking.dart
 class Booking {
+  final int? recordId;
   final String id;
   final String customerName;
   final String phone;
   final String time;
   final String status;
+  final String paymentType;
+  final String paymentStatus;
   final int queueNumber;
+  final double totalAmount;
+  final double depositAmount;
+  final bool canConfirmPayment;
+  final bool canConfirmBooking;
+  final bool canDeclineBooking;
   final String? email;
   final String? note;
 
   const Booking({
+    this.recordId,
     required this.id,
     required this.customerName,
     required this.phone,
     required this.time,
     required this.status,
+    this.paymentType = 'full',
+    this.paymentStatus = 'unpaid',
     required this.queueNumber,
+    this.totalAmount = 0,
+    this.depositAmount = 0,
+    this.canConfirmPayment = false,
+    this.canConfirmBooking = false,
+    this.canDeclineBooking = false,
     this.email,
     this.note,
   });
@@ -64,6 +80,7 @@ class Addon {
   final String subtitle;
   final double price;
   final int? stock;
+  final int maxQty;
   int quantity;
 
   Addon({
@@ -72,6 +89,7 @@ class Addon {
     required this.subtitle,
     required this.price,
     this.stock,
+    this.maxQty = 99,
     this.quantity = 0,
   });
 }
