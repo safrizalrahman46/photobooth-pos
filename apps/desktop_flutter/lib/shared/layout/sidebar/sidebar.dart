@@ -32,21 +32,32 @@ class Sidebar extends StatelessWidget {
           maxWidth: isExpanded ? 240 : 88,
           minWidth: isExpanded ? 240 : 88,
           child: Column(
-            crossAxisAlignment: isExpanded ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+            crossAxisAlignment: isExpanded
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
             children: [
               // Logo & Toggle Area
               Padding(
-                padding: EdgeInsets.fromLTRB(isExpanded ? 20 : 8, 24, isExpanded ? 20 : 8, 32),
+                padding: EdgeInsets.fromLTRB(
+                  isExpanded ? 20 : 8,
+                  24,
+                  isExpanded ? 20 : 8,
+                  32,
+                ),
                 child: Row(
-                  mainAxisAlignment: isExpanded ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
+                  mainAxisAlignment: isExpanded
+                      ? MainAxisAlignment.spaceBetween
+                      : MainAxisAlignment.center,
                   children: [
                     if (isExpanded)
                       Text('Ready To Pict', style: AppTextStyles.h2),
-                    
+
                     IconButton(
                       onPressed: onToggle,
                       icon: Icon(
-                        isExpanded ? Icons.menu_open_rounded : Icons.menu_rounded,
+                        isExpanded
+                            ? Icons.menu_open_rounded
+                            : Icons.menu_rounded,
                         color: AppColors.textPrimary,
                         size: 24,
                       ),
@@ -94,11 +105,11 @@ class Sidebar extends StatelessWidget {
                 onTap: () => onItemTapped(4),
               ),
               _SidebarItem(
-                icon: Icons.extension_rounded,
-                label: 'Add-ons',
-                isActive: selectedIndex == 5,
+                icon: Icons.inventory_2_outlined,
+                label: 'Stocks',
+                isActive: selectedIndex == 6,
                 isExpanded: isExpanded,
-                onTap: () => onItemTapped(5),
+                onTap: () => onItemTapped(6),
               ),
 
               const Spacer(),
@@ -132,7 +143,8 @@ class _SidebarItem extends StatefulWidget {
   State<_SidebarItem> createState() => _SidebarItemState();
 }
 
-class _SidebarItemState extends State<_SidebarItem> with SingleTickerProviderStateMixin {
+class _SidebarItemState extends State<_SidebarItem>
+    with SingleTickerProviderStateMixin {
   bool _isHovered = false;
   late AnimationController _blinkController;
   late Animation<Color?> _colorAnimation;
@@ -177,11 +189,16 @@ class _SidebarItemState extends State<_SidebarItem> with SingleTickerProviderSta
             builder: (context, child) {
               Color bgColor = widget.isActive
                   ? AppColors.sidebarActive
-                  : (_isHovered ? (_colorAnimation.value ?? Colors.transparent) : Colors.transparent);
+                  : (_isHovered
+                        ? (_colorAnimation.value ?? Colors.transparent)
+                        : Colors.transparent);
 
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: bgColor,
                   borderRadius: BorderRadius.circular(16),
@@ -190,7 +207,9 @@ class _SidebarItemState extends State<_SidebarItem> with SingleTickerProviderSta
               );
             },
             child: Row(
-              mainAxisAlignment: widget.isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+              mainAxisAlignment: widget.isExpanded
+                  ? MainAxisAlignment.start
+                  : MainAxisAlignment.center,
               children: [
                 Icon(
                   widget.icon,
@@ -207,7 +226,9 @@ class _SidebarItemState extends State<_SidebarItem> with SingleTickerProviderSta
                       color: widget.isActive
                           ? AppColors.textWhite
                           : AppColors.sidebarInactiveText,
-                      fontWeight: widget.isActive ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: widget.isActive
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                     ),
                   ),
                 ],
@@ -227,9 +248,14 @@ class _SidebarFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 24, horizontal: isExpanded ? 24 : 8),
+      padding: EdgeInsets.symmetric(
+        vertical: 24,
+        horizontal: isExpanded ? 24 : 8,
+      ),
       child: Row(
-        mainAxisAlignment: isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+        mainAxisAlignment: isExpanded
+            ? MainAxisAlignment.start
+            : MainAxisAlignment.center,
         children: [
           CircleAvatar(
             radius: 20,
@@ -244,8 +270,10 @@ class _SidebarFooter extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Satria', 
-                style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+                'Satria',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
