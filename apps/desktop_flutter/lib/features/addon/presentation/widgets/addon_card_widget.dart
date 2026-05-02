@@ -27,7 +27,6 @@ class AddOnCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -96,6 +95,8 @@ class AddOnCardWidget extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               addOn.deskripsi,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w400,
