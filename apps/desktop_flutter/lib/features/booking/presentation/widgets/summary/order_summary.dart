@@ -31,118 +31,124 @@ class OrderSummaryPanel extends StatelessWidget {
             child: Text(
               'ORDER SUMMARY',
               style: AppTextStyles.captionMedium.copyWith(
-                color: Colors.white.withOpacity(0.85),
+                color: AppColors.textPrimary,
                 letterSpacing: 1.2,
-                fontSize: 10,
+                fontSize: 15,
               ),
             ),
           ),
 
           // Divider
-          Container(height: 1, color: Colors.white.withOpacity(0.15)),
+          Container(height: 1, color: Colors.black.withOpacity(0.1)),
 
-          const SizedBox(height: 12),
-
-          // Package item
-          _OrderSummaryRow(
-            title: '${controller.selectedPackage.name} Package',
-            subtitle: '${controller.selectedPackage.duration} Session',
-            price: _formatPrice(controller.packagePrice),
-          ),
-
-          // Addon items
-          for (final addon in controller.selectedAddons)
-            _OrderSummaryRow(
-              title: addon.name,
-              subtitle: 'x${addon.quantity}',
-              price: _formatPrice(addon.price * addon.quantity),
-            ),
-
-          const SizedBox(height: 8),
-
-          // Voucher
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'VOUCHER / DISCOUNT',
-                  style: AppTextStyles.caption.copyWith(
-                    color: Colors.white.withOpacity(0.7),
-                    letterSpacing: 0.8,
-                    fontSize: 9,
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 12, bottom: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Package item
+                  _OrderSummaryRow(
+                    title: '${controller.selectedPackage.name} Package',
+                    subtitle: '${controller.selectedPackage.duration} Session',
+                    price: _formatPrice(controller.packagePrice),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(8),
-                            bottomLeft: Radius.circular(8),
+
+                  // Addon items
+                  for (final addon in controller.selectedAddons)
+                    _OrderSummaryRow(
+                      title: addon.name,
+                      subtitle: 'x${addon.quantity}',
+                      price: _formatPrice(addon.price * addon.quantity),
+                    ),
+
+                  const SizedBox(height: 8),
+
+                  // Voucher
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'VOUCHER / DISCOUNT',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            letterSpacing: 0.8,
+                            fontSize: 9,
                           ),
                         ),
-                        child: Text(
-                          controller.voucherCode,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: Colors.white,
-                            fontSize: 11,
-                          ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.05),
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(8),
+                                    bottomLeft: Radius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  controller.voucherCode,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: controller.applyVoucher,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: const BorderRadius.only(
+                                    topRight: Radius.circular(8),
+                                    bottomRight: Radius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  'APPLY',
+                                  style: AppTextStyles.captionMedium.copyWith(
+                                    color: AppColors.primary,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Photo preview placeholder
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Container(
+                      height: 90,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: controller.applyVoucher,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: const BorderRadius.only(
-                            topRight: Radius.circular(8),
-                            bottomRight: Radius.circular(8),
-                          ),
-                        ),
-                        child: Text(
-                          'APPLY',
-                          style: AppTextStyles.captionMedium.copyWith(
-                            color: AppColors.primary,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          // Photo preview placeholder
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Container(
-              height: 90,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
+                  ),
+                ],
               ),
             ),
           ),
-
-          const Spacer(),
 
           // Grand total
           Padding(
@@ -154,7 +160,7 @@ class OrderSummaryPanel extends StatelessWidget {
                   children: [
                     Text(
                       'Grand Total',
-                      style: AppTextStyles.captionWhite.copyWith(fontSize: 11),
+                      style: AppTextStyles.captionMedium.copyWith(fontSize: 11, color: AppColors.textPrimary),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -180,7 +186,7 @@ class OrderSummaryPanel extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   _formatPrice(controller.grandTotal),
-                  style: AppTextStyles.priceLarge,
+                  style: AppTextStyles.priceLarge.copyWith(color: AppColors.textPrimary),
                 ),
               ],
             ),
@@ -193,7 +199,7 @@ class OrderSummaryPanel extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.black.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -241,7 +247,7 @@ class OrderSummaryPanel extends StatelessWidget {
                 child: Text(
                   controller.isSubmitting ? 'MEMPROSES...' : 'KONFIRMASI &\nCETAK',
                   style: AppTextStyles.h4.copyWith(
-                    color: AppColors.primary,
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
                   textAlign: TextAlign.center,
@@ -270,35 +276,48 @@ class _OrderSummaryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.bodyWhite.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
-                Text(
-                  subtitle,
-                  style: AppTextStyles.captionWhite.copyWith(fontSize: 10),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.captionMedium.copyWith(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Text(
-            price,
-            style: AppTextStyles.bodyWhite.copyWith(
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
+            Text(
+              price,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -330,8 +349,8 @@ class _PaymentTab extends StatelessWidget {
             label,
             style: AppTextStyles.captionMedium.copyWith(
               color: isSelected
-                  ? AppColors.primary
-                  : Colors.white.withOpacity(0.8),
+                  ? AppColors.textPrimary
+                  : AppColors.textSecondary,
               fontWeight: FontWeight.w700,
               fontSize: 11,
             ),
