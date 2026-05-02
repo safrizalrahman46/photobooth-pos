@@ -386,52 +386,8 @@
         </div>
     </div>
 
-    <footer class="bg-background">
-        <div class="max-w-7xl mx-auto px-6 md:px-12 py-16 md:py-24 border-t border-border/40">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
-                <div class="col-span-1 md:col-span-2 space-y-6">
-                    <a href="{{ url('/') }}" class="flex items-center gap-4">
-                        <img src="{{ asset('images/logo/logo.png') }}" alt="{{ $brandName }}" class="h-16 w-auto" />
-                        <span class="font-display text-base font-bold text-memphis-blue tracking-tight">{{ $brandName }}</span>
-                    </a>
-                    <p class="text-sm text-muted-foreground max-w-xs leading-relaxed">
-                        {{ $tagline }} Studio foto self-portrait premium di mana kamu bebas berekspresi tanpa rasa canggung.
-                    </p>
-                    <div class="flex gap-4">
-                        <a href="#" class="h-10 w-10 rounded-full bg-memphis-blue-soft flex items-center justify-center text-memphis-blue hover:bg-memphis-blue hover:text-white transition-all shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
-                        </a>
-                        <a href="#" class="h-10 w-10 rounded-full bg-memphis-blue-soft flex items-center justify-center text-memphis-blue hover:bg-memphis-blue hover:text-white transition-all shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
-                        </a>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="font-display font-bold text-memphis-ink mb-6 uppercase text-xs tracking-widest">Navigasi</h4>
-                    <ul class="space-y-4 text-sm text-muted-foreground">
-                        @foreach($navItems as $item)
-                            <li><a href="{{ $item['href'] }}" class="hover:text-memphis-blue transition-colors">{{ $item['label'] }}</a></li>
-                        @endforeach
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-display font-bold text-memphis-ink mb-6 uppercase text-xs tracking-widest">Kontak</h4>
-                    <ul class="space-y-4 text-sm text-muted-foreground">
-                        <li class="flex items-start gap-3">
-                            <span class="text-memphis-blue font-semibold">Alamat:</span>
-                            <span>Jl. Momen Indah No. 123, Jakarta Selatan</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="text-memphis-blue font-semibold">WA:</span>
-                            <span>+62 812-3456-7890</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="py-8 text-center text-xs text-muted-foreground bg-memphis-blue-soft/30 border-t border-border/20">
-            © {{ date('Y') }} {{ $brandName }}. Semua Momen Berharga.
-        </div>
+    <footer class="py-8 text-center text-xs text-muted-foreground bg-memphis-blue-soft/30 border-t border-border/20">
+        © {{ date('Y') }} {{ $brandName }} All Right Reserved.
     </footer>
 
     <script>
