@@ -16,6 +16,7 @@ class Branch extends Model
         'timezone',
         'phone',
         'address',
+        'payment_qr_url',
         'is_active',
     ];
 

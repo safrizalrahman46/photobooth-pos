@@ -15,6 +15,7 @@ use App\Services\BookingService;
 use App\Services\SlotService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -23,13 +24,79 @@ use Throwable;
 
 class BookingController extends Controller
 {
+    private const CUSTOMER_SESSION_KEY = 'booking.customer_payload';
+    private const PAYMENT_SESSION_KEY = 'booking.payment_payload';
+
     public function __construct(
         private readonly BookingService $bookingService,
         private readonly SlotService $slotService,
     ) {}
 
-    public function create(): View
+    public function customer(Request $request): View
     {
+        $customerPayload = $request->session()->get(self::CUSTOMER_SESSION_KEY, []);
+        $prefillPackage = old('package_id') ?: $request->integer('package') ?: (int) ($customerPayload['package_id'] ?? 0);
+
+        return view('web.booking-customer', [
+            'oldValues' => [
+                'customer_name' => old('customer_name', (string) ($customerPayload['customer_name'] ?? '')),
+                'customer_phone' => old('customer_phone', (string) ($customerPayload['customer_phone'] ?? '')),
+                'customer_email' => old('customer_email', (string) ($customerPayload['customer_email'] ?? '')),
+                'notes' => old('notes', (string) ($customerPayload['notes'] ?? '')),
+                'terms_accepted' => old('terms_accepted', ($customerPayload['terms_accepted'] ?? false) ? '1' : ''),
+                'package_id' => $prefillPackage > 0 ? $prefillPackage : null,
+            ],
+        ]);
+    }
+
+    public function storeCustomer(Request $request): RedirectResponse
+    {
+        $payload = $request->validate([
+            'customer_name' => ['required', 'string', 'max:120'],
+            'customer_phone' => ['required', 'string', 'max:30'],
+            'customer_email' => ['nullable', 'email', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'terms_accepted' => ['accepted'],
+            'package_id' => ['nullable', 'integer'],
+        ]);
+
+        $packageId = isset($payload['package_id']) ? (int) $payload['package_id'] : 0;
+        if ($packageId > 0) {
+            $packageExists = Package::query()
+                ->whereKey($packageId)
+                ->where('is_active', true)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if (! $packageExists) {
+                $packageId = 0;
+            }
+        }
+
+        $request->session()->put(self::CUSTOMER_SESSION_KEY, [
+            'customer_name' => (string) $payload['customer_name'],
+            'customer_phone' => (string) $payload['customer_phone'],
+            'customer_email' => (string) ($payload['customer_email'] ?? ''),
+            'notes' => (string) ($payload['notes'] ?? ''),
+            'terms_accepted' => true,
+            'package_id' => $packageId > 0 ? $packageId : null,
+        ]);
+
+        return redirect()->route('booking.create', array_filter([
+            'package' => $packageId > 0 ? $packageId : null,
+        ]));
+    }
+
+    public function create(Request $request): View|RedirectResponse
+    {
+        $customerPayload = $request->session()->get(self::CUSTOMER_SESSION_KEY);
+
+        if (! is_array($customerPayload) || blank($customerPayload['customer_name'] ?? null) || blank($customerPayload['customer_phone'] ?? null)) {
+            return redirect()->route('booking.customer', array_filter([
+                'package' => $request->integer('package') ?: null,
+            ]));
+        }
+
         $branches = collect();
         $packages = collect();
         $designCatalogs = collect();
@@ -45,7 +112,18 @@ class BookingController extends Controller
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'name', 'description', 'duration_minutes', 'base_price', 'branch_id']);
+                ->get(['id', 'name', 'description', 'duration_minutes', 'base_price', 'branch_id', 'sample_photos'])
+                ->map(function (Package $package): array {
+                    return [
+                        'id' => (int) $package->id,
+                        'name' => (string) $package->name,
+                        'description' => (string) ($package->description ?? ''),
+                        'duration_minutes' => (int) $package->duration_minutes,
+                        'base_price' => (float) $package->base_price,
+                        'branch_id' => $package->branch_id ? (int) $package->branch_id : null,
+                        'sample_photos' => $package->resolvedSamplePhotos(),
+                    ];
+                });
 
             $designCatalogs = DesignCatalog::query()
                 ->where('is_active', true)
@@ -61,11 +139,15 @@ class BookingController extends Controller
         } catch (Throwable) {
         }
 
+        $prefillPackage = old('package_id') ?: ($request->integer('package') ?: (int) ($customerPayload['package_id'] ?? 0));
+
         return view('web.booking-create', [
             'branches' => $branches,
             'packages' => $packages,
             'designCatalogs' => $designCatalogs,
             'addOns' => $addOns,
+            'customerPayload' => $customerPayload,
+            'prefillPackage' => $prefillPackage > 0 ? $prefillPackage : null,
         ]);
     }
 
@@ -127,14 +209,14 @@ class BookingController extends Controller
                 ->withInput();
         }
 
-        $request->session()->put('booking.payment_payload', $payload);
+        $request->session()->put(self::PAYMENT_SESSION_KEY, $payload);
 
         return redirect()->route('booking.payment');
     }
 
     public function payment(): View|RedirectResponse
     {
-        $payload = session('booking.payment_payload');
+        $payload = session(self::PAYMENT_SESSION_KEY);
 
         if (! is_array($payload)) {
             return redirect()
@@ -151,7 +233,7 @@ class BookingController extends Controller
         }
 
         if (! $branch || ! $package) {
-            session()->forget('booking.payment_payload');
+            session()->forget(self::PAYMENT_SESSION_KEY);
 
             return redirect()
                 ->route('booking.create')
@@ -202,7 +284,7 @@ class BookingController extends Controller
                 'transfer_proof_uploaded_at' => now(),
             ])->save();
 
-            $request->session()->forget('booking.payment_payload');
+            $request->session()->forget([self::PAYMENT_SESSION_KEY, self::CUSTOMER_SESSION_KEY]);
 
             return redirect()
                 ->route('booking.success', $booking->booking_code)

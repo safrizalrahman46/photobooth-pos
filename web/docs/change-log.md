@@ -16,6 +16,12 @@
 - Melanjutkan refactor backend admin dengan memindahkan owner read-model booking, transaksi terbaru, activity history, queue snapshot, inventory, package, add-on, design, user, branch, time slot, blackout date, printer setting, dan payment ke service domain masing-masing.
 - Menipiskan `AdminDashboardDataService` menjadi bootstrap aggregator, menghapus wrapper read legacy yang tidak lagi diperlukan.
 - Merapikan `AdminDashboardApp.vue` tahap awal dengan `moduleRegistry.js` agar fetch-on-enter tiap modul tidak lagi tersebar ke banyak watcher terpisah.
+- Mengubah flow booking publik menjadi `landing -> data pemesan -> form booking`, menghilangkan blok data pemesan duplikat pada booking form, dan mengarahkan CTA landing ke flow baru.
+- Mengubah sample `Hasil Foto` booking agar dinamis dari `sample_photos` package dan mengaktifkan route media publik package sample.
+- Menambahkan guard slot booking agar jam yang sudah lewat pada hari ini otomatis tidak dapat dibooking sesuai timezone branch.
+- Menambahkan `payment_qr_url` per branch dan memakai QR branch sebagai prioritas utama pada halaman pembayaran manual.
+- Menambahkan polling realtime ringan pada admin `Bookings`, menghubungkan Queue Monitor dashboard ke page queue, serta menyederhanakan topbar admin dengan search fungsional dan tanpa tombol bell/settings dummy.
+- Menghapus panel `Booking Status Mix` dari reports dan menambahkan mode chart analytics yang dapat diganti seperti revenue harian, booking harian, transaksi harian, walk-in harian, dan peak hours.
 - Menambahkan dokumentasi detail: `docs/admin-history-dashboard-reports-2026-05-02.md`.
 
 ## 2026-05-01 - Desktop POS API Integration

@@ -180,6 +180,7 @@ export const useBranchesModule = ({
             timezone: String(item.timezone || 'Asia/Jakarta'),
             phone: String(item.phone || ''),
             address: String(item.address || ''),
+            payment_qr_url: String(item.payment_qr_url || ''),
             is_active: Boolean(item.is_active),
             bookings_count: Number(item.bookings_count || 0),
             time_slots_count: Number(item.time_slots_count || 0),

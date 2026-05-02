@@ -37,6 +37,7 @@ const customerPhone = ref(digitsOnly(props.oldValues.customer_phone));
 const customerEmail = ref(asString(props.oldValues.customer_email));
 const notes = ref(asString(props.oldValues.notes));
 const termsAccepted = ref(Boolean(props.oldValues.terms_accepted));
+const packageId = ref(asString(props.oldValues.package_id));
 
 const onPhoneInput = (event) => {
     const normalized = digitsOnly(event?.target?.value);
@@ -68,6 +69,7 @@ const canSubmit = computed(() => {
 
             <form :action="props.routes.submit" method="post" class="space-y-6">
                 <input type="hidden" name="_token" :value="props.csrfToken">
+                <input type="hidden" name="package_id" :value="packageId">
 
                 <div
                     v-if="props.errors.length"

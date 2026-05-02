@@ -8,7 +8,7 @@
         ['label' => 'About', 'href' => '#about'],
         ['label' => 'Pricelist', 'href' => '#pricelist'],
         ['label' => 'Contact', 'href' => '#contact'],
-        ['label' => 'Booking', 'href' => '#pricelist'],
+        ['label' => 'Booking', 'href' => route('booking.customer')],
     ];
 
     $marqueeRowA = [
@@ -327,9 +327,9 @@
                                 </li>
                             @endforeach
                         </ul>
-                        <button class="mt-8 w-full bg-memphis-ink text-white py-3 rounded-full text-sm font-bold hover:bg-memphis-blue hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 active:scale-95">
+                        <a href="{{ route('booking.customer', ['package' => $tier['id']]) }}" class="mt-8 flex w-full items-center justify-center bg-memphis-ink py-3 rounded-full text-sm font-bold text-white hover:bg-memphis-blue hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 active:scale-95">
                             Pilih Paket
-                        </button>
+                        </a>
                     </div>
                 @endforeach
             </div>

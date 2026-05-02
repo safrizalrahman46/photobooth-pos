@@ -42,6 +42,7 @@ class AdminBranchService
                     'timezone' => (string) $branch->timezone,
                     'phone' => (string) ($branch->phone ?? ''),
                     'address' => (string) ($branch->address ?? ''),
+                    'payment_qr_url' => (string) ($branch->payment_qr_url ?? ''),
                     'is_active' => (bool) $branch->is_active,
                     'bookings_count' => (int) ($branch->bookings_count ?? 0),
                     'time_slots_count' => (int) ($branch->time_slots_count ?? 0),
@@ -63,6 +64,7 @@ class AdminBranchService
             'timezone' => (string) ($payload['timezone'] ?? 'Asia/Jakarta'),
             'phone' => ! empty($payload['phone']) ? (string) $payload['phone'] : null,
             'address' => ! empty($payload['address']) ? (string) $payload['address'] : null,
+            'payment_qr_url' => ! empty($payload['payment_qr_url']) ? (string) $payload['payment_qr_url'] : null,
             'is_active' => (bool) ($payload['is_active'] ?? true),
         ]);
 
@@ -79,6 +81,7 @@ class AdminBranchService
                 'label' => (string) $branch->code,
                 'branch_name' => (string) $branch->name,
                 'timezone' => (string) $branch->timezone,
+                'payment_qr_url' => (string) ($branch->payment_qr_url ?? ''),
                 'is_active' => (bool) $branch->is_active,
             ],
         );
@@ -100,6 +103,7 @@ class AdminBranchService
             'timezone' => (string) ($payload['timezone'] ?? 'Asia/Jakarta'),
             'phone' => ! empty($payload['phone']) ? (string) $payload['phone'] : null,
             'address' => ! empty($payload['address']) ? (string) $payload['address'] : null,
+            'payment_qr_url' => ! empty($payload['payment_qr_url']) ? (string) $payload['payment_qr_url'] : null,
             'is_active' => $nextActive,
         ]);
 
@@ -118,6 +122,7 @@ class AdminBranchService
                 'label' => (string) $branch->code,
                 'branch_name' => (string) $branch->name,
                 'timezone' => (string) $branch->timezone,
+                'payment_qr_url' => (string) ($branch->payment_qr_url ?? ''),
                 'is_active' => (bool) $branch->is_active,
                 'updated_fields' => array_keys($payload),
             ],

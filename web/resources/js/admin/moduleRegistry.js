@@ -17,6 +17,15 @@ export const buildAdminModuleRegistry = (ctx) => ({
             ctx.fetchReportSummary();
         },
     },
+    bookings: {
+        onEnter: () => {
+            ctx.fetchRows(Number(ctx.pagination.value.current_page || 1), { silent: false });
+            ctx.startBookingsAutoRefresh();
+        },
+        onLeave: () => {
+            ctx.stopBookingsAutoRefresh();
+        },
+    },
     packages: {
         onEnter: () => {
             if (!ctx.packages.value.length && !ctx.packageLoading.value) {

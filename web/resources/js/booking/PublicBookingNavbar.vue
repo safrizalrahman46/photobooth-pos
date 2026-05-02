@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
+import defaultLogo from '../../images/logo/logo.png';
 
 const props = defineProps({
     routes: {
@@ -34,7 +35,7 @@ const links = computed(() => {
     ];
 });
 
-const logoSrc = computed(() => props.site.logo_url || props.routes.logo || '/favicon.ico');
+const logoSrc = computed(() => props.site.logo_url || props.routes.logo || defaultLogo);
 const brandName = computed(() => props.site.brand_name || 'Ready to Pict');
 const shortName = computed(() => props.site.short_name || 'Studio');
 

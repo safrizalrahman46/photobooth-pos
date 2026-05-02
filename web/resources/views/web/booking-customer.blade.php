@@ -1,6 +1,7 @@
 @php
     $general = $siteSettings['general'] ?? [];
     $ui = is_array($siteSettings['ui']['booking'] ?? null) ? $siteSettings['ui']['booking'] : [];
+    $prefillPackage = old('package_id') ?: (request()->integer('package') ?: ($oldValues['package_id'] ?? null));
     $navigationConfig = is_array($ui['navigation'] ?? null) ? $ui['navigation'] : [];
     $navigation = collect($navigationConfig)
         ->map(function ($item, int $index): array {
@@ -40,10 +41,12 @@
         'site' => [
             'brand_name' => $general['brand_name'] ?? config('app.name', 'Ready To Pict'),
             'short_name' => $general['short_name'] ?? 'Studio',
-            'logo_url' => $general['logo_url'] ?? '/favicon.ico',
+            'logo_url' => $general['logo_url'] ?? asset('images/logo/logo.png'),
         ],
         'csrfToken' => csrf_token(),
     ];
+
+    $bootstrap['oldValues']['package_id'] = $prefillPackage;
 @endphp
 
 <x-layouts.public :title="'Data Pemesan - '.($general['brand_name'] ?? config('app.name', 'Ready To Pict'))">
