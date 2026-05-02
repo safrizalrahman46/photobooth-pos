@@ -6,18 +6,17 @@ use App\Http\Requests\AdminStorePackageRequest;
 use App\Http\Requests\AdminUpdatePackageRequest;
 use App\Http\Controllers\Controller;
 use App\Models\Package;
-use App\Services\AdminDashboardDataService;
 use App\Services\AdminPackageService;
 use Illuminate\Http\JsonResponse;
 
 class AdminPackageController extends Controller
 {
-    public function index(AdminDashboardDataService $service): JsonResponse
+    public function index(AdminPackageService $service): JsonResponse
     {
         return response()->json([
             'success' => true,
             'data' => [
-                'packages' => $service->packageManagementRows(),
+                'packages' => $service->managementRows(),
             ],
         ]);
     }
@@ -25,7 +24,6 @@ class AdminPackageController extends Controller
     public function store(
         AdminStorePackageRequest $request,
         AdminPackageService $packageService,
-        AdminDashboardDataService $service,
     ): JsonResponse
     {
         $packageService->create($request->validated());
@@ -34,7 +32,7 @@ class AdminPackageController extends Controller
             'success' => true,
             'message' => 'Package created successfully.',
             'data' => [
-                'packages' => $service->packageManagementRows(),
+                'packages' => $packageService->managementRows(),
             ],
         ], 201);
     }
@@ -43,7 +41,6 @@ class AdminPackageController extends Controller
         AdminUpdatePackageRequest $request,
         Package $package,
         AdminPackageService $packageService,
-        AdminDashboardDataService $service,
     ): JsonResponse
     {
         $packageService->update($package, $request->validated());
@@ -52,12 +49,12 @@ class AdminPackageController extends Controller
             'success' => true,
             'message' => 'Package updated successfully.',
             'data' => [
-                'packages' => $service->packageManagementRows(),
+                'packages' => $packageService->managementRows(),
             ],
         ]);
     }
 
-    public function destroy(Package $package, AdminPackageService $packageService, AdminDashboardDataService $service): JsonResponse
+    public function destroy(Package $package, AdminPackageService $packageService): JsonResponse
     {
         $packageService->delete($package);
 
@@ -65,7 +62,7 @@ class AdminPackageController extends Controller
             'success' => true,
             'message' => 'Package deleted successfully.',
             'data' => [
-                'packages' => $service->packageManagementRows(),
+                'packages' => $packageService->managementRows(),
             ],
         ]);
     }

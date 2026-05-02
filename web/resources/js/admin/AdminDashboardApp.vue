@@ -29,6 +29,7 @@ import SettingsPage from './pages/SettingsPage.vue';
 import TimeSlotsPage from './pages/TimeSlotsPage.vue';
 import UsersPage from './pages/UsersPage.vue';
 import StockPage from './pages/StockPage.vue';
+import { buildAdminModuleRegistry } from './moduleRegistry';
 import { useAppSettingsModule } from './composables/useAppSettingsModule';
 import { useBlackoutDatesModule } from './composables/useBlackoutDatesModule';
 import { useBranchesModule } from './composables/useBranchesModule';
@@ -3011,6 +3012,47 @@ const {
     getCsrfToken,
 });
 
+const moduleRegistry = computed(() => buildAdminModuleRegistry({
+    reportFilters,
+    setDefaultReportRange,
+    fetchReportSummary,
+    packages,
+    packageLoading,
+    fetchPackagesData,
+    addOnLoading,
+    fetchAddOnsData,
+    stockLoading,
+    fetchStockData,
+    designs,
+    designLoading,
+    fetchDesignsData,
+    users,
+    userLoading,
+    fetchUsersData,
+    settingsLoading,
+    fetchSettingsData,
+    branchRows,
+    branchLoading,
+    fetchBranchesData,
+    timeSlotRows,
+    timeSlotLoading,
+    fetchTimeSlotsData,
+    blackoutDateRows,
+    blackoutDateLoading,
+    fetchBlackoutDatesData,
+    paymentRows,
+    paymentLoading,
+    fetchPaymentsData,
+    printerSettingRows,
+    printerSettingLoading,
+    fetchPrinterSettingsData,
+    appSettingsLoading,
+    fetchAppSettingsData,
+    fetchQueueData,
+    startQueueAutoRefresh,
+    stopQueueAutoRefresh,
+}));
+
 const branchOptionsForManagement = computed(() => {
     const options = branchRows.value
         .filter((row) => row.id > 0)
@@ -3539,75 +3581,15 @@ const goToNextPage = () => {
     fetchRows(Number(pagination.value.current_page || 1) + 1);
 };
 
-watch(activeModuleId, (nextValue) => {
-    if (!['dashboard', 'reports'].includes(nextValue)) {
-        return;
+watch(activeModuleId, (nextValue, previousValue) => {
+    const previousEntry = moduleRegistry.value[String(previousValue || '')];
+    if (previousEntry?.onLeave) {
+        previousEntry.onLeave();
     }
 
-    if (!reportFilters.value.from || !reportFilters.value.to) {
-        setDefaultReportRange();
-    }
-
-    fetchReportSummary();
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'packages' && nextValue !== 'designs' && nextValue !== 'add-ons') {
-        return;
-    }
-
-    if (!packages.value.length && !packageLoading.value) {
-        fetchPackagesData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'add-ons') {
-        return;
-    }
-
-    if (!addOnLoading.value) {
-        fetchAddOnsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'stock') {
-        return;
-    }
-
-    if (!stockLoading.value) {
-        fetchStockData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'designs') {
-        return;
-    }
-
-    if (!designs.value.length && !designLoading.value) {
-        fetchDesignsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'users') {
-        return;
-    }
-
-    if (!users.value.length && !userLoading.value) {
-        fetchUsersData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'settings') {
-        return;
-    }
-
-    if (!settingsLoading.value) {
-        fetchSettingsData();
+    const nextEntry = moduleRegistry.value[String(nextValue || '')];
+    if (nextEntry?.onEnter) {
+        nextEntry.onEnter();
     }
 }, { immediate: true });
 
@@ -3640,76 +3622,6 @@ watch(search, () => {
         fetchRows(1);
     }, 350);
 });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'branches') {
-        return;
-    }
-
-    if (!branchRows.value.length && !branchLoading.value) {
-        fetchBranchesData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'time-slots') {
-        return;
-    }
-
-    if (!timeSlotRows.value.length && !timeSlotLoading.value) {
-        fetchTimeSlotsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'blackout-dates') {
-        return;
-    }
-
-    if (!blackoutDateRows.value.length && !blackoutDateLoading.value) {
-        fetchBlackoutDatesData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'payments') {
-        return;
-    }
-
-    if (!paymentRows.value.length && !paymentLoading.value) {
-        fetchPaymentsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'printer-settings') {
-        return;
-    }
-
-    if (!printerSettingRows.value.length && !printerSettingLoading.value) {
-        fetchPrinterSettingsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'app-settings') {
-        return;
-    }
-
-    if (!appSettingsLoading.value) {
-        fetchAppSettingsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'queue') {
-        stopQueueAutoRefresh();
-        return;
-    }
-
-    fetchQueueData();
-    startQueueAutoRefresh();
-}, { immediate: true });
 
 onMounted(() => {
     syncRoutePathFromWindow();

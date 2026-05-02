@@ -8,23 +8,22 @@ use App\Http\Requests\AdminStoreInventoryItemRequest;
 use App\Http\Requests\AdminUpdateInventoryItemRequest;
 use App\Models\InventoryItem;
 use App\Services\ActivityLogger;
-use App\Services\AdminDashboardDataService;
 use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 
 class AdminInventoryController extends Controller
 {
-    public function index(AdminDashboardDataService $service): JsonResponse
+    public function index(InventoryService $service): JsonResponse
     {
         return response()->json([
             'success' => true,
-            'data' => $service->inventoryManagementPayload(),
+            'data' => $service->managementPayload(),
         ]);
     }
 
     public function store(
         AdminStoreInventoryItemRequest $request,
-        AdminDashboardDataService $service,
+        InventoryService $service,
         ActivityLogger $activityLogger,
     ): JsonResponse
     {
@@ -58,14 +57,14 @@ class AdminInventoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Inventory item created successfully.',
-            'data' => $service->inventoryManagementPayload(),
+            'data' => $service->managementPayload(),
         ], 201);
     }
 
     public function update(
         AdminUpdateInventoryItemRequest $request,
         InventoryItem $inventoryItem,
-        AdminDashboardDataService $service,
+        InventoryService $service,
         ActivityLogger $activityLogger,
     ): JsonResponse {
         $payload = $request->validated();
@@ -104,13 +103,13 @@ class AdminInventoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Inventory item updated successfully.',
-            'data' => $service->inventoryManagementPayload(),
+            'data' => $service->managementPayload(),
         ]);
     }
 
     public function destroy(
         InventoryItem $inventoryItem,
-        AdminDashboardDataService $service,
+        InventoryService $service,
         ActivityLogger $activityLogger,
     ): JsonResponse
     {
@@ -132,7 +131,7 @@ class AdminInventoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Inventory item deleted successfully.',
-            'data' => $service->inventoryManagementPayload(),
+            'data' => $service->managementPayload(),
         ]);
     }
 
@@ -140,7 +139,6 @@ class AdminInventoryController extends Controller
         AdminInventoryMovementRequest $request,
         InventoryItem $inventoryItem,
         InventoryService $inventoryService,
-        AdminDashboardDataService $service,
     ): JsonResponse {
         $actorId = (int) ($request->user()?->id ?? 0);
 
@@ -153,7 +151,7 @@ class AdminInventoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Inventory movement saved successfully.',
-            'data' => $service->inventoryManagementPayload(),
+            'data' => $inventoryService->managementPayload(),
         ]);
     }
 

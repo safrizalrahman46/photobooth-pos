@@ -122,6 +122,58 @@ class AdminAddOnService
         $addOn->delete();
     }
 
+    public function managementRows(): array
+    {
+        return AddOn::query()
+            ->with(['package:id,name', 'inventoryItems:id,code,name,unit,available_stock,low_stock_threshold,is_active'])
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get([
+                'id',
+                'package_id',
+                'code',
+                'name',
+                'description',
+                'price',
+                'max_qty',
+                'is_physical',
+                'is_active',
+                'sort_order',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function (AddOn $addOn): array {
+                $price = (float) $addOn->price;
+                $inventoryItems = $this->inventoryService->mapAddOnInventoryItems($addOn);
+                $effectiveStock = $this->inventoryService->effectiveAvailableStock($inventoryItems);
+                $stockTone = $this->inventoryService->effectiveStockTone($inventoryItems, $effectiveStock);
+
+                return [
+                    'id' => (int) $addOn->id,
+                    'package_id' => $addOn->package_id ? (int) $addOn->package_id : null,
+                    'package_name' => (string) ($addOn->package?->name ?? 'Global'),
+                    'code' => (string) $addOn->code,
+                    'name' => (string) $addOn->name,
+                    'description' => (string) ($addOn->description ?? ''),
+                    'price' => $price,
+                    'price_text' => $this->formatRupiah($price),
+                    'max_qty' => max(1, (int) $addOn->max_qty),
+                    'is_physical' => (bool) $addOn->is_physical,
+                    'inventory_items' => $inventoryItems,
+                    'effective_available_stock' => $effectiveStock,
+                    'effective_stock_status' => $stockTone['status'],
+                    'effective_stock_label' => $stockTone['label'],
+                    'type_label' => $addOn->is_physical ? 'Physical' : 'Non-physical',
+                    'is_active' => (bool) $addOn->is_active,
+                    'sort_order' => (int) $addOn->sort_order,
+                    'created_at' => $addOn->created_at?->toIso8601String(),
+                    'updated_at' => $addOn->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
     private function nextCode(): string
     {
         $cursor = ((int) AddOn::query()->max('id')) + 1;
@@ -133,5 +185,10 @@ class AdminAddOnService
         } while ($exists);
 
         return $candidate;
+    }
+
+    private function formatRupiah(float $amount): string
+    {
+        return 'Rp ' . number_format($amount, 0, ',', '.');
     }
 }

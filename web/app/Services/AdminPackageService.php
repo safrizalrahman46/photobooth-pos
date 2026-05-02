@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\BookingStatus;
 use App\Models\AddOn;
 use App\Models\Package;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -126,6 +128,116 @@ class AdminPackageService
         );
 
         $package->delete();
+    }
+
+    public function managementRows(): array
+    {
+        $startOfMonth = now()->startOfMonth()->toDateString();
+        $endOfMonth = now()->endOfMonth()->toDateString();
+
+        return Package::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->with([
+                'addOns:id,package_id,code,name,description,price,max_qty,is_physical,is_active,sort_order',
+                'addOns.inventoryItems:id,code,name,unit,available_stock,low_stock_threshold,is_active',
+                'inventoryItems:id,code,name,unit',
+            ])
+            ->withCount([
+                'bookings as total_bookings',
+                'bookings as this_month_bookings' => function (Builder $query) use ($startOfMonth, $endOfMonth): void {
+                    $query->whereBetween('booking_date', [$startOfMonth, $endOfMonth]);
+                },
+                'bookings as pending_bookings' => function (Builder $query): void {
+                    $query->whereIn('status', [
+                        BookingStatus::Pending->value,
+                        BookingStatus::Confirmed->value,
+                        BookingStatus::Paid->value,
+                        BookingStatus::CheckedIn->value,
+                        BookingStatus::InQueue->value,
+                        BookingStatus::InSession->value,
+                    ]);
+                },
+                'bookings as completed_bookings' => function (Builder $query): void {
+                    $query->where('status', BookingStatus::Done->value);
+                },
+                'addOns as add_ons_count',
+            ])
+            ->withSum([
+                'bookings as this_month_revenue' => function (Builder $query) use ($startOfMonth, $endOfMonth): void {
+                    $query->whereBetween('booking_date', [$startOfMonth, $endOfMonth]);
+                },
+            ], 'paid_amount')
+            ->get([
+                'id',
+                'branch_id',
+                'code',
+                'name',
+                'description',
+                'sample_photos',
+                'duration_minutes',
+                'base_price',
+                'is_active',
+                'sort_order',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function (Package $package): array {
+                $addOns = $package->addOns
+                    ->sortBy([['sort_order', 'asc'], ['name', 'asc']])
+                    ->values()
+                    ->map(function (AddOn $addOn): array {
+                        $price = (float) $addOn->price;
+                        $inventoryItems = $this->inventoryService->mapAddOnInventoryItems($addOn);
+                        $effectiveStock = $this->inventoryService->effectiveAvailableStock($inventoryItems);
+                        $stockTone = $this->inventoryService->effectiveStockTone($inventoryItems, $effectiveStock);
+
+                        return [
+                            'id' => (int) $addOn->id,
+                            'code' => (string) $addOn->code,
+                            'name' => (string) $addOn->name,
+                            'description' => (string) ($addOn->description ?? ''),
+                            'price' => $price,
+                            'price_text' => $this->formatRupiah($price),
+                            'max_qty' => max(1, (int) $addOn->max_qty),
+                            'is_physical' => (bool) $addOn->is_physical,
+                            'inventory_items' => $inventoryItems,
+                            'effective_available_stock' => $effectiveStock,
+                            'effective_stock_status' => $stockTone['status'],
+                            'effective_stock_label' => $stockTone['label'],
+                            'is_active' => (bool) $addOn->is_active,
+                            'sort_order' => (int) $addOn->sort_order,
+                        ];
+                    })
+                    ->all();
+
+                return [
+                    'id' => (int) $package->id,
+                    'branch_id' => $package->branch_id ? (int) $package->branch_id : null,
+                    'code' => (string) $package->code,
+                    'name' => (string) $package->name,
+                    'description' => (string) ($package->description ?? ''),
+                    'sample_photos' => $package->resolvedSamplePhotos(),
+                    'duration_minutes' => (int) $package->duration_minutes,
+                    'base_price' => (float) $package->base_price,
+                    'base_price_text' => $this->formatRupiah((float) $package->base_price),
+                    'is_active' => (bool) $package->is_active,
+                    'sort_order' => (int) $package->sort_order,
+                    'total_bookings' => (int) ($package->total_bookings ?? 0),
+                    'this_month_bookings' => (int) ($package->this_month_bookings ?? 0),
+                    'pending_bookings' => (int) ($package->pending_bookings ?? 0),
+                    'completed_bookings' => (int) ($package->completed_bookings ?? 0),
+                    'add_ons_count' => (int) ($package->add_ons_count ?? count($addOns)),
+                    'add_ons' => $addOns,
+                    'inventory_items' => $this->inventoryService->mapPackageInventoryItems($package),
+                    'this_month_revenue' => (float) ($package->this_month_revenue ?? 0),
+                    'this_month_revenue_text' => $this->formatRupiah((float) ($package->this_month_revenue ?? 0)),
+                    'created_at' => $package->created_at?->toIso8601String(),
+                    'updated_at' => $package->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     private function nextCode(): string
@@ -348,5 +460,10 @@ class AdminPackageService
             ->values()
             ->take(12)
             ->all();
+    }
+
+    private function formatRupiah(float $amount): string
+    {
+        return 'Rp ' . number_format($amount, 0, ',', '.');
     }
 }

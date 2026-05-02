@@ -12,6 +12,10 @@
 - Memperluas payload transaksi terbaru agar halaman Transactions bisa menampilkan detail item dan riwayat pembayaran.
 - Menambahkan final UX polish pada dashboard/history/transactions/reports dan memecah load `report/export` dengan async page loading + dynamic import `chart.js`.
 - Mengubah `Revenue Overview` dashboard dari progress list menjadi chart kombinasi revenue + booking.
+- Memulai refactor maintainability Batch 1 dengan memindahkan owner logic analytics/report dari `AdminDashboardDataService` ke `ReportService` tanpa mengubah kontrak endpoint admin.
+- Melanjutkan refactor backend admin dengan memindahkan owner read-model booking, transaksi terbaru, activity history, queue snapshot, inventory, package, add-on, design, user, branch, time slot, blackout date, printer setting, dan payment ke service domain masing-masing.
+- Menipiskan `AdminDashboardDataService` menjadi bootstrap aggregator, menghapus wrapper read legacy yang tidak lagi diperlukan.
+- Merapikan `AdminDashboardApp.vue` tahap awal dengan `moduleRegistry.js` agar fetch-on-enter tiap modul tidak lagi tersebar ke banyak watcher terpisah.
 - Menambahkan dokumentasi detail: `docs/admin-history-dashboard-reports-2026-05-02.md`.
 
 ## 2026-05-01 - Desktop POS API Integration
