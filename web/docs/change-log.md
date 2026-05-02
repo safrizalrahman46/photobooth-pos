@@ -22,6 +22,8 @@
 - Menambahkan `payment_qr_url` per branch dan memakai QR branch sebagai prioritas utama pada halaman pembayaran manual.
 - Menambahkan polling realtime ringan pada admin `Bookings`, menghubungkan Queue Monitor dashboard ke page queue, serta menyederhanakan topbar admin dengan search fungsional dan tanpa tombol bell/settings dummy.
 - Menghapus panel `Booking Status Mix` dari reports dan menambahkan mode chart analytics yang dapat diganti seperti revenue harian, booking harian, transaksi harian, walk-in harian, dan peak hours.
+- Menyelesaikan Tahap 1 redesign `Time Slots`: kapasitas slot backend sekarang konsisten dengan final save booking, admin slot mendapat insight sisa booking paralel + package compatibility, dan page Time Slots dirapikan agar model mental slot lebih mudah dipahami.
+- Menambahkan migration untuk menghapus constraint PostgreSQL legacy `bookings_no_overlap` yang sebelumnya memblok semua overlap booking dan bertentangan dengan konsep `time_slots.capacity`.
 - Menambahkan dokumentasi detail: `docs/admin-history-dashboard-reports-2026-05-02.md`.
 
 ## 2026-05-01 - Desktop POS API Integration

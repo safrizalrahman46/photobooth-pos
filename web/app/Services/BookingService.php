@@ -19,6 +19,7 @@ class BookingService
     public function __construct(
         private readonly CodeGenerator $codeGenerator,
         private readonly ActivityLogger $activityLogger,
+        private readonly SlotService $slotService,
     ) {}
 
     public function create(array $payload): Booking
@@ -230,18 +231,16 @@ class BookingService
 
     private function assertNoConflict(int $branchId, Carbon $startAt, Carbon $endAt): void
     {
-        $hasConflict = Booking::query()
-            ->where('branch_id', $branchId)
-            ->whereIn('status', BookingStatus::activeStatuses())
-            ->where(function ($query) use ($startAt, $endAt) {
-                $query->where('start_at', '<', $endAt)
-                    ->where('end_at', '>', $startAt);
-            })
-            ->lockForUpdate()
-            ->exists();
+        $slot = $this->slotService->resolveBookableSlotForSession($branchId, $startAt, $endAt, true);
 
-        if ($hasConflict) {
-            throw new RuntimeException('Slot sudah terisi. Silakan pilih jadwal lain.');
+        if (! $slot) {
+            throw new RuntimeException('Slot tidak tersedia atau durasi paket tidak muat pada rentang waktu ini.');
+        }
+
+        $remainingCapacity = $this->slotService->remainingParallelCapacity($slot, $startAt, $endAt, null, true);
+
+        if ($remainingCapacity <= 0) {
+            throw new RuntimeException('Kapasitas slot sudah penuh. Silakan pilih jadwal lain.');
         }
     }
 }

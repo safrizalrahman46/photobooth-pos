@@ -10,8 +10,10 @@ use App\Models\Package;
 use App\Models\TimeSlot;
 use App\Models\User;
 use App\Services\AdminBookingManagementService;
+use App\Services\BookingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -138,7 +140,7 @@ class AdminVueModulesTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_booking_availability_marks_slot_unavailable_after_one_active_booking(): void
+    public function test_booking_availability_respects_parallel_capacity(): void
     {
         $bookingDate = Carbon::now()->addDay()->toDateString();
 
@@ -195,8 +197,83 @@ class AdminVueModulesTest extends TestCase
         $slot = $slots->firstWhere('start_time', '10:00:00');
 
         $this->assertNotNull($slot);
-        $this->assertFalse((bool) ($slot['is_available'] ?? true));
-        $this->assertSame(0, (int) ($slot['remaining_slots'] ?? -1));
+        $this->assertTrue((bool) ($slot['is_available'] ?? false));
+        $this->assertSame(1, (int) ($slot['remaining_slots'] ?? -1));
+    }
+
+    public function test_booking_service_allows_parallel_bookings_until_slot_capacity(): void
+    {
+        Queue::fake();
+
+        $bookingDate = Carbon::now()->addDay()->toDateString();
+
+        $branch = Branch::query()->create([
+            'code' => 'BRANCH-CAP-01',
+            'name' => 'Branch Capacity',
+            'timezone' => 'Asia/Jakarta',
+            'is_active' => true,
+        ]);
+
+        $package = Package::query()->create([
+            'branch_id' => $branch->id,
+            'code' => 'PKG-CAP-01',
+            'name' => 'Package Capacity',
+            'duration_minutes' => 30,
+            'base_price' => 100000,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        TimeSlot::query()->create([
+            'branch_id' => $branch->id,
+            'slot_date' => $bookingDate,
+            'start_time' => '10:00:00',
+            'end_time' => '11:00:00',
+            'capacity' => 2,
+            'is_bookable' => true,
+        ]);
+
+        $service = app(BookingService::class);
+
+        $firstBooking = $service->create([
+            'branch_id' => $branch->id,
+            'package_id' => $package->id,
+            'customer_name' => 'Customer One',
+            'customer_phone' => '0812000201',
+            'booking_date' => $bookingDate,
+            'booking_time' => '10:00',
+            'payment_type' => 'full',
+            'addons' => [],
+        ]);
+
+        $secondBooking = $service->create([
+            'branch_id' => $branch->id,
+            'package_id' => $package->id,
+            'customer_name' => 'Customer Two',
+            'customer_phone' => '0812000202',
+            'booking_date' => $bookingDate,
+            'booking_time' => '10:00',
+            'payment_type' => 'full',
+            'addons' => [],
+        ]);
+
+        $this->assertNotNull($firstBooking->id);
+        $this->assertNotNull($secondBooking->id);
+        $this->assertSame(2, Booking::query()->count());
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Kapasitas slot sudah penuh.');
+
+        $service->create([
+            'branch_id' => $branch->id,
+            'package_id' => $package->id,
+            'customer_name' => 'Customer Three',
+            'customer_phone' => '0812000203',
+            'booking_date' => $bookingDate,
+            'booking_time' => '10:00',
+            'payment_type' => 'full',
+            'addons' => [],
+        ]);
     }
 
     public function test_booking_availability_marks_past_time_slots_as_unavailable_for_today(): void
