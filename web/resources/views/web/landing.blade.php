@@ -152,8 +152,8 @@
     <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm">
         <div class="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12 py-4 md:py-6">
             <a href="{{ url('/') }}" class="flex items-center gap-2 md:gap-3">
-                <img src="{{ asset('images/logo/logo.png') }}" alt="{{ $brandName }}" class="h-8 md:h-12 w-auto" />
-                <span class="font-display text-lg md:text-2xl font-semibold tracking-tight text-memphis-blue">
+                <img src="{{ asset('images/logo/logo.png') }}" alt="{{ $brandName }}" class="h-15 md:h-18 w-auto" />
+                <span class="font-display text-lg md:text-1x2 font-semibold tracking-tight text-memphis-blue">
                     {{ $brandName }}
                 </span>
             </a>
@@ -390,9 +390,9 @@
         <div class="max-w-7xl mx-auto px-6 md:px-12 py-16 md:py-24 border-t border-border/40">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
                 <div class="col-span-1 md:col-span-2 space-y-6">
-                    <a href="{{ url('/') }}" class="flex items-center gap-3">
-                        <img src="{{ asset('images/logo/logo.png') }}" alt="{{ $brandName }}" class="h-10 w-auto" />
-                        <span class="font-display text-xl font-bold text-memphis-blue tracking-tight">{{ $brandName }}</span>
+                    <a href="{{ url('/') }}" class="flex items-center gap-4">
+                        <img src="{{ asset('images/logo/logo.png') }}" alt="{{ $brandName }}" class="h-16 w-auto" />
+                        <span class="font-display text-base font-bold text-memphis-blue tracking-tight">{{ $brandName }}</span>
                     </a>
                     <p class="text-sm text-muted-foreground max-w-xs leading-relaxed">
                         {{ $tagline }} Studio foto self-portrait premium di mana kamu bebas berekspresi tanpa rasa canggung.
