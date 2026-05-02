@@ -33,6 +33,9 @@ Route::prefix('booking')->name('booking.')->group(function () {
     Route::post('/', [BookingController::class, 'store'])->name('store');
     Route::get('/success/{booking:booking_code}', [BookingController::class, 'success'])->name('success');
 });
+Route::get('/login', function () {
+    return redirect()->route('admin.login');
+})->name('login');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
@@ -43,7 +46,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
         Route::get('/', AdminDashboardController::class)->name('dashboard');
-        Route::get('/admin-dashboard', fn () => redirect()->route('admin.dashboard'));
+        Route::get('/admin-dashboard', fn() => redirect()->route('admin.dashboard'));
         Route::get('/packages', AdminDashboardController::class);
         Route::get('/add-ons', AdminDashboardController::class);
         Route::get('/design-catalogs', AdminDashboardController::class);
