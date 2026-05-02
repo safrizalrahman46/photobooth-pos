@@ -146,7 +146,7 @@ class _SidebarItemState extends State<_SidebarItem> with SingleTickerProviderSta
     );
     _colorAnimation = ColorTween(
       begin: Colors.transparent,
-      end: Colors.orange.withOpacity(0.15),
+      end: AppColors.sidebarActive.withOpacity(0.15),
     ).animate(_blinkController);
   }
 
