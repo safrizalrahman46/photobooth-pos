@@ -26,15 +26,31 @@
     ];
 
     $marqueeRowC = [
+        ['src' => asset('images/landing/source tambahan/2025-07-26_175640636.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/2025-07-26_180006489.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/2025-07-27_234407925.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/2025-07-27_234531406.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20250704_141325_882.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20250704_152608_170.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20250727_161115272.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20250727_173634_111.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20250727_180948_030.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20250930_120707_461.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20250930_140001_528.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20250930_140526_642.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
         ['src' => asset('images/landing/source tambahan/20260213_203935_348.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/IMG_0031_20260329_125025_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20260213_204007_698.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
         ['src' => asset('images/landing/source tambahan/20260329_125031_649.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/IMG_0034_20260329_125135_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20260329_125102_684.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
         ['src' => asset('images/landing/source tambahan/20260404_175201_597.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/IMG_0117_20260404_175132_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
         ['src' => asset('images/landing/source tambahan/20260404_175452_585.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/IMG_0125_20260404_175402_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
         ['src' => asset('images/landing/source tambahan/20260404_175900_243.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20260404_214644_137.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/IMG_0031_20260329_125025_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/IMG_0034_20260329_125135_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/IMG_0117_20260404_175132_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/IMG_0125_20260404_175402_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/IMG_0370_20250704_141212_3600.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
     ];
 
     
