@@ -1,36 +1,48 @@
+import 'package:desktop_flutter/core/session/api_session.dart';
+import 'package:desktop_flutter/shared/models/report_summary.dart';
+
 import '../domain/entities/laporan_summary.dart';
 import '../domain/entities/cashflow.dart';
 import '../domain/entities/payment_method.dart';
 import '../domain/repositories/laporan_repository.dart';
 
 class LaporanRepositoryImpl implements LaporanRepository {
+  Future<ReportSummary> _summary() async {
+    final client = ApiSession.client;
+
+    if (client == null) {
+      throw Exception('Sesi API belum tersedia.');
+    }
+
+    final now = DateTime.now();
+    final from = DateTime(now.year, now.month, 1);
+    final to = DateTime(now.year, now.month + 1, 0);
+
+    return client.fetchReportSummary(from: from, to: to);
+  }
+
   @override
   Future<LaporanSummary> getLaporanSummary() async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    final summary = await _summary();
 
     return LaporanSummary(
-      totalPendapatan: 14250000,
-      percentageChange: 12.5,
-      jumlahBooking: 48,
-      paketTerlaris: "Premium Cinematic",
-      pesananTerkonfirmasi: 22,
+      totalPendapatan: summary.combinedPaidSales,
+      percentageChange: 0,
+      jumlahBooking: summary.totalBookings,
+      paketTerlaris: '-',
+      pesananTerkonfirmasi: summary.doneBookings,
     );
   }
 
   @override
   Future<Cashflow> getCashflow() async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    final summary = await _summary();
 
-    return Cashflow(kasMasuk: 15800000, kasKeluar: 1550000);
+    return Cashflow(kasMasuk: summary.combinedPaidSales, kasKeluar: 0);
   }
 
   @override
   Future<List<PaymentMethod>> getPaymentMethods() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    return [
-      PaymentMethod(name: "QRIS", percentage: 75),
-      PaymentMethod(name: "Cash", percentage: 25),
-    ];
+    return const <PaymentMethod>[];
   }
 }

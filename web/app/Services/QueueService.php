@@ -17,6 +17,7 @@ class QueueService
 {
     public function __construct(
         private readonly CodeGenerator $codeGenerator,
+        private readonly ActivityLogger $activityLogger,
     ) {}
 
     public function checkInBooking(Booking $booking): QueueTicket
@@ -53,6 +54,27 @@ class QueueService
             $booking->status = BookingStatus::InQueue;
             $booking->save();
 
+            $this->activityLogger->log(
+                'queue',
+                'booking_checked_in',
+                null,
+                QueueTicket::class,
+                (int) $ticket->id,
+                [
+                    'message' => sprintf(
+                        'Booking %s masuk antrean %s.',
+                        (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                        (string) $ticket->queue_code,
+                    ),
+                    'label' => (string) $ticket->queue_code,
+                    'booking_code' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                    'customer_name' => (string) $ticket->customer_name,
+                    'branch_id' => (int) $ticket->branch_id,
+                    'status' => QueueStatus::Waiting->value,
+                    'source_type' => QueueSourceType::Booking->value,
+                ],
+            );
+
             return $ticket;
         });
     }
@@ -63,7 +85,7 @@ class QueueService
             $date = Carbon::parse($payload['queue_date']);
             $queueNumber = $this->nextQueueNumber((int) $payload['branch_id'], $date->toDateString());
 
-            return QueueTicket::query()->create([
+            $ticket = QueueTicket::query()->create([
                 'queue_code' => $this->codeGenerator->generateQueueCode($date, $queueNumber),
                 'branch_id' => $payload['branch_id'],
                 'queue_date' => $date->toDateString(),
@@ -74,6 +96,25 @@ class QueueService
                 'status' => QueueStatus::Waiting,
                 'priority' => 0,
             ]);
+
+            $this->activityLogger->log(
+                'queue',
+                'walk_in_created',
+                null,
+                QueueTicket::class,
+                (int) $ticket->id,
+                [
+                    'message' => sprintf('Walk-in %s ditambahkan ke antrean.', (string) $ticket->queue_code),
+                    'label' => (string) $ticket->queue_code,
+                    'customer_name' => (string) $ticket->customer_name,
+                    'branch_id' => (int) $ticket->branch_id,
+                    'queue_date' => $ticket->queue_date?->toDateString(),
+                    'status' => QueueStatus::Waiting->value,
+                    'source_type' => QueueSourceType::WalkIn->value,
+                ],
+            );
+
+            return $ticket;
         });
     }
 
@@ -116,6 +157,27 @@ class QueueService
         $ticket->save();
 
         $this->syncBookingStatus($ticket, $toStatus);
+
+        $this->activityLogger->log(
+            'queue',
+            'status_changed',
+            null,
+            QueueTicket::class,
+            (int) $ticket->id,
+            [
+                'message' => sprintf(
+                    'Status antrean %s berubah dari %s ke %s.',
+                    (string) $ticket->queue_code,
+                    $fromStatus->value,
+                    $toStatus->value,
+                ),
+                'label' => (string) $ticket->queue_code,
+                'customer_name' => (string) $ticket->customer_name,
+                'branch_id' => (int) $ticket->branch_id,
+                'from_status' => $fromStatus->value,
+                'to_status' => $toStatus->value,
+            ],
+        );
 
         return $ticket->refresh();
     }
@@ -204,31 +266,44 @@ class QueueService
 
         $booking = $ticket->booking;
 
-        if ($toStatus === QueueStatus::Finished) {
-            $booking->status = BookingStatus::Done;
-            $booking->save();
+        $currentStatus = $booking->status instanceof BookingStatus
+            ? $booking->status
+            : BookingStatus::from((string) $booking->status);
 
+        $nextStatus = match ($toStatus) {
+            QueueStatus::Finished => BookingStatus::Done,
+            QueueStatus::InSession => BookingStatus::InSession,
+            QueueStatus::Called, QueueStatus::CheckedIn => BookingStatus::CheckedIn,
+            QueueStatus::Cancelled => $currentStatus !== BookingStatus::Done ? BookingStatus::Cancelled : null,
+            default => null,
+        };
+
+        if (! $nextStatus || $nextStatus === $currentStatus) {
             return;
         }
 
-        if ($toStatus === QueueStatus::InSession) {
-            $booking->status = BookingStatus::InSession;
-            $booking->save();
+        $booking->status = $nextStatus;
+        $booking->save();
 
-            return;
-        }
-
-        if (in_array($toStatus, [QueueStatus::Called, QueueStatus::CheckedIn], true)) {
-            $booking->status = BookingStatus::CheckedIn;
-            $booking->save();
-
-            return;
-        }
-
-        if ($toStatus === QueueStatus::Cancelled && ($booking->status?->value ?? $booking->status) !== BookingStatus::Done->value) {
-            $booking->status = BookingStatus::Cancelled;
-            $booking->save();
-        }
+        $this->activityLogger->log(
+            'bookings',
+            'status_changed',
+            null,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf(
+                    'Status booking %s berubah dari %s ke %s melalui antrean.',
+                    (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                    $currentStatus->value,
+                    $nextStatus->value,
+                ),
+                'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                'from_status' => $currentStatus->value,
+                'to_status' => $nextStatus->value,
+                'queue_code' => (string) $ticket->queue_code,
+            ],
+        );
     }
 
     private function queueTodayDate(): string

@@ -9,6 +9,10 @@ use Illuminate\Validation\ValidationException;
 
 class AdminTimeSlotService
 {
+    public function __construct(
+        private readonly ActivityLogger $activityLogger,
+    ) {}
+
     public function rows(array $filters = []): array
     {
         $query = TimeSlot::query()
@@ -44,7 +48,7 @@ class AdminTimeSlotService
             (string) $payload['end_time'],
         );
 
-        return TimeSlot::query()->create([
+        $timeSlot = TimeSlot::query()->create([
             'branch_id' => (int) $payload['branch_id'],
             'slot_date' => (string) $payload['slot_date'],
             'start_time' => (string) $payload['start_time'],
@@ -52,6 +56,26 @@ class AdminTimeSlotService
             'capacity' => (int) $payload['capacity'],
             'is_bookable' => (bool) ($payload['is_bookable'] ?? true),
         ]);
+
+        $this->activityLogger->log(
+            'time-slots',
+            'created',
+            null,
+            TimeSlot::class,
+            (int) $timeSlot->id,
+            [
+                'message' => sprintf('Time slot %s %s-%s dibuat.', (string) $timeSlot->slot_date, (string) $timeSlot->start_time, (string) $timeSlot->end_time),
+                'label' => (string) $timeSlot->slot_date,
+                'branch_id' => (int) $timeSlot->branch_id,
+                'slot_date' => (string) $timeSlot->slot_date,
+                'start_time' => (string) $timeSlot->start_time,
+                'end_time' => (string) $timeSlot->end_time,
+                'capacity' => (int) $timeSlot->capacity,
+                'is_bookable' => (bool) $timeSlot->is_bookable,
+            ],
+        );
+
+        return $timeSlot;
     }
 
     public function update(TimeSlot $timeSlot, array $payload): TimeSlot
@@ -75,22 +99,72 @@ class AdminTimeSlotService
 
         $timeSlot->save();
 
+        $this->activityLogger->log(
+            'time-slots',
+            'updated',
+            null,
+            TimeSlot::class,
+            (int) $timeSlot->id,
+            [
+                'message' => sprintf('Time slot %s %s-%s diperbarui.', (string) $timeSlot->slot_date, (string) $timeSlot->start_time, (string) $timeSlot->end_time),
+                'label' => (string) $timeSlot->slot_date,
+                'branch_id' => (int) $timeSlot->branch_id,
+                'slot_date' => (string) $timeSlot->slot_date,
+                'start_time' => (string) $timeSlot->start_time,
+                'end_time' => (string) $timeSlot->end_time,
+                'capacity' => (int) $timeSlot->capacity,
+                'is_bookable' => (bool) $timeSlot->is_bookable,
+                'updated_fields' => array_keys($payload),
+            ],
+        );
+
         return $timeSlot->refresh();
     }
 
     public function destroy(TimeSlot $timeSlot): void
     {
+        $this->activityLogger->log(
+            'time-slots',
+            'deleted',
+            null,
+            TimeSlot::class,
+            (int) $timeSlot->id,
+            [
+                'message' => sprintf('Time slot %s %s-%s dihapus.', (string) $timeSlot->slot_date, (string) $timeSlot->start_time, (string) $timeSlot->end_time),
+                'label' => (string) $timeSlot->slot_date,
+                'branch_id' => (int) $timeSlot->branch_id,
+            ],
+        );
+
         $timeSlot->delete();
     }
 
     public function bulkBookable(array $slotIds, bool $isBookable): int
     {
-        return TimeSlot::query()
+        $updatedCount = TimeSlot::query()
             ->whereIn('id', $slotIds)
             ->update([
                 'is_bookable' => $isBookable,
                 'updated_at' => now(),
             ]);
+
+        if ($updatedCount > 0) {
+            $this->activityLogger->log(
+                'time-slots',
+                'bulk_bookable_updated',
+                null,
+                TimeSlot::class,
+                null,
+                [
+                    'message' => sprintf('Status bookable %d time slot diperbarui.', $updatedCount),
+                    'label' => 'bulk-update',
+                    'slot_count' => $updatedCount,
+                    'is_bookable' => $isBookable,
+                ],
+            );
+        }
+
+        return $updatedCount;
     }
 
     public function generate(array $payload): array
@@ -135,6 +209,22 @@ class AdminTimeSlotService
                 $cursor->addMinutes($interval);
             }
         }
+
+        $this->activityLogger->log(
+            'time-slots',
+            'generated',
+            null,
+            TimeSlot::class,
+            null,
+            [
+                'message' => sprintf('Generate time slot selesai: %d dibuat, %d dilewati.', $createdCount, $skippedCount),
+                'label' => sprintf('%s - %s', $startDate->toDateString(), $endDate->toDateString()),
+                'branch_id' => $branchId,
+                'created_count' => $createdCount,
+                'skipped_count' => $skippedCount,
+                'is_bookable' => $isBookable,
+            ],
+        );
 
         return [
             'created_count' => $createdCount,
@@ -200,4 +290,3 @@ class AdminTimeSlotService
         ];
     }
 }
-

@@ -116,7 +116,8 @@ const selectedAddons = computed(() => {
     return props.bookingPayload.addons
         .filter((item) => item && item.label)
         .map((item) => ({
-            id: asString(item.id || item.label),
+            id: Number(item.add_on_id || item.id || 0),
+            add_on_id: Number(item.add_on_id || item.id || 0),
             label: asString(item.label),
             qty: Number(item.qty || 1),
             price: Number(item.price || 0),

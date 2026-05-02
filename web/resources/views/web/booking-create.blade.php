@@ -18,6 +18,7 @@
         'branches' => $branches->values(),
         'packages' => $packages->values(),
         'designCatalogs' => $designCatalogs->values(),
+        'addOns' => $addOns->values(),
         'oldValues' => $oldValues,
         'errors' => $errors->all(),
         'routes' => [

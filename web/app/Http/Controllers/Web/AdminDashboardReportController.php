@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Services\AdminDashboardDataService;
+use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class AdminDashboardReportController extends Controller
 {
-    public function __invoke(Request $request, AdminDashboardDataService $service): JsonResponse
+    public function __invoke(Request $request, ReportService $service): JsonResponse
     {
         $payload = $request->validate([
             'from' => ['nullable', 'date_format:Y-m-d'],

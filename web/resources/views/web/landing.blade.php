@@ -26,11 +26,17 @@
     ];
 
     $marqueeRowC = [
-        ['src' => asset('images/landing/Mini/IMG_1228.JPG'), 'package' => 'MINIMARKET / SOFA', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/Mini/IMG_1254.JPG'), 'package' => 'MINIMARKET / SOFA', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/Sofa/IMG_0350.JPG'), 'package' => 'MINIMARKET / SOFA', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/Sofa/IMG_0689.JPG'), 'package' => 'MINIMARKET / SOFA', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20260213_203935_348.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/IMG_0031_20260329_125025_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20260329_125031_649.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/IMG_0034_20260329_125135_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20260404_175201_597.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/IMG_0117_20260404_175132_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20260404_175452_585.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/IMG_0125_20260404_175402_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source tambahan/20260404_175900_243.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
     ];
+
     
     // Mapping $packages dari database ke format Memphis UI
     $accents = ['bg-memphis-yellow', 'bg-memphis-blue', 'bg-memphis-orange'];
@@ -188,16 +194,7 @@
             </div>
         </div>
 
-        <!-- Row C -->
-        <div class="relative overflow-hidden">
-            <div class="flex w-max animate-marquee-left gap-4">
-                @foreach(array_merge($marqueeRowC, $marqueeRowC) as $i => $item)
-                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
-                        <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    </button>
-                @endforeach
-            </div>
-        </div>
+
     </section>
 
     <!-- ABOUT US -->
@@ -238,6 +235,38 @@
     </section>
 
 
+
+    <!-- Row C / Gallery Bottom -->
+    <section class="bg-background pb-16 pt-0 space-y-6 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 md:px-12 mb-8 text-center">
+            <span class="inline-block bg-memphis-orange text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4">
+                Bukan Cuma Studio
+            </span>
+            <h2 class="font-display text-3xl md:text-5xl tracking-tight text-memphis-ink leading-tight">
+                Hadir Untuk <span class="text-memphis-blue">Momen Spesialmu.</span>
+            </h2>
+            <p class="mt-4 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                Nggak cuma asyik buat foto-foto di studio, Ready to Pict juga bisa hadir meramaikan acara spesial kamu! Dari pernikahan, ulang tahun, sampai corporate event, bikin momen makin seru dan tak terlupakan.
+            </p>
+        </div>
+
+        <div class="relative overflow-hidden">
+            <div class="flex w-max animate-marquee-left gap-4">
+                @foreach(array_merge($marqueeRowC, $marqueeRowC) as $i => $item)
+                    @php
+                        $isVideo = str_ends_with($item['src'], '.mp4') || str_ends_with($item['src'], '.webm');
+                    @endphp
+                    <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}', {{ $isVideo ? 'true' : 'false' }})" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
+                        @if($isVideo)
+                            <video src="{{ $item['src'] }}" autoplay loop muted playsinline class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"></video>
+                        @else
+                            <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        @endif
+                    </button>
+                @endforeach
+            </div>
+        </div>
+    </section>
 
     <!-- PRICELIST -->
     <section id="pricelist" class="bg-memphis-blue-soft/60 py-16 md:py-24 scroll-mt-24">
@@ -350,6 +379,7 @@
         </button>
         <div class="relative max-w-5xl w-full flex flex-col items-center gap-6" onclick="event.stopPropagation()">
             <img id="lightbox-img" src="" alt="" class="max-h-[80vh] w-auto rounded-2xl shadow-2xl object-contain" />
+            <video id="lightbox-video" autoplay loop muted playsinline class="hidden max-h-[80vh] w-auto rounded-2xl shadow-2xl object-contain"></video>
             <div class="text-center space-y-2">
                 <span class="inline-block bg-memphis-yellow text-memphis-ink px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest">
                     Paket
@@ -406,8 +436,22 @@
             });
         }
 
-        function openLightbox(src, pkg, price) {
-            document.getElementById('lightbox-img').src = src;
+        function openLightbox(src, pkg, price, isVideo = false) {
+            const imgContainer = document.getElementById('lightbox-img');
+            const videoContainer = document.getElementById('lightbox-video');
+            
+            if (isVideo) {
+                imgContainer.classList.add('hidden');
+                videoContainer.classList.remove('hidden');
+                videoContainer.src = src;
+                videoContainer.play();
+            } else {
+                videoContainer.classList.add('hidden');
+                videoContainer.pause();
+                imgContainer.classList.remove('hidden');
+                imgContainer.src = src;
+            }
+
             document.getElementById('lightbox-package').textContent = pkg;
             document.getElementById('lightbox-price').textContent = price;
             
@@ -427,6 +471,9 @@
             const lb = document.getElementById('lightbox');
             lb.classList.add('opacity-0');
             
+            const videoContainer = document.getElementById('lightbox-video');
+            videoContainer.pause();
+
             setTimeout(() => {
                 lb.classList.add('hidden');
                 lb.classList.remove('flex');

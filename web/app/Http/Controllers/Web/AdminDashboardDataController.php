@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Services\AdminDashboardDataService;
+use App\Services\BookingReadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AdminDashboardDataController extends Controller
 {
-    public function __invoke(Request $request, AdminDashboardDataService $service): JsonResponse
+    public function __invoke(Request $request, BookingReadService $service): JsonResponse
     {
         $payload = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],

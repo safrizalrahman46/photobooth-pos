@@ -23,6 +23,8 @@ class AdminBookingManagementService
         private readonly BookingService $bookingService,
         private readonly TransactionService $transactionService,
         private readonly QueueService $queueService,
+        private readonly InventoryService $inventoryService,
+        private readonly ActivityLogger $activityLogger,
     ) {}
 
     public function create(array $payload): Booking
@@ -51,7 +53,29 @@ class AdminBookingManagementService
             $this->syncBookingTransactionItems($booking, $package, $selectedAddOns);
         });
 
-        return $booking->refresh();
+        $booking = $booking->refresh();
+
+        $this->activityLogger->log(
+            'bookings',
+            'created',
+            null,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf('Booking admin %s dibuat.', (string) $booking->booking_code),
+                'label' => (string) $booking->booking_code,
+                'customer_name' => (string) $booking->customer_name,
+                'branch_id' => (int) $booking->branch_id,
+                'package_id' => (int) $booking->package_id,
+                'booking_date' => $booking->booking_date?->toDateString(),
+                'payment_type' => (string) $booking->payment_type,
+                'total_amount' => (float) $booking->total_amount,
+                'add_ons_count' => count($selectedAddOns),
+                'source' => 'admin',
+            ],
+        );
+
+        return $booking;
     }
 
     public function update(Booking $booking, array $payload): Booking
@@ -81,11 +105,46 @@ class AdminBookingManagementService
             $this->syncBookingTransactionItems($booking, $package, $selectedAddOns);
         });
 
-        return $booking->refresh();
+        $booking = $booking->refresh();
+
+        $this->activityLogger->log(
+            'bookings',
+            'updated',
+            null,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf('Booking %s diperbarui.', (string) $booking->booking_code),
+                'label' => (string) $booking->booking_code,
+                'customer_name' => (string) $booking->customer_name,
+                'branch_id' => (int) $booking->branch_id,
+                'package_id' => (int) $booking->package_id,
+                'booking_date' => $booking->booking_date?->toDateString(),
+                'total_amount' => (float) $booking->total_amount,
+                'updated_fields' => array_values(array_keys($payload)),
+                'add_ons_count' => count($selectedAddOns),
+            ],
+        );
+
+        return $booking;
     }
 
     public function delete(Booking $booking): void
     {
+        $this->activityLogger->log(
+            'bookings',
+            'deleted',
+            null,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf('Booking %s dihapus.', (string) ($booking->booking_code ?? ('BK-' . $booking->id))),
+                'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                'customer_name' => (string) ($booking->customer_name ?? '-'),
+                'branch_id' => $booking->branch_id ? (int) $booking->branch_id : null,
+            ],
+        );
+
         $booking->delete();
     }
 
@@ -117,24 +176,43 @@ class AdminBookingManagementService
             ]);
         }
 
-        if ($status === BookingStatus::Pending) {
-            $this->bookingService->updateStatus(
-                $booking,
-                BookingStatus::Confirmed,
-                $actorId,
-                $reason ?: 'Confirmed from owner dashboard'
-            );
-        }
+        DB::transaction(function () use ($booking, $status, $actorId, $reason): void {
+            if ($booking->approved_at === null) {
+                $this->inventoryService->deductForVerifiedBooking($booking, $actorId);
 
-        if ($booking->approved_at === null) {
-            $booking->update([
-                'approved_by' => $actorId ?: $booking->approved_by,
-                'approved_at' => now(),
-            ]);
-        }
+                $booking->refresh()->update([
+                    'approved_by' => $actorId ?: $booking->approved_by,
+                    'approved_at' => now(),
+                ]);
+            }
+
+            if ($status === BookingStatus::Pending) {
+                $this->bookingService->updateStatus(
+                    $booking,
+                    BookingStatus::Confirmed,
+                    $actorId,
+                    $reason ?: 'Confirmed from owner dashboard'
+                );
+            }
+        });
 
         $booking = $booking->refresh();
         $this->autoCheckInQueueAfterVerification($booking);
+
+        $this->activityLogger->log(
+            'bookings',
+            'verified',
+            $actorId,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf('Booking %s diverifikasi.', (string) $booking->booking_code),
+                'label' => (string) $booking->booking_code,
+                'approved_at' => $booking->approved_at?->toIso8601String(),
+                'status' => (string) ($booking->status?->value ?? $booking->status),
+                'reason' => $reason,
+            ],
+        );
 
         return $booking->refresh();
     }
@@ -210,6 +288,27 @@ class AdminBookingManagementService
             );
         }
 
+        $this->activityLogger->log(
+            'bookings',
+            'payment_confirmed',
+            $cashierId,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf(
+                    'Pembayaran booking %s dikonfirmasi.',
+                    (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                ),
+                'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                'transaction_code' => (string) ($updatedTransaction->transaction_code ?? ''),
+                'amount' => $amount,
+                'method' => (string) ($payload['method'] ?? ''),
+                'transaction_status' => (string) ($updatedTransaction->status?->value ?? $updatedTransaction->status),
+                'paid_amount' => (float) $updatedTransaction->paid_amount,
+                'total_amount' => (float) $updatedTransaction->total_amount,
+            ],
+        );
+
         return $updatedTransaction->refresh();
     }
 
@@ -254,6 +353,19 @@ class AdminBookingManagementService
             BookingStatus::Cancelled,
             $actorId,
             $reason ?: 'Declined from booking detail due to missing payment proof'
+        );
+
+        $this->activityLogger->log(
+            'bookings',
+            'declined',
+            $actorId,
+            Booking::class,
+            (int) $booking->id,
+            [
+                'message' => sprintf('Booking %s ditolak.', (string) ($booking->booking_code ?? ('BK-' . $booking->id))),
+                'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                'reason' => $reason,
+            ],
         );
 
         return $booking->refresh();
@@ -433,6 +545,18 @@ class AdminBookingManagementService
             if ($qty > $maxQty) {
                 throw ValidationException::withMessages([
                     'add_ons' => sprintf('Maksimum qty untuk %s adalah %d.', (string) $addOn->name, $maxQty),
+                ]);
+            }
+
+            // GAP 1: Validasi stok tersedia untuk add-on physical
+            if ($addOn->is_physical && (int) $addOn->available_stock < $qty) {
+                throw ValidationException::withMessages([
+                    'add_ons' => sprintf(
+                        'Stok add-on "%s" tidak mencukupi. Tersedia: %d, Diminta: %d.',
+                        (string) $addOn->name,
+                        (int) $addOn->available_stock,
+                        $qty
+                    ),
                 ]);
             }
 
@@ -628,5 +752,40 @@ class AdminBookingManagementService
             });
 
         return max($packageBasePrice + $addOnTotal, 0);
+    }
+
+    /**
+     * GAP 1: Kurangi stok add-on physical secara otomatis saat booking pertama kali diverifikasi.
+     * Hanya memproses add-on yang ada di pivot booking_add_ons (booking dari channel Admin).
+     * Menggunakan lockForUpdate via AdminAddOnService untuk mencegah race condition.
+     */
+    private function deductAddOnStocksForBooking(Booking $booking, ?int $actorId = null): void
+    {
+        $booking->loadMissing(['addOns']);
+
+        if ($booking->addOns->isEmpty()) {
+            return;
+        }
+
+        foreach ($booking->addOns as $addOn) {
+            if (! $addOn->is_physical) {
+                continue;
+            }
+
+            $qty = (int) ($addOn->pivot?->qty ?? 0);
+
+            if ($qty <= 0) {
+                continue;
+            }
+
+            $this->addOnService->recordStockMovement($addOn, [
+                'movement_type' => 'out',
+                'qty'           => $qty,
+                'notes'         => sprintf(
+                    'Auto-deducted saat verifikasi booking %s.',
+                    (string) $booking->booking_code
+                ),
+            ], $actorId);
+        }
     }
 }

@@ -1,5 +1,44 @@
 # Change Log
 
+## 2026-05-02 - Admin Dashboard, History Perubahan, and Reports Refresh
+
+- Merapikan dashboard admin menjadi layout minimal yang fokus pada `Revenue Overview`, `Queue Monitor`, `Cashier Performance`, dan `Alert Operasional`.
+- Mengubah modul `Activity Logs` menjadi `History Perubahan` dengan data detail dari `activity_logs` dan retensi 90 hari.
+- Menambahkan logging perubahan pada flow backend booking, queue, payment/transaction, inventory, package, add-on, design, user, branch, time slot, blackout date, printer setting, dan app settings.
+- Menambahkan command + schedule purge mingguan untuk menghapus activity log yang lebih lama dari 90 hari.
+- Memperluas payload report dengan `cashier_daily_series` untuk stacked bar performa cashier per hari.
+- Menambahkan export report ke Excel berbasis `xlsx` dan chart frontend berbasis `chart.js`.
+- Mengubah badge/blink sidebar queue agar memakai total ticket `waiting`, tanpa mengubah aturan booking verified terlebih dahulu sebelum masuk antrean.
+- Memperluas payload transaksi terbaru agar halaman Transactions bisa menampilkan detail item dan riwayat pembayaran.
+- Menambahkan final UX polish pada dashboard/history/transactions/reports dan memecah load `report/export` dengan async page loading + dynamic import `chart.js`.
+- Mengubah `Revenue Overview` dashboard dari progress list menjadi chart kombinasi revenue + booking.
+- Memulai refactor maintainability Batch 1 dengan memindahkan owner logic analytics/report dari `AdminDashboardDataService` ke `ReportService` tanpa mengubah kontrak endpoint admin.
+- Melanjutkan refactor backend admin dengan memindahkan owner read-model booking, transaksi terbaru, activity history, queue snapshot, inventory, package, add-on, design, user, branch, time slot, blackout date, printer setting, dan payment ke service domain masing-masing.
+- Menipiskan `AdminDashboardDataService` menjadi bootstrap aggregator, menghapus wrapper read legacy yang tidak lagi diperlukan.
+- Merapikan `AdminDashboardApp.vue` tahap awal dengan `moduleRegistry.js` agar fetch-on-enter tiap modul tidak lagi tersebar ke banyak watcher terpisah.
+- Menambahkan dokumentasi detail: `docs/admin-history-dashboard-reports-2026-05-02.md`.
+
+## 2026-05-01 - Desktop POS API Integration
+
+- Menambahkan endpoint API desktop untuk add-on, inventory item, POS walk-in checkout, dan booking verification.
+- Menghubungkan Flutter desktop ke API Laravel melalui `ApiSession` dan `ApiClient` berbasis token login.
+- Mengubah data package, add-on, booking, antrean, history transaksi, dan ringkasan laporan dasar agar berasal dari API.
+- Menambahkan flow POS walk-in checkout yang otomatis membuat transaksi, pembayaran, antrean, dan deduction inventory.
+- Menambahkan flow verifikasi pembayaran/booking customer dari website `/booking` melalui desktop app.
+- Menambahkan print struk PDF via Windows print dialog setelah checkout walk-in berhasil.
+- Menambahkan dokumentasi detail: `docs/desktop-pos-api-integration-2026-05-01.md`.
+
+## 2026-04-30 - Inventory Item Stock Flow
+
+- Memisahkan tracking stok dari `add_ons` ke master `inventory_items`.
+- Menambahkan mapping konsumsi barang untuk package dan add-on.
+- Menambahkan ledger `inventory_movements` untuk stok manual dan auto deduction booking.
+- Mengurangi stok otomatis saat booking diverifikasi, termasuk DP, dengan guard stok cukup dan anti double-deduction.
+- Mengubah UI Stock agar menampilkan barang fisik, bukan nama add-on.
+- Menambahkan mapping konsumsi barang pada UI Packages dan Add-ons tanpa mengubah style visual utama.
+- Menghapus input dan endpoint stock movement legacy dari Add-ons; availability add-on sekarang read-only dari mapping `inventory_items`.
+- Mengamankan booking publik agar harga add-on diambil dari database, bukan dari payload frontend.
+
 ## 2026-04-25
 
 ### Booking Verification, Queue Automation, and Payment Flow Hardening

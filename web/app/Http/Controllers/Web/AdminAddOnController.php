@@ -3,22 +3,20 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\AdminAddOnStockMovementRequest;
 use App\Http\Requests\AdminStoreAddOnRequest;
 use App\Http\Requests\AdminUpdateAddOnRequest;
 use App\Models\AddOn;
 use App\Services\AdminAddOnService;
-use App\Services\AdminDashboardDataService;
 use Illuminate\Http\JsonResponse;
 
 class AdminAddOnController extends Controller
 {
-    public function index(AdminDashboardDataService $service): JsonResponse
+    public function index(AdminAddOnService $service): JsonResponse
     {
         return response()->json([
             'success' => true,
             'data' => [
-                'add_ons' => $service->addOnManagementRows(),
+                'add_ons' => $service->managementRows(),
             ],
         ]);
     }
@@ -26,7 +24,6 @@ class AdminAddOnController extends Controller
     public function store(
         AdminStoreAddOnRequest $request,
         AdminAddOnService $addOnService,
-        AdminDashboardDataService $service,
     ): JsonResponse
     {
         $addOnService->create($request->validated());
@@ -35,7 +32,7 @@ class AdminAddOnController extends Controller
             'success' => true,
             'message' => 'Add-on created successfully.',
             'data' => [
-                'add_ons' => $service->addOnManagementRows(),
+                'add_ons' => $addOnService->managementRows(),
             ],
         ], 201);
     }
@@ -44,7 +41,6 @@ class AdminAddOnController extends Controller
         AdminUpdateAddOnRequest $request,
         AddOn $addOn,
         AdminAddOnService $addOnService,
-        AdminDashboardDataService $service,
     ): JsonResponse
     {
         $addOnService->update($addOn, $request->validated());
@@ -53,12 +49,12 @@ class AdminAddOnController extends Controller
             'success' => true,
             'message' => 'Add-on updated successfully.',
             'data' => [
-                'add_ons' => $service->addOnManagementRows(),
+                'add_ons' => $addOnService->managementRows(),
             ],
         ]);
     }
 
-    public function destroy(AddOn $addOn, AdminAddOnService $addOnService, AdminDashboardDataService $service): JsonResponse
+    public function destroy(AddOn $addOn, AdminAddOnService $addOnService): JsonResponse
     {
         $addOnService->delete($addOn);
 
@@ -66,25 +62,7 @@ class AdminAddOnController extends Controller
             'success' => true,
             'message' => 'Add-on deleted successfully.',
             'data' => [
-                'add_ons' => $service->addOnManagementRows(),
-            ],
-        ]);
-    }
-
-    public function stockMovement(
-        AdminAddOnStockMovementRequest $request,
-        AddOn $addOn,
-        AdminAddOnService $addOnService,
-        AdminDashboardDataService $service,
-    ): JsonResponse {
-        $payload = $request->validated();
-        $addOnService->recordStockMovement($addOn, $payload, (int) ($request->user()?->id ?? 0));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Stock movement saved successfully.',
-            'data' => [
-                'add_ons' => $service->addOnManagementRows(),
+                'add_ons' => $addOnService->managementRows(),
             ],
         ]);
     }

@@ -39,10 +39,12 @@ class StoreBookingRequest extends FormRequest
             'payment_type' => ['nullable', Rule::in(['full', 'dp50'])],
             'source' => ['nullable', Rule::in(['web', 'walk_in', 'admin'])],
             'addons' => ['nullable', 'array', 'max:20'],
-            'addons.*.id' => ['required_with:addons', 'string', 'max:80'],
-            'addons.*.label' => ['required_with:addons', 'string', 'max:150'],
+            'addons.*.add_on_id' => [
+                'required_with:addons',
+                'integer',
+                Rule::exists('add_ons', 'id')->where(fn ($query) => $query->where('is_active', true)),
+            ],
             'addons.*.qty' => ['required_with:addons', 'integer', 'min:1', 'max:99'],
-            'addons.*.price' => ['required_with:addons', 'numeric', 'min:0', 'max:9999999'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
 
@@ -86,14 +88,14 @@ class StoreBookingRequest extends FormRequest
         return collect($decoded)
             ->filter(fn ($item) => is_array($item))
             ->map(function (array $item): array {
+                $addOnId = (int) ($item['add_on_id'] ?? $item['id'] ?? 0);
+
                 return [
-                    'id' => (string) ($item['id'] ?? ''),
-                    'label' => (string) ($item['label'] ?? ''),
+                    'add_on_id' => $addOnId,
                     'qty' => (int) ($item['qty'] ?? 0),
-                    'price' => (float) ($item['price'] ?? 0),
                 ];
             })
-            ->filter(fn (array $item) => $item['id'] !== '' && $item['label'] !== '' && $item['qty'] > 0)
+            ->filter(fn (array $item) => $item['add_on_id'] > 0 && $item['qty'] > 0)
             ->values()
             ->all();
     }

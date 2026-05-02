@@ -10,6 +10,7 @@ use App\Http\Controllers\Web\AdminDashboardController;
 use App\Http\Controllers\Web\AdminDashboardDataController;
 use App\Http\Controllers\Web\AdminDashboardReportController;
 use App\Http\Controllers\Web\AdminDesignController;
+use App\Http\Controllers\Web\AdminInventoryController;
 use App\Http\Controllers\Web\AdminPackageController;
 use App\Http\Controllers\Web\AdminPaymentController;
 use App\Http\Controllers\Web\AdminPrinterSettingController;
@@ -40,7 +41,6 @@ Route::get('/login', function () {
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login'])->name('login.attempt');
-    Route::get('/stock', AdminDashboardController::class);
 
     Route::middleware('auth')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
@@ -49,6 +49,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/admin-dashboard', fn() => redirect()->route('admin.dashboard'));
         Route::get('/packages', AdminDashboardController::class);
         Route::get('/add-ons', AdminDashboardController::class);
+        Route::get('/stock', AdminDashboardController::class);
         Route::get('/design-catalogs', AdminDashboardController::class);
         Route::get('/users', AdminDashboardController::class);
         Route::get('/bookings', AdminDashboardController::class);
@@ -76,7 +77,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/add-ons', [AdminAddOnController::class, 'store'])->name('add-ons.store');
         Route::put('/add-ons/{addOn}', [AdminAddOnController::class, 'update']);
         Route::delete('/add-ons/{addOn}', [AdminAddOnController::class, 'destroy']);
-        Route::post('/add-ons/{addOn}/stock-movement', [AdminAddOnController::class, 'stockMovement'])->name('add-ons.stock-movement');
+
+        Route::get('/stock-data', [AdminInventoryController::class, 'index'])->name('stock.data');
+        Route::post('/inventory-items', [AdminInventoryController::class, 'store'])->name('inventory-items.store');
+        Route::put('/inventory-items/{inventoryItem}', [AdminInventoryController::class, 'update']);
+        Route::delete('/inventory-items/{inventoryItem}', [AdminInventoryController::class, 'destroy']);
+        Route::post('/inventory-items/{inventoryItem}/movement', [AdminInventoryController::class, 'movement'])->name('inventory-items.movement');
 
         Route::get('/designs-data', [AdminDesignController::class, 'index'])->name('designs.data');
         Route::post('/designs', [AdminDesignController::class, 'store'])->name('designs.store');

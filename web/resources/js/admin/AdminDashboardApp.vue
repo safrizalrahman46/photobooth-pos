@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
     Activity,
     BarChart3,
@@ -15,9 +15,7 @@ import {
 
 import AdminSidebar from './components/AdminSidebar.vue';
 import AdminTopBar from './components/AdminTopBar.vue';
-import ActivityLogsPage from './pages/ActivityLogsPage.vue';
 import BookingsPage from './pages/BookingsPage.vue';
-import DashboardPage from './pages/DashboardPage.vue';
 import AddOnsPage from './pages/AddOnsPage.vue';
 import AppSettingsPage from './pages/AppSettingsPage.vue';
 import BlackoutDatesPage from './pages/BlackoutDatesPage.vue';
@@ -27,18 +25,22 @@ import PackagesPage from './pages/PackagesPage.vue';
 import PaymentsPage from './pages/PaymentsPage.vue';
 import PrinterSettingsPage from './pages/PrinterSettingsPage.vue';
 import QueuePage from './pages/QueuePage.vue';
-import ReportsPage from './pages/ReportsPage.vue';
 import SettingsPage from './pages/SettingsPage.vue';
 import TimeSlotsPage from './pages/TimeSlotsPage.vue';
-import TransactionsPage from './pages/TransactionsPage.vue';
 import UsersPage from './pages/UsersPage.vue';
 import StockPage from './pages/StockPage.vue';
+import { buildAdminModuleRegistry } from './moduleRegistry';
 import { useAppSettingsModule } from './composables/useAppSettingsModule';
 import { useBlackoutDatesModule } from './composables/useBlackoutDatesModule';
 import { useBranchesModule } from './composables/useBranchesModule';
 import { usePaymentsModule } from './composables/usePaymentsModule';
 import { usePrinterSettingsModule } from './composables/usePrinterSettingsModule';
 import { useTimeSlotsModule } from './composables/useTimeSlotsModule';
+
+const DashboardPage = defineAsyncComponent(() => import('./pages/DashboardPage.vue'));
+const TransactionsPage = defineAsyncComponent(() => import('./pages/TransactionsPage.vue'));
+const ReportsPage = defineAsyncComponent(() => import('./pages/ReportsPage.vue'));
+const ActivityLogsPage = defineAsyncComponent(() => import('./pages/ActivityLogsPage.vue'));
 
 const props = defineProps({
     initialStats: {
@@ -129,6 +131,18 @@ const props = defineProps({
     addOnBaseUrl: {
         type: String,
         default: '/admin/add-ons',
+    },
+    stockDataUrl: {
+        type: String,
+        default: '',
+    },
+    inventoryItemStoreUrl: {
+        type: String,
+        default: '',
+    },
+    inventoryItemBaseUrl: {
+        type: String,
+        default: '/admin/inventory-items',
     },
     designsDataUrl: {
         type: String,
@@ -318,6 +332,14 @@ const props = defineProps({
         default: () => [],
     },
     initialPaymentTransactionOptions: {
+        type: Array,
+        default: () => [],
+    },
+    initialInventoryItems: {
+        type: Array,
+        default: () => [],
+    },
+    initialInventoryMovements: {
         type: Array,
         default: () => [],
     },
@@ -643,18 +665,12 @@ const pendingBookingBlinkDuration = computed(() => {
     return `${seconds.toFixed(2)}s`;
 });
 
-const verifiedQueueWaitingCount = computed(() => {
-    const fromStats = Math.max(0, Number(queueStats.value.verified_waiting || 0));
-
-    if (fromStats > 0) {
-        return fromStats;
-    }
-
-    return waitingQueue.value.filter((item) => String(item.source_type || '').toLowerCase() === 'booking').length;
+const queueWaitingCount = computed(() => {
+    return Math.max(0, Number(queueStats.value.waiting || 0));
 });
 
 const queueBlinkDuration = computed(() => {
-    const count = Math.max(0, Number(verifiedQueueWaitingCount.value || 0));
+    const count = Math.max(0, Number(queueWaitingCount.value || 0));
 
     if (count <= 0) {
         return null;
@@ -667,7 +683,7 @@ const queueBlinkDuration = computed(() => {
 
 const navBadgeMap = computed(() => {
     const pending = Math.max(0, Number(pendingBookingsCount.value || 0));
-    const queueWaiting = Math.max(0, Number(verifiedQueueWaitingCount.value || 0));
+    const queueWaiting = Math.max(0, Number(queueWaitingCount.value || 0));
 
     return {
         bookings: pending,
@@ -709,7 +725,9 @@ const navItems = computed(() => {
 
             return {
                 id,
-                label,
+                label: id === 'activity-logs' && (label === '' || label === 'Activity Logs')
+                    ? 'History Perubahan'
+                    : label,
                 icon: resolveNavIcon(item?.icon),
                 href: resolveNavHref(item?.href),
                 group,
@@ -817,6 +835,10 @@ const topbarTitle = computed(() => {
     const id = String(activeModuleId.value || 'dashboard');
     const title = String(topbarMetaById.value[id]?.title || '').trim();
     const navLabel = String(navItems.value.find((item) => item.id === id)?.label || '').trim();
+
+    if (id === 'activity-logs' && (title === '' || title === 'Activity Logs')) {
+        return 'History Perubahan';
+    }
 
     return title || navLabel || 'Dashboard';
 });
@@ -940,6 +962,7 @@ const currentQueue = computed(() => {
         ticket_id: value.ticket_id ? Number(value.ticket_id) : null,
         booking_id: value.booking_id ? Number(value.booking_id) : null,
         branch_id: value.branch_id ? Number(value.branch_id) : null,
+        branch_name: String(value.branch_name || '-'),
         queue_date: String(value.queue_date || ''),
         source_type: String(value.source_type || ''),
         queue_code: String(value.queue_code || '-'),
@@ -963,6 +986,7 @@ const waitingQueue = computed(() => {
         ticket_id: item.ticket_id ? Number(item.ticket_id) : null,
         booking_id: item.booking_id ? Number(item.booking_id) : null,
         branch_id: item.branch_id ? Number(item.branch_id) : null,
+        branch_name: String(item.branch_name || '-'),
         queue_date: String(item.queue_date || ''),
         source_type: String(item.source_type || ''),
         queue_code: String(item.queue_code || '-'),
@@ -1075,14 +1099,49 @@ const normalizedRecentTransactions = computed(() => {
         const amount = Number(item.amount || 0);
 
         return {
+            record_id: Number(item.record_id || 0),
             id: String(item.code || `TX-${index + 1}`),
             customer,
+            customerPhone: String(item.customer_phone || ''),
+            branchName: String(item.branch_name || '-'),
             cashier: String(item.cashier || '-'),
             method,
             amount,
             amountText: String(item.paid_text || item.total_text || formatRupiah(amount)),
             status: String(item.status || 'unpaid'),
             time: String(item.time_text || item.time || '-'),
+            notes: String(item.notes || ''),
+            totalAmount: Number(item.total_amount || 0),
+            totalText: String(item.total_text || formatRupiah(item.total_amount || 0)),
+            paidAmount: Number(item.paid_amount || 0),
+            paidText: String(item.paid_text || formatRupiah(item.paid_amount || 0)),
+            remainingAmount: Number(item.remaining_amount || 0),
+            remainingText: String(item.remaining_text || formatRupiah(item.remaining_amount || 0)),
+            changeAmount: Number(item.change_amount || 0),
+            changeText: String(item.change_text || formatRupiah(item.change_amount || 0)),
+            items: Array.isArray(item.items)
+                ? item.items.map((line) => ({
+                    itemType: String(line.item_type || '-'),
+                    itemName: String(line.item_name || '-'),
+                    qty: Number(line.qty || 0),
+                    unitPrice: Number(line.unit_price || 0),
+                    unitPriceText: String(line.unit_price_text || formatRupiah(line.unit_price || 0)),
+                    lineTotal: Number(line.line_total || 0),
+                    lineTotalText: String(line.line_total_text || formatRupiah(line.line_total || 0)),
+                }))
+                : [],
+            payments: Array.isArray(item.payments)
+                ? item.payments.map((payment) => ({
+                    paymentCode: String(payment.payment_code || '-'),
+                    method: String(payment.method || '-').toUpperCase(),
+                    amount: Number(payment.amount || 0),
+                    amountText: String(payment.amount_text || formatRupiah(payment.amount || 0)),
+                    referenceNo: String(payment.reference_no || ''),
+                    cashierName: String(payment.cashier_name || '-'),
+                    paidAt: String(payment.paid_at || ''),
+                    paidAtText: String(payment.paid_at_text || '-'),
+                }))
+                : [],
         };
     });
 });
@@ -1097,11 +1156,18 @@ const normalizedRecentActivities = computed(() => {
     const source = Array.isArray(props.recentActivities) ? props.recentActivities : [];
 
     return source.map((item, index) => ({
-        id: index,
+        id: Number(item.id || index),
         actor: String(item.actor || 'System'),
         action: String(item.action || '-'),
+        action_key: String(item.action_key || item.action || ''),
         module: String(item.module || 'system'),
+        module_key: String(item.module_key || item.module || 'system'),
+        label: String(item.label || ''),
+        message: String(item.message || item.action || '-'),
+        details: Array.isArray(item.details) ? item.details.map((detail) => String(detail || '')).filter(Boolean) : [],
+        changed_fields: Array.isArray(item.changed_fields) ? item.changed_fields.map((field) => String(field || '')).filter(Boolean) : [],
         time: String(item.time || '-'),
+        time_text: String(item.time_text || item.time || '-'),
     }));
 });
 
@@ -1116,8 +1182,26 @@ const packageCards = computed(() => {
                 description: String(addOn?.description || ''),
                 price: Number(addOn?.price || 0),
                 max_qty: Math.max(1, Number(addOn?.max_qty || 1)),
+                is_physical: Boolean(addOn?.is_physical),
                 is_active: Boolean(addOn?.is_active),
                 sort_order: Number(addOn?.sort_order || 0),
+                inventory_items: Array.isArray(addOn?.inventory_items)
+                    ? addOn.inventory_items.map((row) => ({
+                        inventory_item_id: Number(row?.inventory_item_id || 0),
+                        code: String(row?.code || ''),
+                        name: String(row?.name || ''),
+                        unit: String(row?.unit || 'pcs'),
+                        available_stock: Math.max(0, Number(row?.available_stock || 0)),
+                        low_stock_threshold: Math.max(0, Number(row?.low_stock_threshold || 0)),
+                        is_active: Boolean(row?.is_active),
+                        qty_per_unit: Math.max(1, Number(row?.qty_per_unit || 1)),
+                    })).filter((row) => row.inventory_item_id > 0)
+                    : [],
+                effective_available_stock: addOn?.effective_available_stock === null || addOn?.effective_available_stock === undefined
+                    ? null
+                    : Math.max(0, Number(addOn?.effective_available_stock || 0)),
+                effective_stock_status: String(addOn?.effective_stock_status || 'untracked'),
+                effective_stock_label: String(addOn?.effective_stock_label || 'Not mapped'),
             }))
             : [];
 
@@ -1140,6 +1224,15 @@ const packageCards = computed(() => {
             completed: Number(item.completed_bookings || 0),
             add_ons_count: Number(item.add_ons_count || addOns.length || 0),
             add_ons: addOns,
+            inventory_items: Array.isArray(item.inventory_items)
+                ? item.inventory_items.map((row) => ({
+                    inventory_item_id: Number(row?.inventory_item_id || 0),
+                    code: String(row?.code || ''),
+                    name: String(row?.name || ''),
+                    unit: String(row?.unit || 'pcs'),
+                    qty_per_booking: Math.max(1, Number(row?.qty_per_booking || 1)),
+                })).filter((row) => row.inventory_item_id > 0)
+                : [],
             revenue,
             revenueText: formatRupiah(revenue),
         };
@@ -1151,6 +1244,50 @@ const packageOptions = computed(() => {
         id: Number(item.id || 0),
         name: String(item.name || '-'),
     }));
+});
+
+const inventoryItemRows = computed(() => {
+    return (inventoryItems.value || []).map((item) => ({
+        id: Number(item.id || 0),
+        code: String(item.code || ''),
+        name: String(item.name || '-'),
+        unit: String(item.unit || 'pcs'),
+        available_stock: Math.max(0, Number(item.available_stock || 0)),
+        low_stock_threshold: Math.max(0, Number(item.low_stock_threshold || 0)),
+        is_active: Boolean(item.is_active),
+        sort_order: Number(item.sort_order || 0),
+        updated_at: item.updated_at || null,
+    }));
+});
+
+const inventoryMovementRows = computed(() => {
+    return (inventoryMovements.value || []).map((item) => ({
+        id: Number(item.id || 0),
+        inventory_item_id: Number(item.inventory_item_id || 0),
+        inventory_item_code: String(item.inventory_item_code || ''),
+        inventory_item_name: String(item.inventory_item_name || '-'),
+        unit: String(item.unit || 'pcs'),
+        movement_type: String(item.movement_type || ''),
+        qty: Math.max(0, Number(item.qty || 0)),
+        stock_before: Math.max(0, Number(item.stock_before || 0)),
+        stock_after: Math.max(0, Number(item.stock_after || 0)),
+        source_type: String(item.source_type || ''),
+        source_ref: String(item.source_ref || ''),
+        notes: String(item.notes || ''),
+        actor_name: String(item.actor_name || 'System'),
+        created_at_text: String(item.created_at_text || '-'),
+    }));
+});
+
+const inventoryItemOptions = computed(() => {
+    return inventoryItemRows.value
+        .filter((item) => item.is_active)
+        .map((item) => ({
+            id: Number(item.id || 0),
+            code: String(item.code || ''),
+            name: String(item.name || '-'),
+            unit: String(item.unit || 'pcs'),
+        }));
 });
 
 const designCards = computed(() => {
@@ -1190,7 +1327,7 @@ const activitySearch = ref('');
 const activityModuleFilter = ref('all');
 
 const activityModuleOptions = computed(() => {
-    const modules = normalizedRecentActivities.value.map((item) => String(item.module || '').toLowerCase());
+    const modules = normalizedRecentActivities.value.map((item) => String(item.module_key || item.module || '').toLowerCase());
     const uniques = Array.from(new Set(modules.filter(Boolean))).sort();
 
     return ['all', ...uniques];
@@ -1200,7 +1337,7 @@ const filteredActivityRows = computed(() => {
     const term = String(activitySearch.value || '').toLowerCase().trim();
 
     return normalizedRecentActivities.value.filter((activity) => {
-        const moduleName = String(activity.module || '').toLowerCase();
+        const moduleName = String(activity.module_key || activity.module || '').toLowerCase();
         const passesModule = activityModuleFilter.value === 'all' || moduleName === activityModuleFilter.value;
 
         if (!passesModule) {
@@ -1214,6 +1351,10 @@ const filteredActivityRows = computed(() => {
         return (
             String(activity.actor || '').toLowerCase().includes(term)
             || String(activity.action || '').toLowerCase().includes(term)
+            || String(activity.message || '').toLowerCase().includes(term)
+            || String(activity.label || '').toLowerCase().includes(term)
+            || (activity.details || []).some((detail) => String(detail || '').toLowerCase().includes(term))
+            || (activity.changed_fields || []).some((field) => String(field || '').toLowerCase().includes(term))
             || moduleName.includes(term)
         );
     });
@@ -1281,6 +1422,8 @@ const reportError = ref('');
 const reportData = ref(null);
 const packages = ref(Array.isArray(props.initialPackages) ? props.initialPackages : []);
 const addOns = ref(Array.isArray(props.initialAddOns) ? props.initialAddOns : []);
+const inventoryItems = ref(Array.isArray(props.initialInventoryItems) ? props.initialInventoryItems : []);
+const inventoryMovements = ref(Array.isArray(props.initialInventoryMovements) ? props.initialInventoryMovements : []);
 const designs = ref(Array.isArray(props.initialDesigns) ? props.initialDesigns : []);
 const users = ref(Array.isArray(props.initialUsers) ? props.initialUsers : []);
 const userRoles = ref(Array.isArray(props.initialUserRoles) ? props.initialUserRoles : []);
@@ -1305,6 +1448,10 @@ const addOnLoading = ref(false);
 const addOnSaving = ref(false);
 const addOnError = ref('');
 const deletingAddOnId = ref(null);
+const stockLoading = ref(false);
+const stockSaving = ref(false);
+const stockError = ref('');
+const deletingInventoryItemId = ref(null);
 const designLoading = ref(false);
 const designSaving = ref(false);
 const designError = ref('');
@@ -1515,6 +1662,128 @@ const reportStatusRows = computed(() => {
     return Array.isArray(rowsValue) ? rowsValue : [];
 });
 
+const dashboardOwnerHighlights = computed(() => {
+    return Array.isArray(props.ownerHighlights) ? props.ownerHighlights : [];
+});
+
+const reportRangeLabel = computed(() => {
+    return String(reportData.value?.range?.label || '').trim();
+});
+
+const reportPackageOptions = computed(() => {
+    return packageCards.value.map((item) => ({
+        id: Number(item.id || 0),
+        name: String(item.name || '-'),
+    })).filter((item) => item.id > 0);
+});
+
+const reportCashierOptions = computed(() => {
+    return userRows.value
+        .filter((item) => ['cashier', 'owner'].includes(String(item.role_key || '').toLowerCase()))
+        .map((item) => ({
+            id: Number(item.id || 0),
+            name: String(item.name || '-'),
+        }));
+});
+
+const cashierChartPalette = ['#2563EB', '#7C3AED', '#059669', '#D97706', '#EC4899', '#0F766E'];
+
+const reportCashierDailySource = computed(() => {
+    const source = reportData.value?.cashier_daily_series;
+
+    if (!source || typeof source !== 'object') {
+        return {
+            labels: [],
+            datasets: [],
+        };
+    }
+
+    return source;
+});
+
+const reportCashierChartLabels = computed(() => {
+    return Array.isArray(reportCashierDailySource.value.labels) ? reportCashierDailySource.value.labels : [];
+});
+
+const reportCashierChartDatasets = computed(() => {
+    const source = Array.isArray(reportCashierDailySource.value.datasets) ? reportCashierDailySource.value.datasets : [];
+
+    return source.map((dataset, index) => ({
+        label: String(dataset.cashier_name || `Cashier ${index + 1}`),
+        data: Array.isArray(dataset.data) ? dataset.data.map((value) => Number(value || 0)) : [],
+        backgroundColor: cashierChartPalette[index % cashierChartPalette.length],
+        borderColor: cashierChartPalette[index % cashierChartPalette.length],
+    }));
+});
+
+const exportReport = async () => {
+    if (!reportData.value) {
+        reportError.value = 'Belum ada data report untuk diexport.';
+        return;
+    }
+
+    try {
+        const xlsxModule = await import('xlsx');
+        const XLSX = xlsxModule.default || xlsxModule;
+        const workbook = XLSX.utils.book_new();
+
+        const summarySheet = XLSX.utils.json_to_sheet(reportSummaryCards.value.map((card) => ({
+            Label: card.label,
+            Value: card.value,
+            Helper: card.helper,
+        })));
+
+        const dailySheet = XLSX.utils.json_to_sheet(reportDailyRows.value.map((row) => ({
+            Date: row.date,
+            Label: row.label,
+            Revenue: Number(row.revenue || 0),
+            Transactions: Number(row.transactions || 0),
+            Bookings: Number(row.bookings || 0),
+            WalkIns: Number(row.walk_ins || 0),
+        })));
+
+        const cashierSheet = XLSX.utils.json_to_sheet(reportCashierRows.value.map((row) => ({
+            Cashier: row.cashier_name,
+            Transactions: Number(row.transaction_count || 0),
+            Revenue: Number(row.revenue || 0),
+            AverageTransaction: Number(row.average_transaction || 0),
+        })));
+
+        const cashierDailyRows = reportCashierChartLabels.value.map((label, index) => {
+            const row = { Date: label };
+
+            reportCashierChartDatasets.value.forEach((dataset) => {
+                row[dataset.label] = Number(dataset.data?.[index] || 0);
+            });
+
+            return row;
+        });
+
+        const cashierDailySheet = XLSX.utils.json_to_sheet(cashierDailyRows);
+        const addOnSheet = XLSX.utils.json_to_sheet(reportAddOnRows.value.map((row) => ({
+            AddOn: row.add_on_name,
+            Quantity: Number(row.total_qty || 0),
+            Bookings: Number(row.booking_count || 0),
+            Revenue: Number(row.total_revenue || 0),
+        })));
+
+        XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+        XLSX.utils.book_append_sheet(workbook, dailySheet, 'Daily Summary');
+        XLSX.utils.book_append_sheet(workbook, cashierSheet, 'Cashier Summary');
+        XLSX.utils.book_append_sheet(workbook, cashierDailySheet, 'Cashier Daily');
+        XLSX.utils.book_append_sheet(workbook, addOnSheet, 'AddOn Usage');
+
+        const suffix = reportFilters.value.from && reportFilters.value.to
+            ? `${reportFilters.value.from}_${reportFilters.value.to}`
+            : localDateIso();
+
+        XLSX.writeFile(workbook, `report-${suffix}.xlsx`);
+    } catch (error) {
+        reportError.value = 'Export Excel gagal diproses.';
+        console.error('Failed to export report:', error);
+    }
+};
+
 const resolveBookingStatus = (status) => {
     return bookingStatusMap[status] || {
         label: status || 'Unknown',
@@ -1574,6 +1843,19 @@ const applyAddOnsPayload = (payload) => {
 
     if (Array.isArray(nextAddOns)) {
         addOns.value = nextAddOns;
+    }
+};
+
+const applyInventoryPayload = (payload) => {
+    const nextItems = payload?.data?.inventory_items;
+    const nextMovements = payload?.data?.inventory_movements;
+
+    if (Array.isArray(nextItems)) {
+        inventoryItems.value = nextItems;
+    }
+
+    if (Array.isArray(nextMovements)) {
+        inventoryMovements.value = nextMovements;
     }
 };
 
@@ -2141,16 +2423,146 @@ const updateAddOn = async ({ id, payload }) => {
     }
 };
 
-const moveAddOnStock = async ({ id, payload }) => {
-    if (!id || !props.addOnBaseUrl) {
+const fetchStockData = async () => {
+    if (!props.stockDataUrl) {
         return;
     }
 
-    addOnSaving.value = true;
-    addOnError.value = '';
+    stockLoading.value = true;
+    stockError.value = '';
 
     try {
-        const response = await fetch(`${props.addOnBaseUrl}/${id}/stock-movement`, {
+        const response = await fetch(props.stockDataUrl, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyInventoryPayload(payload);
+    } catch (error) {
+        stockError.value = error instanceof Error ? error.message : 'Failed to load stock data.';
+    } finally {
+        stockLoading.value = false;
+    }
+};
+
+const createInventoryItem = async (formPayload) => {
+    if (!props.inventoryItemStoreUrl) {
+        return;
+    }
+
+    stockSaving.value = true;
+    stockError.value = '';
+
+    try {
+        const response = await fetch(props.inventoryItemStoreUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(formPayload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyInventoryPayload(payload);
+    } catch (error) {
+        stockError.value = error instanceof Error ? error.message : 'Failed to create inventory item.';
+        throw error;
+    } finally {
+        stockSaving.value = false;
+    }
+};
+
+const updateInventoryItem = async ({ id, payload }) => {
+    if (!id || !props.inventoryItemBaseUrl) {
+        return;
+    }
+
+    stockSaving.value = true;
+    stockError.value = '';
+
+    try {
+        const response = await fetch(`${props.inventoryItemBaseUrl}/${id}`, {
+            method: 'PUT',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyInventoryPayload(result);
+    } catch (error) {
+        stockError.value = error instanceof Error ? error.message : 'Failed to update inventory item.';
+        throw error;
+    } finally {
+        stockSaving.value = false;
+    }
+};
+
+const deleteInventoryItem = async (id) => {
+    if (!id || !props.inventoryItemBaseUrl) {
+        return;
+    }
+
+    deletingInventoryItemId.value = Number(id);
+    stockError.value = '';
+
+    try {
+        const response = await fetch(`${props.inventoryItemBaseUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const payload = await response.json();
+        applyInventoryPayload(payload);
+    } catch (error) {
+        stockError.value = error instanceof Error ? error.message : 'Failed to delete inventory item.';
+        throw error;
+    } finally {
+        deletingInventoryItemId.value = null;
+    }
+};
+
+const moveInventoryStock = async ({ id, payload }) => {
+    if (!id || !props.inventoryItemBaseUrl) {
+        return;
+    }
+
+    stockSaving.value = true;
+    stockError.value = '';
+
+    try {
+        const response = await fetch(`${props.inventoryItemBaseUrl}/${id}/movement`, {
             method: 'POST',
             headers: {
                 Accept: 'application/json',
@@ -2166,12 +2578,12 @@ const moveAddOnStock = async ({ id, payload }) => {
         }
 
         const result = await response.json();
-        applyAddOnsPayload(result);
+        applyInventoryPayload(result);
     } catch (error) {
-        addOnError.value = error instanceof Error ? error.message : 'Failed to update add-on stock.';
+        stockError.value = error instanceof Error ? error.message : 'Failed to update stock.';
         throw error;
     } finally {
-        addOnSaving.value = false;
+        stockSaving.value = false;
     }
 };
 
@@ -2219,8 +2631,23 @@ const addOnRows = computed(() => {
         price_text: String(item.price_text || formatRupiah(Number(item.price || 0))),
         max_qty: Math.max(1, Number(item.max_qty || 1)),
         is_physical: Boolean(item.is_physical),
-        available_stock: Math.max(0, Number(item.available_stock || 0)),
-        low_stock_threshold: Math.max(0, Number(item.low_stock_threshold || 0)),
+        inventory_items: Array.isArray(item.inventory_items)
+            ? item.inventory_items.map((row) => ({
+                inventory_item_id: Number(row?.inventory_item_id || 0),
+                code: String(row?.code || ''),
+                name: String(row?.name || ''),
+                unit: String(row?.unit || 'pcs'),
+                available_stock: Math.max(0, Number(row?.available_stock || 0)),
+                low_stock_threshold: Math.max(0, Number(row?.low_stock_threshold || 0)),
+                is_active: Boolean(row?.is_active),
+                qty_per_unit: Math.max(1, Number(row?.qty_per_unit || 1)),
+            })).filter((row) => row.inventory_item_id > 0)
+            : [],
+        effective_available_stock: item.effective_available_stock === null || item.effective_available_stock === undefined
+            ? null
+            : Math.max(0, Number(item.effective_available_stock || 0)),
+        effective_stock_status: String(item.effective_stock_status || 'untracked'),
+        effective_stock_label: String(item.effective_stock_label || 'Not mapped'),
         type_label: String(item.type_label || (item.is_physical ? 'Physical' : 'Non-physical')),
         is_active: Boolean(item.is_active),
         sort_order: Number(item.sort_order || 0),
@@ -2584,6 +3011,47 @@ const {
     parseRequestError,
     getCsrfToken,
 });
+
+const moduleRegistry = computed(() => buildAdminModuleRegistry({
+    reportFilters,
+    setDefaultReportRange,
+    fetchReportSummary,
+    packages,
+    packageLoading,
+    fetchPackagesData,
+    addOnLoading,
+    fetchAddOnsData,
+    stockLoading,
+    fetchStockData,
+    designs,
+    designLoading,
+    fetchDesignsData,
+    users,
+    userLoading,
+    fetchUsersData,
+    settingsLoading,
+    fetchSettingsData,
+    branchRows,
+    branchLoading,
+    fetchBranchesData,
+    timeSlotRows,
+    timeSlotLoading,
+    fetchTimeSlotsData,
+    blackoutDateRows,
+    blackoutDateLoading,
+    fetchBlackoutDatesData,
+    paymentRows,
+    paymentLoading,
+    fetchPaymentsData,
+    printerSettingRows,
+    printerSettingLoading,
+    fetchPrinterSettingsData,
+    appSettingsLoading,
+    fetchAppSettingsData,
+    fetchQueueData,
+    startQueueAutoRefresh,
+    stopQueueAutoRefresh,
+}));
 
 const branchOptionsForManagement = computed(() => {
     const options = branchRows.value
@@ -2998,6 +3466,14 @@ const resolveActivityTone = (module) => {
         return { bg: '#F5F3FF', color: '#7C3AED' };
     }
 
+    if (normalized.includes('package') || normalized.includes('add-on') || normalized.includes('inventory') || normalized.includes('stock')) {
+        return { bg: '#FFF7ED', color: '#EA580C' };
+    }
+
+    if (normalized.includes('branch') || normalized.includes('time-slot') || normalized.includes('blackout') || normalized.includes('printer') || normalized.includes('setting')) {
+        return { bg: '#F8FAFC', color: '#475569' };
+    }
+
     return { bg: '#F8FAFC', color: '#64748B' };
 };
 
@@ -3105,65 +3581,15 @@ const goToNextPage = () => {
     fetchRows(Number(pagination.value.current_page || 1) + 1);
 };
 
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'reports') {
-        return;
+watch(activeModuleId, (nextValue, previousValue) => {
+    const previousEntry = moduleRegistry.value[String(previousValue || '')];
+    if (previousEntry?.onLeave) {
+        previousEntry.onLeave();
     }
 
-    if (!reportFilters.value.from || !reportFilters.value.to) {
-        setDefaultReportRange();
-    }
-
-    fetchReportSummary();
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'packages' && nextValue !== 'designs' && nextValue !== 'add-ons') {
-        return;
-    }
-
-    if (!packages.value.length && !packageLoading.value) {
-        fetchPackagesData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'add-ons') {
-        return;
-    }
-
-    if (!addOnLoading.value) {
-        fetchAddOnsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'designs') {
-        return;
-    }
-
-    if (!designs.value.length && !designLoading.value) {
-        fetchDesignsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'users') {
-        return;
-    }
-
-    if (!users.value.length && !userLoading.value) {
-        fetchUsersData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'settings') {
-        return;
-    }
-
-    if (!settingsLoading.value) {
-        fetchSettingsData();
+    const nextEntry = moduleRegistry.value[String(nextValue || '')];
+    if (nextEntry?.onEnter) {
+        nextEntry.onEnter();
     }
 }, { immediate: true });
 
@@ -3196,76 +3622,6 @@ watch(search, () => {
         fetchRows(1);
     }, 350);
 });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'branches') {
-        return;
-    }
-
-    if (!branchRows.value.length && !branchLoading.value) {
-        fetchBranchesData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'time-slots') {
-        return;
-    }
-
-    if (!timeSlotRows.value.length && !timeSlotLoading.value) {
-        fetchTimeSlotsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'blackout-dates') {
-        return;
-    }
-
-    if (!blackoutDateRows.value.length && !blackoutDateLoading.value) {
-        fetchBlackoutDatesData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'payments') {
-        return;
-    }
-
-    if (!paymentRows.value.length && !paymentLoading.value) {
-        fetchPaymentsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'printer-settings') {
-        return;
-    }
-
-    if (!printerSettingRows.value.length && !printerSettingLoading.value) {
-        fetchPrinterSettingsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'app-settings') {
-        return;
-    }
-
-    if (!appSettingsLoading.value) {
-        fetchAppSettingsData();
-    }
-}, { immediate: true });
-
-watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'queue') {
-        stopQueueAutoRefresh();
-        return;
-    }
-
-    fetchQueueData();
-    startQueueAutoRefresh();
-}, { immediate: true });
 
 onMounted(() => {
     syncRoutePathFromWindow();
@@ -3316,26 +3672,31 @@ onBeforeUnmount(() => {
                             :revenue-series="normalizedRevenueSeries" :active-revenue-period="activeRevenuePeriod"
                             :revenue-total="revenueTotal" :booking-total="bookingTotal" :queue-stats="queueStats"
                             :current-queue="currentQueue" :waiting-queue="waitingQueue"
-                            :recent-transactions="normalizedRecentTransactions"
-                            :recent-activities="normalizedRecentActivities" :panel-bookings-url="panelBookingsUrl"
-                            :panel-transactions-url="panelTransactionsUrl" :format-rupiah="formatRupiah"
+                            :owner-highlights="dashboardOwnerHighlights"
+                            :cashier-chart-labels="reportCashierChartLabels"
+                            :cashier-chart-datasets="reportCashierChartDatasets"
+                            :report-range-label="reportRangeLabel" :format-rupiah="formatRupiah"
                             @set-revenue-period="activeRevenuePeriod = $event" />
 
                         <PackagesPage v-else-if="activeModuleId === 'packages'" :package-cards="packageCards"
                             :branch-options="branchOptionsForManagement" :panel-base-url="panelBaseUrl"
-                            :format-rupiah="formatRupiah" :loading="packageLoading" :saving="packageSaving"
+                            :inventory-options="inventoryItemOptions" :format-rupiah="formatRupiah" :loading="packageLoading" :saving="packageSaving"
                             :deleting-package-id="deletingPackageId" :error-message="packageError"
                             @refresh-packages="fetchPackagesData" @create-package="createPackage"
                             @update-package="updatePackage" @delete-package="deletePackage" />
 
                         <AddOnsPage v-else-if="activeModuleId === 'add-ons'" :add-on-rows="addOnRows"
-                            :package-options="packageOptions" :format-rupiah="formatRupiah" :loading="addOnLoading"
+                            :package-options="packageOptions" :inventory-options="inventoryItemOptions" :format-rupiah="formatRupiah" :loading="addOnLoading"
                             :saving="addOnSaving" :deleting-add-on-id="deletingAddOnId" :error-message="addOnError"
                             @refresh-add-ons="fetchAddOnsData" @create-add-on="createAddOn" @update-add-on="updateAddOn"
-                            @move-stock="moveAddOnStock" @delete-add-on="deleteAddOn" />
+                            @delete-add-on="deleteAddOn" />
 
-                        <StockPage v-else-if="activeModuleId === 'stock'" :addOnRows="addOnRows" :loading="addOnLoading"
-                            :saving="addOnSaving" :errorMessage="addOnError" @move-stock="moveAddOnStock" />
+                        <StockPage v-else-if="activeModuleId === 'stock'" :inventory-items="inventoryItemRows"
+                            :inventory-movements="inventoryMovementRows" :loading="stockLoading" :saving="stockSaving"
+                            :deleting-inventory-item-id="deletingInventoryItemId" :error-message="stockError"
+                            @refresh-stock="fetchStockData" @create-inventory-item="createInventoryItem"
+                            @update-inventory-item="updateInventoryItem" @delete-inventory-item="deleteInventoryItem"
+                            @move-stock="moveInventoryStock" />
 
                         <DesignsPage v-else-if="activeModuleId === 'designs'" :design-cards="designCards"
                             :panel-base-url="panelBaseUrl" :package-options="packageOptions" :loading="designLoading"
@@ -3414,9 +3775,13 @@ onBeforeUnmount(() => {
                         <ReportsPage v-else-if="activeModuleId === 'reports'" :report-filters="reportFilters"
                             :report-error="reportError" :report-loading="reportLoading"
                             :report-summary-cards="reportSummaryCards" :report-daily-rows="reportDailyRows"
-                            :report-daily-max-revenue="reportDailyMaxRevenue" :report-status-rows="reportStatusRows"
-                            :report-package-rows="reportPackageRows" :report-cashier-rows="reportCashierRows"
-                            :report-add-on-rows="reportAddOnRows" />
+                            :report-status-rows="reportStatusRows" :report-package-rows="reportPackageRows"
+                            :report-cashier-rows="reportCashierRows" :report-add-on-rows="reportAddOnRows"
+                            :report-package-options="reportPackageOptions"
+                            :report-cashier-options="reportCashierOptions" :report-range-label="reportRangeLabel"
+                            :report-cashier-chart-labels="reportCashierChartLabels"
+                            :report-cashier-chart-datasets="reportCashierChartDatasets"
+                            @export-report="exportReport" />
 
                         <ActivityLogsPage v-else-if="activeModuleId === 'activity-logs'"
                             :activity-search="activitySearch" :activity-module-filter="activityModuleFilter"

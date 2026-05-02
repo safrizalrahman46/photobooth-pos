@@ -3,13 +3,17 @@
 namespace Tests\Feature;
 
 use App\Models\Branch;
+use App\Models\AddOn;
 use App\Models\Booking;
+use App\Models\InventoryItem;
 use App\Models\Package;
 use App\Models\TimeSlot;
 use App\Models\User;
+use App\Services\AdminBookingManagementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class AdminVueModulesTest extends TestCase
@@ -505,5 +509,134 @@ class AdminVueModulesTest extends TestCase
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    public function test_verified_booking_deducts_package_and_add_on_inventory_once(): void
+    {
+        $user = User::factory()->create();
+
+        $branch = Branch::query()->create([
+            'code' => 'BRANCH-INV-01',
+            'name' => 'Branch Inventory',
+            'timezone' => 'Asia/Jakarta',
+            'is_active' => true,
+        ]);
+
+        $package = Package::query()->create([
+            'branch_id' => $branch->id,
+            'code' => 'PKG-INV-01',
+            'name' => 'Package Inventory',
+            'duration_minutes' => 30,
+            'base_price' => 100000,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $paper = InventoryItem::query()->create([
+            'code' => 'INV-TEST-PAPER',
+            'name' => 'Test Paper 4R',
+            'unit' => 'lembar',
+            'available_stock' => 10,
+            'low_stock_threshold' => 2,
+            'is_active' => true,
+        ]);
+
+        $package->inventoryItems()->attach($paper->id, ['qty_per_booking' => 1]);
+
+        $addOn = AddOn::query()->create([
+            'package_id' => null,
+            'code' => 'AON-INV-PRINT',
+            'name' => '+ 1 cetak test',
+            'price' => 15000,
+            'max_qty' => 10,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        $addOn->inventoryItems()->attach($paper->id, ['qty_per_unit' => 1]);
+
+        $booking = Booking::query()->create([
+            'booking_code' => 'BK-INV-001',
+            'branch_id' => $branch->id,
+            'package_id' => $package->id,
+            'customer_name' => 'Inventory Customer',
+            'customer_phone' => '0812009999',
+            'booking_date' => '2026-04-22',
+            'start_at' => '2026-04-22 09:00:00',
+            'end_at' => '2026-04-22 09:30:00',
+            'status' => 'pending',
+            'source' => 'web',
+            'payment_type' => 'dp50',
+            'total_amount' => 115000,
+            'paid_amount' => 57500,
+            'deposit_amount' => 57500,
+        ]);
+        $booking->addOns()->attach($addOn->id, [
+            'qty' => 2,
+            'unit_price' => 15000,
+            'line_total' => 30000,
+        ]);
+
+        $service = app(AdminBookingManagementService::class);
+        $service->confirm($booking, $user->id, 'Inventory test verification');
+
+        $this->assertSame(7, (int) $paper->refresh()->available_stock);
+
+        $service->confirm($booking->refresh(), $user->id, 'Inventory test verification repeat');
+
+        $this->assertSame(7, (int) $paper->refresh()->available_stock);
+    }
+
+    public function test_verified_booking_fails_when_inventory_is_insufficient(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $user = User::factory()->create();
+
+        $branch = Branch::query()->create([
+            'code' => 'BRANCH-INV-02',
+            'name' => 'Branch Inventory Shortage',
+            'timezone' => 'Asia/Jakarta',
+            'is_active' => true,
+        ]);
+
+        $package = Package::query()->create([
+            'branch_id' => $branch->id,
+            'code' => 'PKG-INV-02',
+            'name' => 'Package Inventory Shortage',
+            'duration_minutes' => 30,
+            'base_price' => 100000,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $paper = InventoryItem::query()->create([
+            'code' => 'INV-TEST-SHORTAGE',
+            'name' => 'Shortage Paper 4R',
+            'unit' => 'lembar',
+            'available_stock' => 0,
+            'low_stock_threshold' => 2,
+            'is_active' => true,
+        ]);
+
+        $package->inventoryItems()->attach($paper->id, ['qty_per_booking' => 1]);
+
+        $booking = Booking::query()->create([
+            'booking_code' => 'BK-INV-002',
+            'branch_id' => $branch->id,
+            'package_id' => $package->id,
+            'customer_name' => 'Shortage Customer',
+            'customer_phone' => '0812009998',
+            'booking_date' => '2026-04-22',
+            'start_at' => '2026-04-22 10:00:00',
+            'end_at' => '2026-04-22 10:30:00',
+            'status' => 'pending',
+            'source' => 'web',
+            'payment_type' => 'dp50',
+            'total_amount' => 100000,
+            'paid_amount' => 50000,
+            'deposit_amount' => 50000,
+        ]);
+
+        app(AdminBookingManagementService::class)->confirm($booking, $user->id, 'Inventory shortage test');
     }
 }

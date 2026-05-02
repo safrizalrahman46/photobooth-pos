@@ -16,6 +16,7 @@ class TransactionService
 {
     public function __construct(
         private readonly CodeGenerator $codeGenerator,
+        private readonly ActivityLogger $activityLogger,
     ) {}
 
     public function create(array $payload, int $cashierId): Transaction
@@ -56,6 +57,26 @@ class TransactionService
                 ]);
             }
 
+            $this->activityLogger->log(
+                'transactions',
+                'created',
+                $cashierId,
+                Transaction::class,
+                (int) $transaction->id,
+                [
+                    'message' => sprintf('Transaksi %s dibuat.', (string) $transaction->transaction_code),
+                    'label' => (string) $transaction->transaction_code,
+                    'branch_id' => (int) $transaction->branch_id,
+                    'booking_id' => $transaction->booking_id ? (int) $transaction->booking_id : null,
+                    'queue_ticket_id' => $transaction->queue_ticket_id ? (int) $transaction->queue_ticket_id : null,
+                    'subtotal' => $subtotal,
+                    'discount_amount' => $discount,
+                    'tax_amount' => $tax,
+                    'total_amount' => $total,
+                    'item_count' => count($items),
+                ],
+            );
+
             return $transaction->refresh();
         });
     }
@@ -64,8 +85,12 @@ class TransactionService
     {
         return DB::transaction(function () use ($transaction, $payload, $cashierId): Transaction {
             $amount = (float) $payload['amount'];
+            $beforePaidAmount = (float) $transaction->paid_amount;
+            $beforeStatus = $transaction->status instanceof TransactionStatus
+                ? $transaction->status->value
+                : (string) $transaction->status;
 
-            Payment::query()->create([
+            $payment = Payment::query()->create([
                 'transaction_id' => $transaction->id,
                 'payment_code' => $this->codeGenerator->generatePaymentCode(now()),
                 'method' => $payload['method'],
@@ -97,13 +122,66 @@ class TransactionService
             if ($transaction->booking && $transaction->status === TransactionStatus::Paid) {
                 $booking = Booking::query()->find($transaction->booking_id);
                 if ($booking) {
+                    $beforeBookingStatus = $booking->status instanceof BookingStatus
+                        ? $booking->status->value
+                        : (string) $booking->status;
+
                     $booking->paid_amount = $newPaidAmount;
                     if ($booking->status !== BookingStatus::Done) {
                         $booking->status = BookingStatus::Paid;
                     }
                     $booking->save();
+
+                    $afterBookingStatus = $booking->status instanceof BookingStatus
+                        ? $booking->status->value
+                        : (string) $booking->status;
+
+                    if ($beforeBookingStatus !== $afterBookingStatus) {
+                        $this->activityLogger->log(
+                            'bookings',
+                            'status_changed',
+                            $cashierId,
+                            Booking::class,
+                            (int) $booking->id,
+                            [
+                                'message' => sprintf(
+                                    'Status booking %s berubah dari %s ke %s melalui pembayaran transaksi.',
+                                    (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                                    $beforeBookingStatus,
+                                    $afterBookingStatus,
+                                ),
+                                'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                                'transaction_code' => (string) $transaction->transaction_code,
+                                'from_status' => $beforeBookingStatus,
+                                'to_status' => $afterBookingStatus,
+                            ],
+                        );
+                    }
                 }
             }
+
+            $this->activityLogger->log(
+                'payments',
+                'created',
+                $cashierId,
+                Payment::class,
+                (int) $payment->id,
+                [
+                    'message' => sprintf(
+                        'Pembayaran %s ditambahkan ke transaksi %s.',
+                        (string) $payment->payment_code,
+                        (string) $transaction->transaction_code,
+                    ),
+                    'label' => (string) $payment->payment_code,
+                    'transaction_code' => (string) $transaction->transaction_code,
+                    'amount' => $amount,
+                    'method' => (string) ($payment->method?->value ?? $payment->method),
+                    'status_before' => $beforeStatus,
+                    'status_after' => (string) ($transaction->status?->value ?? $transaction->status),
+                    'paid_before' => $beforePaidAmount,
+                    'paid_after' => $newPaidAmount,
+                ],
+            );
 
             return $transaction->refresh();
         });

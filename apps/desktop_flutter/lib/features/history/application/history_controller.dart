@@ -1,6 +1,7 @@
 // features/history/application/history_controller.dart
 
 import 'package:flutter/foundation.dart';
+import 'package:desktop_flutter/core/session/api_session.dart';
 import '../domain/entities/transaction.dart';
 
 /// Controller untuk mengelola state halaman History Transaksi.
@@ -9,54 +10,13 @@ import '../domain/entities/transaction.dart';
 /// Untuk integrasi state management lain (Riverpod, Bloc, GetX),
 /// logika filtering & pagination di sini bisa dipindahkan ke notifier / cubit masing-masing.
 class HistoryController extends ChangeNotifier {
-  // ─── Dummy data (ganti dengan repository call di production) ───────────────
-  final List<Transaction> _allTransactions = [
-    Transaction(
-      id: 'TRX-9402',
-      waktu: DateTime(2024, 10, 24, 14, 22),
-      namaPelanggan: 'Andi Pratama',
-      paket: 'Mandi Bola',
-      addOns: 'Cetak 4R',
-      totalBayar: 90000,
-      status: TransactionStatus.lunas,
-    ),
-    Transaction(
-      id: 'TRX-9401',
-      waktu: DateTime(2024, 10, 24, 13, 45),
-      namaPelanggan: 'Siska Amelia',
-      paket: 'Neon Splash',
-      addOns: 'USB Drive',
-      totalBayar: 125000,
-      status: TransactionStatus.lunas,
-    ),
-    Transaction(
-      id: 'TRX-9400',
-      waktu: DateTime(2024, 10, 24, 12, 10),
-      namaPelanggan: 'Rizky Febian',
-      paket: 'Quick Snap',
-      addOns: 'Keychain',
-      totalBayar: 45000,
-      status: TransactionStatus.lunas,
-    ),
-    Transaction(
-      id: 'TRX-9399',
-      waktu: DateTime(2024, 10, 24, 11, 30),
-      namaPelanggan: 'Maya Angelou',
-      paket: 'Classic Duo',
-      addOns: 'Wood Frame',
-      totalBayar: 150000,
-      status: TransactionStatus.lunas,
-    ),
-    Transaction(
-      id: 'TRX-9398',
-      waktu: DateTime(2024, 10, 24, 10, 15),
-      namaPelanggan: 'Dani Ramdan',
-      paket: 'Selfie Party',
-      addOns: null,
-      totalBayar: 35000,
-      status: TransactionStatus.batal,
-    ),
-  ];
+  HistoryController() {
+    loadTransactions();
+  }
+
+  List<Transaction> _allTransactions = [];
+  bool isLoading = false;
+  String? errorMessage;
 
   // ─── State ─────────────────────────────────────────────────────────────────
   String _searchQuery = '';
@@ -105,6 +65,42 @@ class HistoryController extends ChangeNotifier {
   }
 
   // ─── Actions ───────────────────────────────────────────────────────────────
+  Future<void> loadTransactions() async {
+    final client = ApiSession.client;
+
+    if (client == null) {
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final rows = await client.fetchTransactions(perPage: 100);
+
+      _allTransactions = rows.map((row) {
+        final packageItems = row.items.where((item) => item.itemType == 'package' || item.itemType == 'booking').toList();
+        final addOnItems = row.items.where((item) => item.itemType == 'add_on').toList();
+
+        return Transaction(
+          id: row.transactionCode,
+          waktu: DateTime.tryParse(row.createdAt ?? '') ?? DateTime.now(),
+          namaPelanggan: row.customerName.isEmpty ? '-' : row.customerName,
+          paket: packageItems.isNotEmpty ? packageItems.first.itemName : '-',
+          addOns: addOnItems.isEmpty ? null : addOnItems.map((item) => item.itemName).join(', '),
+          totalBayar: row.totalAmount.round(),
+          status: _mapTransactionStatus(row.status),
+        );
+      }).toList();
+    } catch (error) {
+      errorMessage = error.toString();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void onSearchChanged(String query) {
     _searchQuery = query;
     _currentPage = 1;
@@ -132,7 +128,6 @@ class HistoryController extends ChangeNotifier {
   }
 
   /// Placeholder aksi per-baris (edit / hapus / detail)
-  static const double _colAction = 140; // Increased width for button
   void onRowAction(Transaction transaction) {
     debugPrint('Row action: ${transaction.id}');
   }
@@ -141,5 +136,13 @@ class HistoryController extends ChangeNotifier {
   void onReprint(Transaction transaction) {
     debugPrint('Cetak ulang: ${transaction.id}');
     // Logic untuk integrasi ke printer thermal / ESC/POS
+  }
+
+  TransactionStatus _mapTransactionStatus(String status) {
+    return switch (status) {
+      'paid' => TransactionStatus.lunas,
+      'void' => TransactionStatus.batal,
+      _ => TransactionStatus.pending,
+    };
   }
 }

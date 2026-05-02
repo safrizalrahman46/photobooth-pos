@@ -6,6 +6,10 @@ use App\Models\PrinterSetting;
 
 class AdminPrinterSettingService
 {
+    public function __construct(
+        private readonly ActivityLogger $activityLogger,
+    ) {}
+
     public function rows(array $filters = []): array
     {
         $query = PrinterSetting::query()
@@ -56,7 +60,25 @@ class AdminPrinterSettingService
             $setting->save();
         }
 
-        return $setting->refresh();
+        $setting = $setting->refresh();
+
+        $this->activityLogger->log(
+            'printer-settings',
+            'created',
+            null,
+            PrinterSetting::class,
+            (int) $setting->id,
+            [
+                'message' => sprintf('Printer %s dibuat.', (string) $setting->device_name),
+                'label' => (string) $setting->device_name,
+                'branch_id' => (int) $setting->branch_id,
+                'printer_type' => (string) $setting->printer_type,
+                'is_default' => (bool) $setting->is_default,
+                'is_active' => (bool) $setting->is_active,
+            ],
+        );
+
+        return $setting;
     }
 
     public function update(PrinterSetting $printerSetting, array $payload): PrinterSetting
@@ -85,7 +107,26 @@ class AdminPrinterSettingService
             $printerSetting->save();
         }
 
-        return $printerSetting->refresh();
+        $printerSetting = $printerSetting->refresh();
+
+        $this->activityLogger->log(
+            'printer-settings',
+            'updated',
+            null,
+            PrinterSetting::class,
+            (int) $printerSetting->id,
+            [
+                'message' => sprintf('Printer %s diperbarui.', (string) $printerSetting->device_name),
+                'label' => (string) $printerSetting->device_name,
+                'branch_id' => (int) $printerSetting->branch_id,
+                'printer_type' => (string) $printerSetting->printer_type,
+                'is_default' => (bool) $printerSetting->is_default,
+                'is_active' => (bool) $printerSetting->is_active,
+                'updated_fields' => array_keys($payload),
+            ],
+        );
+
+        return $printerSetting;
     }
 
     public function setDefault(PrinterSetting $printerSetting): PrinterSetting
@@ -95,6 +136,19 @@ class AdminPrinterSettingService
         $printerSetting->is_default = true;
         $printerSetting->save();
 
+        $this->activityLogger->log(
+            'printer-settings',
+            'default_updated',
+            null,
+            PrinterSetting::class,
+            (int) $printerSetting->id,
+            [
+                'message' => sprintf('Printer %s dijadikan default.', (string) $printerSetting->device_name),
+                'label' => (string) $printerSetting->device_name,
+                'branch_id' => (int) $printerSetting->branch_id,
+            ],
+        );
+
         return $printerSetting->refresh();
     }
 
@@ -102,6 +156,19 @@ class AdminPrinterSettingService
     {
         $branchId = (int) $printerSetting->branch_id;
         $wasDefault = (bool) $printerSetting->is_default;
+
+        $this->activityLogger->log(
+            'printer-settings',
+            'deleted',
+            null,
+            PrinterSetting::class,
+            (int) $printerSetting->id,
+            [
+                'message' => sprintf('Printer %s dihapus.', (string) $printerSetting->device_name),
+                'label' => (string) $printerSetting->device_name,
+                'branch_id' => $branchId,
+            ],
+        );
 
         $printerSetting->delete();
 
@@ -173,4 +240,3 @@ class AdminPrinterSettingService
         ];
     }
 }
-

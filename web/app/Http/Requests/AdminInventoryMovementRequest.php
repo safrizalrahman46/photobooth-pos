@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class AdminAddOnStockMovementRequest extends FormRequest
+class AdminInventoryMovementRequest extends FormRequest
 {
     public function authorize(): bool
     {

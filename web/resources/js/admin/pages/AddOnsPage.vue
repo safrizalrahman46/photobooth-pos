@@ -5,6 +5,7 @@ import { Pencil, Plus, RefreshCw, Table2, Trash2 } from 'lucide-vue-next';
 const props = defineProps({
     addOnRows: { type: Array, default: () => [] },
     packageOptions: { type: Array, default: () => [] },
+    inventoryOptions: { type: Array, default: () => [] },
     formatRupiah: { type: Function, required: true },
     loading: { type: Boolean, default: false },
     saving: { type: Boolean, default: false },
@@ -12,15 +13,12 @@ const props = defineProps({
     errorMessage: { type: String, default: '' },
 });
 
-const emit = defineEmits(['refresh-add-ons', 'create-add-on', 'update-add-on', 'move-stock', 'delete-add-on']);
+const emit = defineEmits(['refresh-add-ons', 'create-add-on', 'update-add-on', 'delete-add-on']);
 
 const modalOpen = ref(false);
 const modalMode = ref('create');
 const editingAddOnId = ref(null);
 const localError = ref('');
-const stockModalOpen = ref(false);
-const stockModalError = ref('');
-const stockTarget = ref(null);
 
 const form = reactive({
     package_id: '',
@@ -30,16 +28,9 @@ const form = reactive({
     price: 0,
     max_qty: 1,
     is_physical: false,
-    available_stock: 0,
-    low_stock_threshold: 0,
+    inventory_items: [],
     is_active: true,
     sort_order: 0,
-});
-
-const stockForm = reactive({
-    movement_type: 'in',
-    qty: 1,
-    notes: '',
 });
 
 const stats = computed(() => {
@@ -72,22 +63,31 @@ const addOnSections = computed(() => ([
     {
         key: 'physical',
         title: 'Physical Add-ons',
-        description: 'Items with stock movement (inventory).',
+        description: 'Sellable add-ons that may consume inventory items.',
         rows: physicalAddOnRows.value,
     },
     {
         key: 'non-physical',
         title: 'Non-physical Add-ons',
-        description: 'Service/benefit add-ons without physical stock.',
+        description: 'Service/benefit add-ons; optional inventory consumption can still be mapped.',
         rows: nonPhysicalAddOnRows.value,
     },
 ]));
 
 const resolveStockTone = (row) => {
-    const stock = Math.max(0, Number(row?.available_stock || 0));
-    const threshold = Math.max(0, Number(row?.low_stock_threshold || 0));
+    const status = String(row?.effective_stock_status || 'untracked');
 
-    if (stock <= 0) {
+    if (status === 'untracked') {
+        return {
+            label: 'Not mapped',
+            style: {
+                background: '#F8FAFC',
+                color: '#64748B',
+            },
+        };
+    }
+
+    if (status === 'out') {
         return {
             label: 'Out',
             style: {
@@ -97,7 +97,7 @@ const resolveStockTone = (row) => {
         };
     }
 
-    if (stock <= threshold) {
+    if (status === 'low') {
         return {
             label: 'Low',
             style: {
@@ -116,6 +116,14 @@ const resolveStockTone = (row) => {
     };
 };
 
+const formatEffectiveAvailability = (row) => {
+    if (row?.effective_available_stock === null || row?.effective_available_stock === undefined) {
+        return '-';
+    }
+
+    return Number(row.effective_available_stock || 0);
+};
+
 const resetForm = () => {
     form.package_id = '';
     form.code = '';
@@ -124,8 +132,7 @@ const resetForm = () => {
     form.price = 0;
     form.max_qty = 1;
     form.is_physical = false;
-    form.available_stock = 0;
-    form.low_stock_threshold = 0;
+    form.inventory_items = [];
     form.is_active = true;
     form.sort_order = 0;
     editingAddOnId.value = null;
@@ -148,8 +155,12 @@ const openEditModal = (addOn) => {
     form.price = Number(addOn.price || 0);
     form.max_qty = Math.max(1, Number(addOn.max_qty || 1));
     form.is_physical = Boolean(addOn.is_physical);
-    form.available_stock = Math.max(0, Number(addOn.available_stock || 0));
-    form.low_stock_threshold = Math.max(0, Number(addOn.low_stock_threshold || 0));
+    form.inventory_items = Array.isArray(addOn.inventory_items)
+        ? addOn.inventory_items.map((row) => ({
+            inventory_item_id: Number(row.inventory_item_id || 0),
+            qty_per_unit: Math.max(1, Number(row.qty_per_unit || 1)),
+        })).filter((row) => row.inventory_item_id > 0)
+        : [];
     form.is_active = Boolean(addOn.is_active);
     form.sort_order = Number(addOn.sort_order || 0);
     localError.value = '';
@@ -182,18 +193,19 @@ const validateForm = () => {
         return false;
     }
 
-    if (form.is_physical && Number(form.available_stock || 0) < 0) {
-        localError.value = 'Available stock cannot be negative.';
-        return false;
-    }
-
-    if (form.is_physical && Number(form.low_stock_threshold || 0) < 0) {
-        localError.value = 'Low-stock threshold cannot be negative.';
-        return false;
-    }
-
     localError.value = '';
     return true;
+};
+
+const addInventoryConsumption = () => {
+    form.inventory_items = [
+        ...form.inventory_items,
+        { inventory_item_id: '', qty_per_unit: 1 },
+    ];
+};
+
+const removeInventoryConsumption = (index) => {
+    form.inventory_items = form.inventory_items.filter((_, rowIndex) => rowIndex !== index);
 };
 
 const submitForm = async () => {
@@ -209,8 +221,12 @@ const submitForm = async () => {
         price: Number(form.price || 0),
         max_qty: Math.max(1, Number(form.max_qty || 1)),
         is_physical: Boolean(form.is_physical),
-        available_stock: form.is_physical ? Math.max(0, Number(form.available_stock || 0)) : 0,
-        low_stock_threshold: form.is_physical ? Math.max(0, Number(form.low_stock_threshold || 0)) : 0,
+        inventory_items: form.inventory_items
+            .map((row) => ({
+                inventory_item_id: Number(row.inventory_item_id || 0),
+                qty_per_unit: Math.max(1, Number(row.qty_per_unit || 1)),
+            }))
+            .filter((row) => row.inventory_item_id > 0),
         is_active: Boolean(form.is_active),
         sort_order: Math.max(0, Number(form.sort_order || 0)),
     };
@@ -246,90 +262,6 @@ const requestDelete = async (addOn) => {
     }
 };
 
-const openStockModal = (addOn) => {
-    if (!addOn || !addOn.is_physical) {
-        return;
-    }
-
-    stockTarget.value = {
-        id: Number(addOn.id || 0),
-        name: String(addOn.name || 'Add-on'),
-        available_stock: Math.max(0, Number(addOn.available_stock || 0)),
-    };
-    stockForm.movement_type = 'in';
-    stockForm.qty = 1;
-    stockForm.notes = '';
-    stockModalError.value = '';
-    stockModalOpen.value = true;
-};
-
-const closeStockModal = () => {
-    stockModalOpen.value = false;
-    stockModalError.value = '';
-    stockTarget.value = null;
-};
-
-const projectedStock = computed(() => {
-    const baseStock = Math.max(0, Number(stockTarget.value?.available_stock || 0));
-    const qty = Math.max(1, Number(stockForm.qty || 1));
-
-    if (stockForm.movement_type === 'out') {
-        return Math.max(baseStock - qty, 0);
-    }
-
-    return baseStock + qty;
-});
-
-const validateStockForm = () => {
-    if (!stockTarget.value?.id) {
-        stockModalError.value = 'Add-on tidak ditemukan.';
-        return false;
-    }
-
-    if (!['in', 'out'].includes(String(stockForm.movement_type || ''))) {
-        stockModalError.value = 'Tipe pergerakan stok tidak valid.';
-        return false;
-    }
-
-    if (Number(stockForm.qty || 0) < 1) {
-        stockModalError.value = 'Qty minimal 1.';
-        return false;
-    }
-
-    if (
-        stockForm.movement_type === 'out'
-        && Number(stockForm.qty || 0) > Number(stockTarget.value.available_stock || 0)
-    ) {
-        stockModalError.value = 'Stok tidak mencukupi untuk barang keluar.';
-        return false;
-    }
-
-    stockModalError.value = '';
-    return true;
-};
-
-const submitStockMovement = async () => {
-    if (!validateStockForm()) {
-        return;
-    }
-
-    const payload = {
-        movement_type: String(stockForm.movement_type || 'in'),
-        qty: Math.max(1, Number(stockForm.qty || 1)),
-        notes: String(stockForm.notes || '').trim(),
-    };
-
-    try {
-        await emit('move-stock', {
-            id: Number(stockTarget.value.id),
-            payload,
-        });
-
-        closeStockModal();
-    } catch {
-        // Error text is surfaced by parent component.
-    }
-};
 </script>
 
 <template>
@@ -429,7 +361,7 @@ const submitStockMovement = async () => {
                                 <th class="whitespace-nowrap px-3 py-2 text-center font-semibold">Type</th>
                                 <th class="whitespace-nowrap px-3 py-2 text-right font-semibold">Price</th>
                                 <th class="whitespace-nowrap px-3 py-2 text-center font-semibold">Max</th>
-                                <th class="whitespace-nowrap px-3 py-2 text-center font-semibold">Stock</th>
+                                <th class="whitespace-nowrap px-3 py-2 text-center font-semibold">Effective Availability</th>
                                 <th class="whitespace-nowrap px-3 py-2 text-center font-semibold">Status</th>
                                 <th class="whitespace-nowrap px-3 py-2 text-center font-semibold">Sort</th>
                                 <th class="whitespace-nowrap px-3 py-2 text-right font-semibold">Actions</th>
@@ -456,18 +388,12 @@ const submitStockMovement = async () => {
                                 <td class="px-3 py-2 text-right font-semibold text-[#2563EB]">{{ row.price_text || formatRupiah(row.price) }}</td>
                                 <td class="px-3 py-2 text-center text-[#334155]">{{ row.max_qty }}</td>
                                 <td class="px-3 py-2 text-center">
-                                    <template v-if="row.is_physical">
-                                        <p class="font-semibold text-[#0F172A]">{{ Number(row.available_stock || 0) }}</p>
-                                        <div class="mt-0.5 flex items-center justify-center gap-1">
-                                            <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :style="resolveStockTone(row).style">
-                                                {{ resolveStockTone(row).label }}
-                                            </span>
-                                            <span class="text-[11px] text-[#64748B]">Low: {{ Number(row.low_stock_threshold || 0) }}</span>
-                                        </div>
-                                    </template>
-                                    <template v-else>
-                                        <span class="text-[#94A3B8]">-</span>
-                                    </template>
+                                    <p class="font-semibold text-[#0F172A]">{{ formatEffectiveAvailability(row) }}</p>
+                                    <div class="mt-0.5 flex items-center justify-center">
+                                        <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :style="resolveStockTone(row).style">
+                                            {{ row.effective_stock_label || resolveStockTone(row).label }}
+                                        </span>
+                                    </div>
                                 </td>
                                 <td class="px-3 py-2 text-center">
                                     <span class="rounded-full px-2 py-0.5 text-xs font-semibold" :style="row.is_active ? { background: '#ECFDF5', color: '#059669' } : { background: '#F8FAFC', color: '#64748B' }">
@@ -477,16 +403,6 @@ const submitStockMovement = async () => {
                                 <td class="px-3 py-2 text-center text-[#334155]">{{ row.sort_order }}</td>
                                 <td class="px-3 py-2">
                                     <div class="flex flex-wrap items-center justify-end gap-1.5">
-                                        <button
-                                            v-if="row.is_physical"
-                                            type="button"
-                                            class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold"
-                                            style="border-color: #0EA5E9; color: #0369A1;"
-                                            @click="openStockModal(row)"
-                                        >
-                                            <Plus class="h-3.5 w-3.5" />
-                                            Stock
-                                        </button>
                                         <button
                                             type="button"
                                             class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold"
@@ -590,16 +506,32 @@ const submitStockMovement = async () => {
                                     </select>
                                 </td>
                             </tr>
-                            <tr v-if="form.is_physical" class="border-t" style="border-color: #E2E8F0;">
-                                <td class="px-3 py-2 text-[#334155]">Available Stock</td>
+                            <tr class="border-t" style="border-color: #E2E8F0;">
+                                <td class="px-3 py-2 align-top text-[#334155]">Konsumsi Barang</td>
                                 <td class="px-3 py-2">
-                                    <input v-model.number="form.available_stock" type="number" min="0" class="w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
-                                </td>
-                            </tr>
-                            <tr v-if="form.is_physical" class="border-t" style="border-color: #E2E8F0;">
-                                <td class="px-3 py-2 text-[#334155]">Low-stock Threshold</td>
-                                <td class="px-3 py-2">
-                                    <input v-model.number="form.low_stock_threshold" type="number" min="0" class="w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                                    <div class="space-y-2">
+                                        <div
+                                            v-for="(row, rowIndex) in form.inventory_items"
+                                            :key="`addon-inventory-row-${rowIndex}`"
+                                            class="grid grid-cols-[1fr_110px_auto] gap-2"
+                                        >
+                                            <select v-model="row.inventory_item_id" class="rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
+                                                <option value="">Pilih barang</option>
+                                                <option v-for="item in inventoryOptions" :key="`addon-inv-option-${item.id}`" :value="Number(item.id)">
+                                                    {{ item.name }} ({{ item.unit }})
+                                                </option>
+                                            </select>
+                                            <input v-model.number="row.qty_per_unit" type="number" min="1" class="rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" placeholder="Qty" >
+                                            <button type="button" class="rounded-lg border px-3 py-2 text-sm font-semibold text-[#DC2626]" style="border-color: #FECACA;" @click="removeInventoryConsumption(rowIndex)">
+                                                Hapus
+                                            </button>
+                                        </div>
+                                        <button type="button" class="rounded-lg border px-3 py-2 text-sm font-semibold text-[#2563EB]" style="border-color: #BFDBFE;" @click="addInventoryConsumption">
+                                            <Plus class="mr-1 inline h-3.5 w-3.5" />
+                                            Tambah konsumsi barang
+                                        </button>
+                                        <p class="text-xs text-[#64748B]">Contoh: add-on +1 cetak 4R konsumsi 1 Kertas Foto 4R. Stok add-on dihitung dari mapping ini; update stok fisik di halaman Stock.</p>
+                                    </div>
                                 </td>
                             </tr>
                             <tr class="border-t" style="border-color: #E2E8F0;">
@@ -631,59 +563,6 @@ const submitStockMovement = async () => {
                         @click="submitForm"
                     >
                         {{ saving ? 'Saving...' : (modalMode === 'create' ? 'Create Add-on' : 'Save Changes') }}
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="stockModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="w-full max-w-xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
-                <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-[#0F172A]">Stock Movement - {{ stockTarget?.name || '-' }}</h3>
-                    <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeStockModal">Close</button>
-                </div>
-
-                <p class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #BFDBFE; background: #EFF6FF; color: #1E3A8A;">
-                    Stock saat ini: <strong>{{ Number(stockTarget?.available_stock || 0) }}</strong> item
-                </p>
-
-                <p v-if="stockModalError" class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #FECACA; background: #FEF2F2; color: #B91C1C;">
-                    {{ stockModalError }}
-                </p>
-
-                <div class="space-y-3">
-                    <div>
-                        <label class="mb-1 block text-sm text-[#475569]">Tipe Pergerakan</label>
-                        <select v-model="stockForm.movement_type" class="w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
-                            <option value="in">Barang Masuk (Stock In)</option>
-                            <option value="out">Barang Keluar (Stock Out)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm text-[#475569]">Qty</label>
-                        <input v-model.number="stockForm.qty" type="number" min="1" class="w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm text-[#475569]">Notes (opsional)</label>
-                        <textarea v-model="stockForm.notes" rows="3" class="w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></textarea>
-                    </div>
-                </div>
-
-                <p class="mt-3 text-sm text-[#475569]">
-                    Proyeksi stok setelah update:
-                    <strong class="text-[#0F172A]">{{ projectedStock }}</strong>
-                </p>
-
-                <div class="mt-5 flex items-center justify-end gap-2">
-                    <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeStockModal">Cancel</button>
-                    <button
-                        type="button"
-                        class="rounded-xl px-4 py-2 text-sm font-semibold"
-                        style="background: #0F766E; color: #FFFFFF;"
-                        :disabled="saving"
-                        @click="submitStockMovement"
-                    >
-                        {{ saving ? 'Saving...' : 'Save Stock Movement' }}
                     </button>
                 </div>
             </div>
