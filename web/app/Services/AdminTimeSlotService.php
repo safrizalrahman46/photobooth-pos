@@ -2,15 +2,20 @@
 
 namespace App\Services;
 
+use App\Enums\BookingStatus;
+use App\Models\Booking;
+use App\Models\Package;
 use App\Models\TimeSlot;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class AdminTimeSlotService
 {
     public function __construct(
         private readonly ActivityLogger $activityLogger,
+        private readonly SlotService $slotService,
     ) {}
 
     public function rows(array $filters = []): array
@@ -32,9 +37,57 @@ class AdminTimeSlotService
             $query->where('is_bookable', (bool) $filters['is_bookable']);
         }
 
-        return $query
-            ->get()
-            ->map(fn (TimeSlot $slot): array => $this->mapRow($slot))
+        $slots = $query->get();
+
+        if ($slots->isEmpty()) {
+            return [];
+        }
+
+        $branchIds = $slots->pluck('branch_id')
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        $slotDates = $slots->map(fn (TimeSlot $slot): ?string => $slot->slot_date?->toDateString())
+            ->filter()
+            ->unique()
+            ->values();
+
+        $bookingsByKey = Booking::query()
+            ->whereIn('branch_id', $branchIds->all())
+            ->whereIn('booking_date', $slotDates->all())
+            ->whereIn('status', BookingStatus::activeStatuses())
+            ->get(['id', 'branch_id', 'booking_date', 'start_at', 'end_at'])
+            ->groupBy(function (Booking $booking): string {
+                return (int) $booking->branch_id . '|' . ($booking->booking_date?->toDateString() ?? '');
+            });
+
+        $packages = Package::query()
+            ->where('is_active', true)
+            ->where(function (Builder $query) use ($branchIds): void {
+                $query->whereNull('branch_id')
+                    ->orWhereIn('branch_id', $branchIds->all());
+            })
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'branch_id', 'name', 'duration_minutes']);
+
+        return $slots
+            ->map(function (TimeSlot $slot) use ($bookingsByKey, $packages): array {
+                $slotDate = $slot->slot_date?->toDateString() ?? '';
+                $branchId = (int) $slot->branch_id;
+                $bookingKey = $branchId . '|' . $slotDate;
+                $branchPackages = $packages
+                    ->filter(fn (Package $package): bool => $package->branch_id === null || (int) $package->branch_id === $branchId)
+                    ->values();
+
+                return $this->mapRow(
+                    $slot,
+                    $bookingsByKey->get($bookingKey, collect()),
+                    $branchPackages,
+                );
+            })
             ->values()
             ->all();
     }
@@ -88,6 +141,15 @@ class AdminTimeSlotService
             (int) $timeSlot->id,
         );
 
+        $this->ensureCapacitySupportsActiveBookings(
+            (int) $payload['branch_id'],
+            (string) $payload['slot_date'],
+            (string) $payload['start_time'],
+            (string) $payload['end_time'],
+            (int) $payload['capacity'],
+            null,
+        );
+
         $timeSlot->fill([
             'branch_id' => (int) $payload['branch_id'],
             'slot_date' => (string) $payload['slot_date'],
@@ -123,6 +185,8 @@ class AdminTimeSlotService
 
     public function destroy(TimeSlot $timeSlot): void
     {
+        $this->ensureSlotHasNoActiveBookings($timeSlot);
+
         $this->activityLogger->log(
             'time-slots',
             'deleted',
@@ -271,13 +335,29 @@ class AdminTimeSlotService
         return $query->exists();
     }
 
-    private function mapRow(TimeSlot $slot): array
+    private function mapRow(TimeSlot $slot, Collection $bookings, Collection $packages): array
     {
+        $slotDate = $slot->slot_date?->toDateString() ?? null;
+        $timezone = $this->slotService->branchTimezone((int) $slot->branch_id);
+        $slotStart = $this->slotService->slotStartAt($slot, $timezone, $slotDate);
+        $slotEnd = $this->slotService->slotEndAt($slot, $timezone, $slotDate);
+        $slotDurationMinutes = $this->slotService->slotDurationMinutes($slot, $timezone, $slotDate);
+        $activeBookingsCount = $this->slotService->overlapCountFromCollection($bookings, $slotStart, $slotEnd);
+        $remainingParallelCapacity = max(0, (int) $slot->capacity - $activeBookingsCount);
+        $compatiblePackages = $packages
+            ->filter(fn (Package $package): bool => $this->slotService->packageFitsSlot($slot, $package, $timezone, $slotDate))
+            ->values();
+        $compatiblePackageNames = $compatiblePackages
+            ->take(4)
+            ->map(fn (Package $package): string => (string) $package->name)
+            ->values()
+            ->all();
+
         return [
             'id' => (int) $slot->id,
             'branch_id' => (int) $slot->branch_id,
             'branch_name' => (string) ($slot->branch?->name ?? '-'),
-            'slot_date' => $slot->slot_date?->toDateString(),
+            'slot_date' => $slotDate,
             'slot_date_text' => $slot->slot_date?->format('d M Y') ?? '-',
             'start_time' => (string) $slot->start_time,
             'start_time_text' => substr((string) $slot->start_time, 0, 5),
@@ -285,8 +365,54 @@ class AdminTimeSlotService
             'end_time_text' => substr((string) $slot->end_time, 0, 5),
             'capacity' => (int) $slot->capacity,
             'is_bookable' => (bool) $slot->is_bookable,
+            'slot_duration_minutes' => $slotDurationMinutes,
+            'active_bookings_count' => $activeBookingsCount,
+            'remaining_parallel_capacity' => $remainingParallelCapacity,
+            'is_full' => $remainingParallelCapacity <= 0,
+            'compatible_packages_count' => $compatiblePackages->count(),
+            'compatible_package_names' => $compatiblePackageNames,
+            'longest_supported_duration_minutes' => (int) ($compatiblePackages->max('duration_minutes') ?? 0),
             'created_at' => $slot->created_at?->toIso8601String(),
             'updated_at' => $slot->updated_at?->toIso8601String(),
         ];
+    }
+
+    private function ensureCapacitySupportsActiveBookings(
+        int $branchId,
+        string $slotDate,
+        string $startTime,
+        string $endTime,
+        int $capacity,
+        ?int $exceptBookingId = null,
+    ): void {
+        $timezone = $this->slotService->branchTimezone($branchId);
+        $startAt = Carbon::parse($slotDate . ' ' . $startTime, $timezone);
+        $endAt = Carbon::parse($slotDate . ' ' . $endTime, $timezone);
+        $activeOverlapCount = $this->slotService->overlapCount($branchId, $startAt, $endAt, $exceptBookingId);
+
+        if ($activeOverlapCount <= $capacity) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'capacity' => sprintf('Kapasitas tidak boleh lebih kecil dari %d booking aktif yang sudah overlap pada slot ini.', $activeOverlapCount),
+        ]);
+    }
+
+    private function ensureSlotHasNoActiveBookings(TimeSlot $timeSlot): void
+    {
+        $slotDate = $timeSlot->slot_date?->toDateString() ?? now()->toDateString();
+        $timezone = $this->slotService->branchTimezone((int) $timeSlot->branch_id);
+        $startAt = Carbon::parse($slotDate . ' ' . $timeSlot->start_time, $timezone);
+        $endAt = Carbon::parse($slotDate . ' ' . $timeSlot->end_time, $timezone);
+        $activeOverlapCount = $this->slotService->overlapCount((int) $timeSlot->branch_id, $startAt, $endAt);
+
+        if ($activeOverlapCount <= 0) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'time_slot' => 'Slot ini masih dipakai booking aktif. Nonaktifkan booking pada slot ini terlebih dahulu, jangan hapus langsung.',
+        ]);
     }
 }

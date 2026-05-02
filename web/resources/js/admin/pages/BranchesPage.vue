@@ -19,6 +19,7 @@ const createForm = reactive({
     timezone: 'Asia/Jakarta',
     phone: '',
     address: '',
+    payment_qr_url: '',
     is_active: true,
 });
 
@@ -32,6 +33,7 @@ const draftFor = (row) => {
             timezone: 'Asia/Jakarta',
             phone: '',
             address: '',
+            payment_qr_url: '',
             is_active: true,
         };
     }
@@ -43,6 +45,7 @@ const draftFor = (row) => {
             timezone: String(row?.timezone || 'Asia/Jakarta'),
             phone: String(row?.phone || ''),
             address: String(row?.address || ''),
+            payment_qr_url: String(row?.payment_qr_url || ''),
             is_active: Boolean(row?.is_active),
         };
     }
@@ -63,6 +66,7 @@ const submitCreate = () => {
         timezone: String(createForm.timezone || 'Asia/Jakarta').trim() || 'Asia/Jakarta',
         phone: String(createForm.phone || '').trim(),
         address: String(createForm.address || '').trim(),
+        payment_qr_url: String(createForm.payment_qr_url || '').trim(),
         is_active: Boolean(createForm.is_active),
     });
 
@@ -71,6 +75,7 @@ const submitCreate = () => {
     createForm.timezone = 'Asia/Jakarta';
     createForm.phone = '';
     createForm.address = '';
+    createForm.payment_qr_url = '';
     createForm.is_active = true;
 };
 
@@ -96,6 +101,7 @@ const submitUpdate = (id) => {
             timezone: String(draft.timezone || 'Asia/Jakarta').trim() || 'Asia/Jakarta',
             phone: String(draft.phone || '').trim(),
             address: String(draft.address || '').trim(),
+            payment_qr_url: String(draft.payment_qr_url || '').trim(),
             is_active: Boolean(draft.is_active),
         },
     });
@@ -152,6 +158,9 @@ const submitDelete = (id) => {
                 <label class="text-xs text-[#64748B] md:col-span-2">Address
                     <input v-model="createForm.address" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;" >
                 </label>
+                <label class="text-xs text-[#64748B] md:col-span-2 xl:col-span-3">QR Payment URL
+                    <input v-model="createForm.payment_qr_url" type="url" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;" placeholder="https://..." >
+                </label>
                 <label class="flex items-center gap-2 self-end text-sm text-[#334155]">
                     <input v-model="createForm.is_active" type="checkbox" >
                     Active
@@ -189,6 +198,7 @@ const submitDelete = (id) => {
                             <div class="grid grid-cols-1 gap-2">
                                 <input v-model="draftFor(row).phone" type="text" class="rounded-lg border px-2 py-1.5 text-sm" style="border-color: #CBD5E1;" >
                                 <input v-model="draftFor(row).address" type="text" class="rounded-lg border px-2 py-1.5 text-sm" style="border-color: #CBD5E1;" >
+                                <input v-model="draftFor(row).payment_qr_url" type="url" class="rounded-lg border px-2 py-1.5 text-sm" style="border-color: #CBD5E1;" placeholder="QR payment URL" >
                             </div>
                         </td>
                         <td class="px-4 py-3 align-top text-sm text-[#475569]">
@@ -215,4 +225,3 @@ const submitDelete = (id) => {
         </section>
     </div>
 </template>
-

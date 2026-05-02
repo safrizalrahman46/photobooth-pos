@@ -20,3 +20,5 @@ Folder ini menyimpan dokumentasi konfigurasi dan perubahan implementasi proyek.
 - `desktop-pos-api-integration-2026-05-01.md`: dokumentasi integrasi Flutter desktop POS dengan API Laravel, checkout walk-in, verifikasi booking, dan print struk.
 - `admin-history-dashboard-reports-2026-05-02.md`: dokumentasi perubahan dashboard admin minimal, History Perubahan, report cashier daily, export Excel, dan badge queue total waiting.
 - `admin-refactor-roadmap.md`: status boundary refactor backend/frontend admin dan owner service per modul.
+- `public-booking-branch-analytics-update-2026-05-02.md`: dokumentasi flow booking customer-first, QR payment per branch, realtime bookings admin, dan mode analytics reports.
+- `time-slot-stage1-redesign-2026-05-02.md`: dokumentasi Tahap 1 redesign Time Slots dan konsistensi kapasitas booking paralel.

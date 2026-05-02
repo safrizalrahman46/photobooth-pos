@@ -46,51 +46,6 @@ const stepLabels = ['Paket', 'Tanggal', 'Waktu', 'Add-on'];
 
 const packageAccentTokens = ['#2563eb', '#ec4899', '#22c55e', '#f59e0b', '#0ea5e9', '#8b5cf6'];
 
-const packagePhotoCatalog = {
-    basic: [
-        {
-            src: 'https://images.unsplash.com/photo-1638108413764-3ca5cefc242d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaG90byUyMHN0dWRpbyUyMHBvcnRyYWl0JTIwYmFzaWMlMjBzZWxmaWUlMjBib290aHxlbnwxfHx8fDE3NzUzODgyMzl8MA&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Portrait Studio',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1582510870942-6b1b57c94992?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaG90byUyMGJvb3RoJTIwZnJpZW5kcyUyMGdyb3VwJTIwcG9ydHJhaXQlMjBzdHVkaW98ZW58MXx8fHwxNzc1Mzg4MjQ0fDA&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Group Photo',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1675979138868-374ff3176fc1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkaW8lMjBwb3J0cmFpdCUyMHBob3RvZ3JhcGh5JTIwcmluZyUyMGxpZ2h0fGVufDF8fHx8MTc3NTM4ODUyNnww&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Ring Light Portrait',
-        },
-    ],
-    'mandi-bola': [
-        {
-            src: 'https://images.unsplash.com/photo-1622600113744-fe36f577cb6b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiYWxsJTIwcGl0JTIwY29sb3JmdWwlMjBmdW4lMjBwaG90b3Nob290fGVufDF8fHx8MTc3NTM4ODIzOXww&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Mandi Bola',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1571513721963-d855fd8df4c2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2aW50YWdlJTIwcmV0cm8lMjBwaG90b3Nob290JTIwYWVzdGhldGljJTIwc3R1ZGlvfGVufDF8fHx8MTc3NTM4ODI0NHww&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Vintage',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1760727408754-c5c9ef169f8d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb2xvcmZ1bCUyMGJhbGwlMjBwaXQlMjBjaGlsZHJlbiUyMHBsYXklMjBhZXN0aGV0aWN8ZW58MXx8fHwxNzc1Mzg4NTIxfDA&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Colorful Fun',
-        },
-    ],
-    minimarket: [
-        {
-            src: 'https://images.unsplash.com/photo-1772113726165-623176411022?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFya2V0JTIwY29udmVuaWVuY2UlMjBzdG9yZSUyMGFlc3RoZXRpYyUyMHBob3Rvc2hvb3R8ZW58MXx8fHwxNzc1Mzg4MjM5fDA&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Minimarket',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1645636511736-cb60b1bb0ce1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb2ZhJTIwY291Y2glMjBsaWZlc3R5bGUlMjBwaG90b3Nob290JTIwc3R1ZGlvfGVufDF8fHx8MTc3NTM4ODI0NHww&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Sofa',
-        },
-        {
-            src: 'https://images.unsplash.com/photo-1745267199638-e74b14870044?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncm9jZXJ5JTIwc3RvcmUlMjBhaXNsZSUyMHNoZWx2ZXMlMjBhZXN0aGV0aWN8ZW58MXx8fHwxNzc1Mzg4NTI2fDA&ixlib=rb-4.1.0&q=80&w=1080',
-            label: 'Grocery Aesthetic',
-        },
-    ],
-};
-
 const asString = (value) => (value === null || value === undefined ? '' : String(value));
 const normalizeTime = (value) => asString(value).slice(0, 5);
 
@@ -150,20 +105,17 @@ const selectedPackagePhotoSet = computed(() => {
     const selected = selectedPackage.value;
 
     if (!selected) {
-        return packagePhotoCatalog.basic;
+        return [];
     }
 
-    const source = `${asString(selected.code)} ${asString(selected.name)}`.toLowerCase();
+    const samplePhotos = Array.isArray(selected.sample_photos) ? selected.sample_photos : [];
 
-    if (source.includes('mandi bola') || source.includes('mandi-bola') || source.includes('vintage')) {
-        return packagePhotoCatalog['mandi-bola'];
-    }
-
-    if (source.includes('mini') || source.includes('sofa') || source.includes('market')) {
-        return packagePhotoCatalog.minimarket;
-    }
-
-    return packagePhotoCatalog.basic;
+    return samplePhotos
+        .map((src, index) => ({
+            src: asString(src).trim(),
+            label: `${asString(selected.name || 'Paket')} ${index + 1}`,
+        }))
+        .filter((photo) => photo.src !== '');
 });
 
 const selectedBookingDateObject = computed({
@@ -908,53 +860,8 @@ onBeforeUnmount(() => {
                                     </div>
                                 </div>
 
-                                <div class="space-y-4 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
-                                    <h3 class="text-[#1F2937]" style="font-size: 0.875rem; font-weight: 600;">Data Pemesan</h3>
-
-                                    <div class="grid gap-4 sm:grid-cols-2">
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Nama Pemesan</span>
-                                            <input
-                                                v-model="customerName"
-                                                required
-                                                maxlength="120"
-                                                type="text"
-                                                class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            >
-                                        </label>
-
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Nomor HP</span>
-                                            <input
-                                                v-model="customerPhone"
-                                                required
-                                                maxlength="30"
-                                                type="text"
-                                                class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            >
-                                        </label>
-                                    </div>
-
-                                    <div class="grid gap-4 sm:grid-cols-2">
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Email (opsional)</span>
-                                            <input
-                                                v-model="customerEmail"
-                                                type="email"
-                                                class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            >
-                                        </label>
-
-                                        <label class="space-y-1.5 text-sm">
-                                            <span class="text-[#1F2937]" style="font-weight: 500;">Catatan (opsional)</span>
-                                            <textarea
-                                                v-model="notes"
-                                                maxlength="1000"
-                                                rows="2"
-                                                class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
-                                            ></textarea>
-                                        </label>
-                                    </div>
+                                <div class="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4 text-sm text-[#1E3A8A]">
+                                    Data pemesan sudah diisi pada langkah sebelumnya dan akan ikut diproses saat pembayaran.
                                 </div>
                             </div>
                         </section>
@@ -1052,7 +959,11 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
                             <div class="p-0">
+                                <div v-if="!selectedPackagePhotoSet.length" class="px-4 py-10 text-center text-sm text-gray-400">
+                                    Belum ada contoh hasil foto untuk paket ini.
+                                </div>
                                 <div
+                                    v-else
                                     class="photo-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-3"
                                     style="-ms-overflow-style: none; scrollbar-width: none;"
                                 >
@@ -1072,7 +983,7 @@ onBeforeUnmount(() => {
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex justify-center gap-1.5 pb-3">
+                                <div v-if="selectedPackagePhotoSet.length" class="flex justify-center gap-1.5 pb-3">
                                     <div
                                         v-for="(photo, index) in selectedPackagePhotoSet"
                                         :key="`photo-indicator-${index}`"

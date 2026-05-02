@@ -25,6 +25,7 @@ class AdminBookingManagementService
         private readonly QueueService $queueService,
         private readonly InventoryService $inventoryService,
         private readonly ActivityLogger $activityLogger,
+        private readonly SlotService $slotService,
     ) {}
 
     public function create(array $payload): Booking
@@ -400,19 +401,19 @@ class AdminBookingManagementService
 
     private function assertNoConflict(int $branchId, Carbon $startAt, Carbon $endAt, ?int $exceptBookingId = null): void
     {
-        $conflictExists = Booking::query()
-            ->where('branch_id', $branchId)
-            ->whereIn('status', BookingStatus::activeStatuses())
-            ->when($exceptBookingId !== null, fn ($query) => $query->whereKeyNot($exceptBookingId))
-            ->where(function ($query) use ($startAt, $endAt): void {
-                $query->where('start_at', '<', $endAt)
-                    ->where('end_at', '>', $startAt);
-            })
-            ->exists();
+        $slot = $this->slotService->resolveBookableSlotForSession($branchId, $startAt, $endAt);
 
-        if ($conflictExists) {
+        if (! $slot) {
             throw ValidationException::withMessages([
-                'booking_time' => 'Selected time slot is not available. Please choose another time.',
+                'booking_time' => 'Selected time slot is not available or package duration exceeds the slot range.',
+            ]);
+        }
+
+        $remainingCapacity = $this->slotService->remainingParallelCapacity($slot, $startAt, $endAt, $exceptBookingId);
+
+        if ($remainingCapacity <= 0) {
+            throw ValidationException::withMessages([
+                'booking_time' => 'Selected time slot has reached its parallel booking limit. Please choose another time.',
             ]);
         }
     }

@@ -240,6 +240,13 @@ export const useTimeSlotsModule = ({
             end_time_text: String(item.end_time_text || ''),
             capacity: Number(item.capacity || 1),
             is_bookable: Boolean(item.is_bookable),
+            slot_duration_minutes: Number(item.slot_duration_minutes || 0),
+            active_bookings_count: Number(item.active_bookings_count || 0),
+            remaining_parallel_capacity: Number(item.remaining_parallel_capacity || 0),
+            is_full: Boolean(item.is_full),
+            compatible_packages_count: Number(item.compatible_packages_count || 0),
+            compatible_package_names: Array.isArray(item.compatible_package_names) ? item.compatible_package_names.map((name) => String(name || '')) : [],
+            longest_supported_duration_minutes: Number(item.longest_supported_duration_minutes || 0),
         }));
     });
 
