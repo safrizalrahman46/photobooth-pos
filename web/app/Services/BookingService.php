@@ -18,6 +18,7 @@ class BookingService
 {
     public function __construct(
         private readonly CodeGenerator $codeGenerator,
+        private readonly ActivityLogger $activityLogger,
     ) {}
 
     public function create(array $payload): Booking
@@ -65,6 +66,32 @@ class BookingService
             ]);
 
             SendBookingNotificationJob::dispatch($booking->id, 'created');
+
+            $source = $payload['source'] instanceof BookingSource
+                ? $payload['source']
+                : BookingSource::from((string) ($payload['source'] ?? BookingSource::Web->value));
+
+            if ($source !== BookingSource::Admin) {
+                $this->activityLogger->log(
+                    'bookings',
+                    'created',
+                    null,
+                    Booking::class,
+                    (int) $booking->id,
+                    [
+                        'message' => sprintf('Booking %s dibuat.', (string) $booking->booking_code),
+                        'label' => (string) $booking->booking_code,
+                        'source' => (string) ($booking->source?->value ?? $booking->source),
+                        'customer_name' => (string) $booking->customer_name,
+                        'branch_id' => (int) $booking->branch_id,
+                        'package_id' => (int) $booking->package_id,
+                        'booking_date' => $booking->booking_date?->toDateString(),
+                        'payment_type' => (string) $booking->payment_type,
+                        'total_amount' => (float) $booking->total_amount,
+                        'add_ons_count' => count($addons),
+                    ],
+                );
+            }
 
             return $booking;
         });
@@ -176,6 +203,26 @@ class BookingService
             ]);
 
             SendBookingNotificationJob::dispatch($booking->id, 'status_changed');
+
+            $this->activityLogger->log(
+                'bookings',
+                'status_changed',
+                $actorId,
+                Booking::class,
+                (int) $booking->id,
+                [
+                    'message' => sprintf(
+                        'Status booking %s berubah dari %s ke %s.',
+                        (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                        $fromStatus->value,
+                        $toStatus->value,
+                    ),
+                    'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                    'from_status' => $fromStatus->value,
+                    'to_status' => $toStatus->value,
+                    'reason' => $reason,
+                ],
+            );
 
             return $booking->refresh();
         });

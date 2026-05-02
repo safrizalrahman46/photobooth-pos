@@ -9,6 +9,7 @@ class AdminAddOnService
 {
     public function __construct(
         private readonly InventoryService $inventoryService,
+        private readonly ActivityLogger $activityLogger,
     ) {}
 
     public function create(array $payload): AddOn
@@ -34,7 +35,25 @@ class AdminAddOnService
                 $this->inventoryService->syncAddOnConsumptions($addOn, $payload['inventory_items'] ?? []);
             }
 
-            return $addOn->refresh();
+            $addOn = $addOn->refresh();
+
+            $this->activityLogger->log(
+                'add-ons',
+                'created',
+                null,
+                AddOn::class,
+                (int) $addOn->id,
+                [
+                    'message' => sprintf('Add-on %s dibuat.', (string) $addOn->name),
+                    'label' => (string) $addOn->code,
+                    'name' => (string) $addOn->name,
+                    'package_id' => $addOn->package_id ? (int) $addOn->package_id : null,
+                    'price' => (float) $addOn->price,
+                    'max_qty' => (int) $addOn->max_qty,
+                ],
+            );
+
+            return $addOn;
         });
     }
 
@@ -62,12 +81,44 @@ class AdminAddOnService
                 $this->inventoryService->syncAddOnConsumptions($addOn, $payload['inventory_items'] ?? []);
             }
 
-            return $addOn->refresh();
+            $addOn = $addOn->refresh();
+
+            $this->activityLogger->log(
+                'add-ons',
+                'updated',
+                null,
+                AddOn::class,
+                (int) $addOn->id,
+                [
+                    'message' => sprintf('Add-on %s diperbarui.', (string) $addOn->name),
+                    'label' => (string) $addOn->code,
+                    'name' => (string) $addOn->name,
+                    'package_id' => $addOn->package_id ? (int) $addOn->package_id : null,
+                    'price' => (float) $addOn->price,
+                    'max_qty' => (int) $addOn->max_qty,
+                    'updated_fields' => array_keys($payload),
+                ],
+            );
+
+            return $addOn;
         });
     }
 
     public function delete(AddOn $addOn): void
     {
+        $this->activityLogger->log(
+            'add-ons',
+            'deleted',
+            null,
+            AddOn::class,
+            (int) $addOn->id,
+            [
+                'message' => sprintf('Add-on %s dihapus.', (string) $addOn->name),
+                'label' => (string) $addOn->code,
+                'name' => (string) $addOn->name,
+            ],
+        );
+
         $addOn->delete();
     }
 

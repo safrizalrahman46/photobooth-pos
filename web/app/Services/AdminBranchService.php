@@ -10,6 +10,7 @@ class AdminBranchService
 {
     public function __construct(
         private readonly AppSettingService $appSettingService,
+        private readonly ActivityLogger $activityLogger,
     ) {}
 
     public function rows(array $filters = []): array
@@ -67,6 +68,21 @@ class AdminBranchService
 
         $this->appSettingService->settingsPayload();
 
+        $this->activityLogger->log(
+            'branches',
+            'created',
+            null,
+            Branch::class,
+            (int) $branch->id,
+            [
+                'message' => sprintf('Branch %s dibuat.', (string) $branch->name),
+                'label' => (string) $branch->code,
+                'branch_name' => (string) $branch->name,
+                'timezone' => (string) $branch->timezone,
+                'is_active' => (bool) $branch->is_active,
+            ],
+        );
+
         return $branch;
     }
 
@@ -91,6 +107,22 @@ class AdminBranchService
 
         $this->appSettingService->settingsPayload();
 
+        $this->activityLogger->log(
+            'branches',
+            'updated',
+            null,
+            Branch::class,
+            (int) $branch->id,
+            [
+                'message' => sprintf('Branch %s diperbarui.', (string) $branch->name),
+                'label' => (string) $branch->code,
+                'branch_name' => (string) $branch->name,
+                'timezone' => (string) $branch->timezone,
+                'is_active' => (bool) $branch->is_active,
+                'updated_fields' => array_keys($payload),
+            ],
+        );
+
         return $branch->refresh();
     }
 
@@ -108,8 +140,34 @@ class AdminBranchService
             $branch->save();
             $this->appSettingService->settingsPayload();
 
+            $this->activityLogger->log(
+                'branches',
+                'deactivated',
+                null,
+                Branch::class,
+                (int) $branch->id,
+                [
+                    'message' => sprintf('Branch %s dinonaktifkan karena masih memiliki relasi.', (string) $branch->name),
+                    'label' => (string) $branch->code,
+                    'branch_name' => (string) $branch->name,
+                ],
+            );
+
             return 'deactivated';
         }
+
+        $this->activityLogger->log(
+            'branches',
+            'deleted',
+            null,
+            Branch::class,
+            (int) $branch->id,
+            [
+                'message' => sprintf('Branch %s dihapus.', (string) $branch->name),
+                'label' => (string) $branch->code,
+                'branch_name' => (string) $branch->name,
+            ],
+        );
 
         $branch->delete();
         $this->appSettingService->settingsPayload();
@@ -152,4 +210,3 @@ class AdminBranchService
         }
     }
 }
-

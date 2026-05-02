@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
     Activity,
     BarChart3,
@@ -15,9 +15,7 @@ import {
 
 import AdminSidebar from './components/AdminSidebar.vue';
 import AdminTopBar from './components/AdminTopBar.vue';
-import ActivityLogsPage from './pages/ActivityLogsPage.vue';
 import BookingsPage from './pages/BookingsPage.vue';
-import DashboardPage from './pages/DashboardPage.vue';
 import AddOnsPage from './pages/AddOnsPage.vue';
 import AppSettingsPage from './pages/AppSettingsPage.vue';
 import BlackoutDatesPage from './pages/BlackoutDatesPage.vue';
@@ -27,10 +25,8 @@ import PackagesPage from './pages/PackagesPage.vue';
 import PaymentsPage from './pages/PaymentsPage.vue';
 import PrinterSettingsPage from './pages/PrinterSettingsPage.vue';
 import QueuePage from './pages/QueuePage.vue';
-import ReportsPage from './pages/ReportsPage.vue';
 import SettingsPage from './pages/SettingsPage.vue';
 import TimeSlotsPage from './pages/TimeSlotsPage.vue';
-import TransactionsPage from './pages/TransactionsPage.vue';
 import UsersPage from './pages/UsersPage.vue';
 import StockPage from './pages/StockPage.vue';
 import { useAppSettingsModule } from './composables/useAppSettingsModule';
@@ -39,6 +35,11 @@ import { useBranchesModule } from './composables/useBranchesModule';
 import { usePaymentsModule } from './composables/usePaymentsModule';
 import { usePrinterSettingsModule } from './composables/usePrinterSettingsModule';
 import { useTimeSlotsModule } from './composables/useTimeSlotsModule';
+
+const DashboardPage = defineAsyncComponent(() => import('./pages/DashboardPage.vue'));
+const TransactionsPage = defineAsyncComponent(() => import('./pages/TransactionsPage.vue'));
+const ReportsPage = defineAsyncComponent(() => import('./pages/ReportsPage.vue'));
+const ActivityLogsPage = defineAsyncComponent(() => import('./pages/ActivityLogsPage.vue'));
 
 const props = defineProps({
     initialStats: {
@@ -663,18 +664,12 @@ const pendingBookingBlinkDuration = computed(() => {
     return `${seconds.toFixed(2)}s`;
 });
 
-const verifiedQueueWaitingCount = computed(() => {
-    const fromStats = Math.max(0, Number(queueStats.value.verified_waiting || 0));
-
-    if (fromStats > 0) {
-        return fromStats;
-    }
-
-    return waitingQueue.value.filter((item) => String(item.source_type || '').toLowerCase() === 'booking').length;
+const queueWaitingCount = computed(() => {
+    return Math.max(0, Number(queueStats.value.waiting || 0));
 });
 
 const queueBlinkDuration = computed(() => {
-    const count = Math.max(0, Number(verifiedQueueWaitingCount.value || 0));
+    const count = Math.max(0, Number(queueWaitingCount.value || 0));
 
     if (count <= 0) {
         return null;
@@ -687,7 +682,7 @@ const queueBlinkDuration = computed(() => {
 
 const navBadgeMap = computed(() => {
     const pending = Math.max(0, Number(pendingBookingsCount.value || 0));
-    const queueWaiting = Math.max(0, Number(verifiedQueueWaitingCount.value || 0));
+    const queueWaiting = Math.max(0, Number(queueWaitingCount.value || 0));
 
     return {
         bookings: pending,
@@ -729,7 +724,9 @@ const navItems = computed(() => {
 
             return {
                 id,
-                label,
+                label: id === 'activity-logs' && (label === '' || label === 'Activity Logs')
+                    ? 'History Perubahan'
+                    : label,
                 icon: resolveNavIcon(item?.icon),
                 href: resolveNavHref(item?.href),
                 group,
@@ -837,6 +834,10 @@ const topbarTitle = computed(() => {
     const id = String(activeModuleId.value || 'dashboard');
     const title = String(topbarMetaById.value[id]?.title || '').trim();
     const navLabel = String(navItems.value.find((item) => item.id === id)?.label || '').trim();
+
+    if (id === 'activity-logs' && (title === '' || title === 'Activity Logs')) {
+        return 'History Perubahan';
+    }
 
     return title || navLabel || 'Dashboard';
 });
@@ -960,6 +961,7 @@ const currentQueue = computed(() => {
         ticket_id: value.ticket_id ? Number(value.ticket_id) : null,
         booking_id: value.booking_id ? Number(value.booking_id) : null,
         branch_id: value.branch_id ? Number(value.branch_id) : null,
+        branch_name: String(value.branch_name || '-'),
         queue_date: String(value.queue_date || ''),
         source_type: String(value.source_type || ''),
         queue_code: String(value.queue_code || '-'),
@@ -983,6 +985,7 @@ const waitingQueue = computed(() => {
         ticket_id: item.ticket_id ? Number(item.ticket_id) : null,
         booking_id: item.booking_id ? Number(item.booking_id) : null,
         branch_id: item.branch_id ? Number(item.branch_id) : null,
+        branch_name: String(item.branch_name || '-'),
         queue_date: String(item.queue_date || ''),
         source_type: String(item.source_type || ''),
         queue_code: String(item.queue_code || '-'),
@@ -1095,14 +1098,49 @@ const normalizedRecentTransactions = computed(() => {
         const amount = Number(item.amount || 0);
 
         return {
+            record_id: Number(item.record_id || 0),
             id: String(item.code || `TX-${index + 1}`),
             customer,
+            customerPhone: String(item.customer_phone || ''),
+            branchName: String(item.branch_name || '-'),
             cashier: String(item.cashier || '-'),
             method,
             amount,
             amountText: String(item.paid_text || item.total_text || formatRupiah(amount)),
             status: String(item.status || 'unpaid'),
             time: String(item.time_text || item.time || '-'),
+            notes: String(item.notes || ''),
+            totalAmount: Number(item.total_amount || 0),
+            totalText: String(item.total_text || formatRupiah(item.total_amount || 0)),
+            paidAmount: Number(item.paid_amount || 0),
+            paidText: String(item.paid_text || formatRupiah(item.paid_amount || 0)),
+            remainingAmount: Number(item.remaining_amount || 0),
+            remainingText: String(item.remaining_text || formatRupiah(item.remaining_amount || 0)),
+            changeAmount: Number(item.change_amount || 0),
+            changeText: String(item.change_text || formatRupiah(item.change_amount || 0)),
+            items: Array.isArray(item.items)
+                ? item.items.map((line) => ({
+                    itemType: String(line.item_type || '-'),
+                    itemName: String(line.item_name || '-'),
+                    qty: Number(line.qty || 0),
+                    unitPrice: Number(line.unit_price || 0),
+                    unitPriceText: String(line.unit_price_text || formatRupiah(line.unit_price || 0)),
+                    lineTotal: Number(line.line_total || 0),
+                    lineTotalText: String(line.line_total_text || formatRupiah(line.line_total || 0)),
+                }))
+                : [],
+            payments: Array.isArray(item.payments)
+                ? item.payments.map((payment) => ({
+                    paymentCode: String(payment.payment_code || '-'),
+                    method: String(payment.method || '-').toUpperCase(),
+                    amount: Number(payment.amount || 0),
+                    amountText: String(payment.amount_text || formatRupiah(payment.amount || 0)),
+                    referenceNo: String(payment.reference_no || ''),
+                    cashierName: String(payment.cashier_name || '-'),
+                    paidAt: String(payment.paid_at || ''),
+                    paidAtText: String(payment.paid_at_text || '-'),
+                }))
+                : [],
         };
     });
 });
@@ -1117,11 +1155,18 @@ const normalizedRecentActivities = computed(() => {
     const source = Array.isArray(props.recentActivities) ? props.recentActivities : [];
 
     return source.map((item, index) => ({
-        id: index,
+        id: Number(item.id || index),
         actor: String(item.actor || 'System'),
         action: String(item.action || '-'),
+        action_key: String(item.action_key || item.action || ''),
         module: String(item.module || 'system'),
+        module_key: String(item.module_key || item.module || 'system'),
+        label: String(item.label || ''),
+        message: String(item.message || item.action || '-'),
+        details: Array.isArray(item.details) ? item.details.map((detail) => String(detail || '')).filter(Boolean) : [],
+        changed_fields: Array.isArray(item.changed_fields) ? item.changed_fields.map((field) => String(field || '')).filter(Boolean) : [],
         time: String(item.time || '-'),
+        time_text: String(item.time_text || item.time || '-'),
     }));
 });
 
@@ -1281,7 +1326,7 @@ const activitySearch = ref('');
 const activityModuleFilter = ref('all');
 
 const activityModuleOptions = computed(() => {
-    const modules = normalizedRecentActivities.value.map((item) => String(item.module || '').toLowerCase());
+    const modules = normalizedRecentActivities.value.map((item) => String(item.module_key || item.module || '').toLowerCase());
     const uniques = Array.from(new Set(modules.filter(Boolean))).sort();
 
     return ['all', ...uniques];
@@ -1291,7 +1336,7 @@ const filteredActivityRows = computed(() => {
     const term = String(activitySearch.value || '').toLowerCase().trim();
 
     return normalizedRecentActivities.value.filter((activity) => {
-        const moduleName = String(activity.module || '').toLowerCase();
+        const moduleName = String(activity.module_key || activity.module || '').toLowerCase();
         const passesModule = activityModuleFilter.value === 'all' || moduleName === activityModuleFilter.value;
 
         if (!passesModule) {
@@ -1305,6 +1350,10 @@ const filteredActivityRows = computed(() => {
         return (
             String(activity.actor || '').toLowerCase().includes(term)
             || String(activity.action || '').toLowerCase().includes(term)
+            || String(activity.message || '').toLowerCase().includes(term)
+            || String(activity.label || '').toLowerCase().includes(term)
+            || (activity.details || []).some((detail) => String(detail || '').toLowerCase().includes(term))
+            || (activity.changed_fields || []).some((field) => String(field || '').toLowerCase().includes(term))
             || moduleName.includes(term)
         );
     });
@@ -1611,6 +1660,128 @@ const reportStatusRows = computed(() => {
 
     return Array.isArray(rowsValue) ? rowsValue : [];
 });
+
+const dashboardOwnerHighlights = computed(() => {
+    return Array.isArray(props.ownerHighlights) ? props.ownerHighlights : [];
+});
+
+const reportRangeLabel = computed(() => {
+    return String(reportData.value?.range?.label || '').trim();
+});
+
+const reportPackageOptions = computed(() => {
+    return packageCards.value.map((item) => ({
+        id: Number(item.id || 0),
+        name: String(item.name || '-'),
+    })).filter((item) => item.id > 0);
+});
+
+const reportCashierOptions = computed(() => {
+    return userRows.value
+        .filter((item) => ['cashier', 'owner'].includes(String(item.role_key || '').toLowerCase()))
+        .map((item) => ({
+            id: Number(item.id || 0),
+            name: String(item.name || '-'),
+        }));
+});
+
+const cashierChartPalette = ['#2563EB', '#7C3AED', '#059669', '#D97706', '#EC4899', '#0F766E'];
+
+const reportCashierDailySource = computed(() => {
+    const source = reportData.value?.cashier_daily_series;
+
+    if (!source || typeof source !== 'object') {
+        return {
+            labels: [],
+            datasets: [],
+        };
+    }
+
+    return source;
+});
+
+const reportCashierChartLabels = computed(() => {
+    return Array.isArray(reportCashierDailySource.value.labels) ? reportCashierDailySource.value.labels : [];
+});
+
+const reportCashierChartDatasets = computed(() => {
+    const source = Array.isArray(reportCashierDailySource.value.datasets) ? reportCashierDailySource.value.datasets : [];
+
+    return source.map((dataset, index) => ({
+        label: String(dataset.cashier_name || `Cashier ${index + 1}`),
+        data: Array.isArray(dataset.data) ? dataset.data.map((value) => Number(value || 0)) : [],
+        backgroundColor: cashierChartPalette[index % cashierChartPalette.length],
+        borderColor: cashierChartPalette[index % cashierChartPalette.length],
+    }));
+});
+
+const exportReport = async () => {
+    if (!reportData.value) {
+        reportError.value = 'Belum ada data report untuk diexport.';
+        return;
+    }
+
+    try {
+        const xlsxModule = await import('xlsx');
+        const XLSX = xlsxModule.default || xlsxModule;
+        const workbook = XLSX.utils.book_new();
+
+        const summarySheet = XLSX.utils.json_to_sheet(reportSummaryCards.value.map((card) => ({
+            Label: card.label,
+            Value: card.value,
+            Helper: card.helper,
+        })));
+
+        const dailySheet = XLSX.utils.json_to_sheet(reportDailyRows.value.map((row) => ({
+            Date: row.date,
+            Label: row.label,
+            Revenue: Number(row.revenue || 0),
+            Transactions: Number(row.transactions || 0),
+            Bookings: Number(row.bookings || 0),
+            WalkIns: Number(row.walk_ins || 0),
+        })));
+
+        const cashierSheet = XLSX.utils.json_to_sheet(reportCashierRows.value.map((row) => ({
+            Cashier: row.cashier_name,
+            Transactions: Number(row.transaction_count || 0),
+            Revenue: Number(row.revenue || 0),
+            AverageTransaction: Number(row.average_transaction || 0),
+        })));
+
+        const cashierDailyRows = reportCashierChartLabels.value.map((label, index) => {
+            const row = { Date: label };
+
+            reportCashierChartDatasets.value.forEach((dataset) => {
+                row[dataset.label] = Number(dataset.data?.[index] || 0);
+            });
+
+            return row;
+        });
+
+        const cashierDailySheet = XLSX.utils.json_to_sheet(cashierDailyRows);
+        const addOnSheet = XLSX.utils.json_to_sheet(reportAddOnRows.value.map((row) => ({
+            AddOn: row.add_on_name,
+            Quantity: Number(row.total_qty || 0),
+            Bookings: Number(row.booking_count || 0),
+            Revenue: Number(row.total_revenue || 0),
+        })));
+
+        XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+        XLSX.utils.book_append_sheet(workbook, dailySheet, 'Daily Summary');
+        XLSX.utils.book_append_sheet(workbook, cashierSheet, 'Cashier Summary');
+        XLSX.utils.book_append_sheet(workbook, cashierDailySheet, 'Cashier Daily');
+        XLSX.utils.book_append_sheet(workbook, addOnSheet, 'AddOn Usage');
+
+        const suffix = reportFilters.value.from && reportFilters.value.to
+            ? `${reportFilters.value.from}_${reportFilters.value.to}`
+            : localDateIso();
+
+        XLSX.writeFile(workbook, `report-${suffix}.xlsx`);
+    } catch (error) {
+        reportError.value = 'Export Excel gagal diproses.';
+        console.error('Failed to export report:', error);
+    }
+};
 
 const resolveBookingStatus = (status) => {
     return bookingStatusMap[status] || {
@@ -3253,6 +3424,14 @@ const resolveActivityTone = (module) => {
         return { bg: '#F5F3FF', color: '#7C3AED' };
     }
 
+    if (normalized.includes('package') || normalized.includes('add-on') || normalized.includes('inventory') || normalized.includes('stock')) {
+        return { bg: '#FFF7ED', color: '#EA580C' };
+    }
+
+    if (normalized.includes('branch') || normalized.includes('time-slot') || normalized.includes('blackout') || normalized.includes('printer') || normalized.includes('setting')) {
+        return { bg: '#F8FAFC', color: '#475569' };
+    }
+
     return { bg: '#F8FAFC', color: '#64748B' };
 };
 
@@ -3361,7 +3540,7 @@ const goToNextPage = () => {
 };
 
 watch(activeModuleId, (nextValue) => {
-    if (nextValue !== 'reports') {
+    if (!['dashboard', 'reports'].includes(nextValue)) {
         return;
     }
 
@@ -3581,9 +3760,10 @@ onBeforeUnmount(() => {
                             :revenue-series="normalizedRevenueSeries" :active-revenue-period="activeRevenuePeriod"
                             :revenue-total="revenueTotal" :booking-total="bookingTotal" :queue-stats="queueStats"
                             :current-queue="currentQueue" :waiting-queue="waitingQueue"
-                            :recent-transactions="normalizedRecentTransactions"
-                            :recent-activities="normalizedRecentActivities" :panel-bookings-url="panelBookingsUrl"
-                            :panel-transactions-url="panelTransactionsUrl" :format-rupiah="formatRupiah"
+                            :owner-highlights="dashboardOwnerHighlights"
+                            :cashier-chart-labels="reportCashierChartLabels"
+                            :cashier-chart-datasets="reportCashierChartDatasets"
+                            :report-range-label="reportRangeLabel" :format-rupiah="formatRupiah"
                             @set-revenue-period="activeRevenuePeriod = $event" />
 
                         <PackagesPage v-else-if="activeModuleId === 'packages'" :package-cards="packageCards"
@@ -3683,9 +3863,13 @@ onBeforeUnmount(() => {
                         <ReportsPage v-else-if="activeModuleId === 'reports'" :report-filters="reportFilters"
                             :report-error="reportError" :report-loading="reportLoading"
                             :report-summary-cards="reportSummaryCards" :report-daily-rows="reportDailyRows"
-                            :report-daily-max-revenue="reportDailyMaxRevenue" :report-status-rows="reportStatusRows"
-                            :report-package-rows="reportPackageRows" :report-cashier-rows="reportCashierRows"
-                            :report-add-on-rows="reportAddOnRows" />
+                            :report-status-rows="reportStatusRows" :report-package-rows="reportPackageRows"
+                            :report-cashier-rows="reportCashierRows" :report-add-on-rows="reportAddOnRows"
+                            :report-package-options="reportPackageOptions"
+                            :report-cashier-options="reportCashierOptions" :report-range-label="reportRangeLabel"
+                            :report-cashier-chart-labels="reportCashierChartLabels"
+                            :report-cashier-chart-datasets="reportCashierChartDatasets"
+                            @export-report="exportReport" />
 
                         <ActivityLogsPage v-else-if="activeModuleId === 'activity-logs'"
                             :activity-search="activitySearch" :activity-module-filter="activityModuleFilter"

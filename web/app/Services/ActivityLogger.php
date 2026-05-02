@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ActivityLog;
+use Illuminate\Support\Facades\Auth;
 
 class ActivityLogger
 {
@@ -14,15 +15,30 @@ class ActivityLogger
         ?int $subjectId = null,
         array $properties = []
     ): void {
+        $resolvedActorId = $actorId && $actorId > 0
+            ? $actorId
+            : (Auth::id() ? (int) Auth::id() : null);
+
+        $request = app()->bound('request') ? request() : null;
+
         ActivityLog::query()->create([
-            'actor_id' => $actorId,
+            'actor_id' => $resolvedActorId,
             'module' => $module,
             'action' => $action,
             'subject_type' => $subjectType,
             'subject_id' => $subjectId,
             'properties' => $properties,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
+            'ip_address' => $request?->ip(),
+            'user_agent' => $request?->userAgent(),
         ]);
+    }
+
+    public function purgeOlderThanDays(int $days): int
+    {
+        $retentionDays = max(1, $days);
+
+        return ActivityLog::query()
+            ->where('created_at', '<', now()->subDays($retentionDays))
+            ->delete();
     }
 }

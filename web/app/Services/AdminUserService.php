@@ -7,6 +7,10 @@ use Illuminate\Validation\ValidationException;
 
 class AdminUserService
 {
+    public function __construct(
+        private readonly ActivityLogger $activityLogger,
+    ) {}
+
     public function create(array $payload): User
     {
         $user = User::query()->create([
@@ -20,6 +24,22 @@ class AdminUserService
         if (! empty($payload['role'])) {
             $user->syncRoles([$payload['role']]);
         }
+
+        $this->activityLogger->log(
+            'users',
+            'created',
+            null,
+            User::class,
+            (int) $user->id,
+            [
+                'message' => sprintf('User %s dibuat.', (string) $user->name),
+                'label' => (string) $user->email,
+                'name' => (string) $user->name,
+                'email' => (string) $user->email,
+                'role' => (string) ($payload['role'] ?? ''),
+                'is_active' => (bool) $user->is_active,
+            ],
+        );
 
         return $user->refresh();
     }
@@ -53,6 +73,23 @@ class AdminUserService
             }
         }
 
+        $this->activityLogger->log(
+            'users',
+            'updated',
+            $actor?->id,
+            User::class,
+            (int) $user->id,
+            [
+                'message' => sprintf('User %s diperbarui.', (string) $user->name),
+                'label' => (string) $user->email,
+                'name' => (string) $user->name,
+                'email' => (string) $user->email,
+                'role' => $nextRole,
+                'is_active' => (bool) $user->is_active,
+                'updated_fields' => array_keys($payload),
+            ],
+        );
+
         return $user->refresh();
     }
 
@@ -69,6 +106,20 @@ class AdminUserService
                 'role' => 'At least one owner account must remain.',
             ]);
         }
+
+        $this->activityLogger->log(
+            'users',
+            'deleted',
+            $actor?->id,
+            User::class,
+            (int) $user->id,
+            [
+                'message' => sprintf('User %s dihapus.', (string) $user->name),
+                'label' => (string) $user->email,
+                'name' => (string) $user->name,
+                'email' => (string) $user->email,
+            ],
+        );
 
         $user->delete();
     }

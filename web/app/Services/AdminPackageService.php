@@ -13,6 +13,7 @@ class AdminPackageService
 {
     public function __construct(
         private readonly InventoryService $inventoryService,
+        private readonly ActivityLogger $activityLogger,
     ) {}
 
     public function create(array $payload): Package
@@ -40,7 +41,25 @@ class AdminPackageService
                 $this->inventoryService->syncPackageConsumptions($package, $payload['inventory_items'] ?? []);
             }
 
-            return $package->refresh();
+            $package = $package->refresh();
+
+            $this->activityLogger->log(
+                'packages',
+                'created',
+                null,
+                Package::class,
+                (int) $package->id,
+                [
+                    'message' => sprintf('Paket %s dibuat.', (string) $package->name),
+                    'label' => (string) $package->code,
+                    'name' => (string) $package->name,
+                    'branch_id' => $package->branch_id ? (int) $package->branch_id : null,
+                    'duration_minutes' => (int) $package->duration_minutes,
+                    'base_price' => (float) $package->base_price,
+                ],
+            );
+
+            return $package;
         });
     }
 
@@ -68,12 +87,44 @@ class AdminPackageService
                 $this->inventoryService->syncPackageConsumptions($package, $payload['inventory_items'] ?? []);
             }
 
-            return $package->refresh();
+            $package = $package->refresh();
+
+            $this->activityLogger->log(
+                'packages',
+                'updated',
+                null,
+                Package::class,
+                (int) $package->id,
+                [
+                    'message' => sprintf('Paket %s diperbarui.', (string) $package->name),
+                    'label' => (string) $package->code,
+                    'name' => (string) $package->name,
+                    'branch_id' => $package->branch_id ? (int) $package->branch_id : null,
+                    'duration_minutes' => (int) $package->duration_minutes,
+                    'base_price' => (float) $package->base_price,
+                    'updated_fields' => array_keys($payload),
+                ],
+            );
+
+            return $package;
         });
     }
 
     public function delete(Package $package): void
     {
+        $this->activityLogger->log(
+            'packages',
+            'deleted',
+            null,
+            Package::class,
+            (int) $package->id,
+            [
+                'message' => sprintf('Paket %s dihapus.', (string) $package->name),
+                'label' => (string) $package->code,
+                'name' => (string) $package->name,
+            ],
+        );
+
         $package->delete();
     }
 

@@ -17,6 +17,10 @@ class InventoryService
     public const SOURCE_BOOKING_VERIFICATION = 'booking_verification';
     public const SOURCE_POS_WALK_IN_TRANSACTION = 'pos_walk_in_transaction';
 
+    public function __construct(
+        private readonly ActivityLogger $activityLogger,
+    ) {}
+
     public function syncAddOnConsumptions(AddOn $addOn, array $rows): void
     {
         $syncData = $this->normalizeConsumptionRows($rows, 'qty_per_unit');
@@ -73,6 +77,26 @@ class InventoryService
                 'notes' => trim((string) ($payload['notes'] ?? '')) ?: null,
                 'moved_by' => $actorId,
             ]);
+
+            $this->activityLogger->log(
+                'inventory',
+                'movement_recorded',
+                $actorId,
+                InventoryItem::class,
+                (int) $lockedItem->id,
+                [
+                    'message' => sprintf('Pergerakan stok %s untuk %s dicatat.', $movementType, (string) $lockedItem->name),
+                    'label' => (string) $lockedItem->code,
+                    'item_name' => (string) $lockedItem->name,
+                    'movement_type' => $movementType,
+                    'qty' => $qty,
+                    'stock_before' => $beforeStock,
+                    'stock_after' => $afterStock,
+                    'source_type' => $payload['source_type'] ?? null,
+                    'source_ref' => $payload['source_ref'] ?? null,
+                    'notes' => trim((string) ($payload['notes'] ?? '')) ?: null,
+                ],
+            );
 
             return $lockedItem->refresh();
         });
@@ -163,6 +187,31 @@ class InventoryService
                     'moved_by' => $actorId,
                 ]);
             }
+
+            $this->activityLogger->log(
+                'inventory',
+                'booking_deducted',
+                $actorId,
+                Booking::class,
+                (int) $lockedBooking->id,
+                [
+                    'message' => sprintf('Stok booking %s berhasil dipotong.', (string) $lockedBooking->booking_code),
+                    'label' => (string) $lockedBooking->booking_code,
+                    'source_type' => self::SOURCE_BOOKING_VERIFICATION,
+                    'items' => $requirements->map(function (int $qty, int|string $itemId) use ($items): array {
+                        /** @var InventoryItem|null $item */
+                        $item = $items->get((int) $itemId);
+
+                        return [
+                            'inventory_item_id' => (int) $itemId,
+                            'code' => (string) ($item?->code ?? ''),
+                            'name' => (string) ($item?->name ?? '-'),
+                            'qty' => $qty,
+                            'unit' => (string) ($item?->unit ?? 'pcs'),
+                        ];
+                    })->values()->all(),
+                ],
+            );
         });
     }
 
@@ -247,6 +296,31 @@ class InventoryService
                     'moved_by' => $actorId,
                 ]);
             }
+
+            $this->activityLogger->log(
+                'inventory',
+                'transaction_deducted',
+                $actorId,
+                Transaction::class,
+                (int) $lockedTransaction->id,
+                [
+                    'message' => sprintf('Stok transaksi %s berhasil dipotong.', (string) $lockedTransaction->transaction_code),
+                    'label' => (string) $lockedTransaction->transaction_code,
+                    'source_type' => $sourceType,
+                    'items' => $requirements->map(function (int $qty, int|string $itemId) use ($items): array {
+                        /** @var InventoryItem|null $item */
+                        $item = $items->get((int) $itemId);
+
+                        return [
+                            'inventory_item_id' => (int) $itemId,
+                            'code' => (string) ($item?->code ?? ''),
+                            'name' => (string) ($item?->name ?? '-'),
+                            'qty' => $qty,
+                            'unit' => (string) ($item?->unit ?? 'pcs'),
+                        ];
+                    })->values()->all(),
+                ],
+            );
         });
     }
 

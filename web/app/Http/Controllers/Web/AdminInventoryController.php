@@ -7,6 +7,7 @@ use App\Http\Requests\AdminInventoryMovementRequest;
 use App\Http\Requests\AdminStoreInventoryItemRequest;
 use App\Http\Requests\AdminUpdateInventoryItemRequest;
 use App\Models\InventoryItem;
+use App\Services\ActivityLogger;
 use App\Services\AdminDashboardDataService;
 use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
@@ -21,11 +22,15 @@ class AdminInventoryController extends Controller
         ]);
     }
 
-    public function store(AdminStoreInventoryItemRequest $request, AdminDashboardDataService $service): JsonResponse
+    public function store(
+        AdminStoreInventoryItemRequest $request,
+        AdminDashboardDataService $service,
+        ActivityLogger $activityLogger,
+    ): JsonResponse
     {
         $payload = $request->validated();
 
-        InventoryItem::query()->create([
+        $inventoryItem = InventoryItem::query()->create([
             'code' => trim((string) ($payload['code'] ?? '')) ?: $this->nextCode(),
             'name' => $payload['name'],
             'unit' => trim((string) ($payload['unit'] ?? 'pcs')) ?: 'pcs',
@@ -34,6 +39,21 @@ class AdminInventoryController extends Controller
             'is_active' => $payload['is_active'] ?? true,
             'sort_order' => $payload['sort_order'] ?? 0,
         ]);
+
+        $activityLogger->log(
+            'inventory',
+            'created',
+            $request->user()?->id,
+            InventoryItem::class,
+            (int) $inventoryItem->id,
+            [
+                'message' => sprintf('Inventory item %s dibuat.', (string) $inventoryItem->name),
+                'label' => (string) $inventoryItem->code,
+                'item_name' => (string) $inventoryItem->name,
+                'available_stock' => (int) $inventoryItem->available_stock,
+                'low_stock_threshold' => (int) $inventoryItem->low_stock_threshold,
+            ],
+        );
 
         return response()->json([
             'success' => true,
@@ -46,6 +66,7 @@ class AdminInventoryController extends Controller
         AdminUpdateInventoryItemRequest $request,
         InventoryItem $inventoryItem,
         AdminDashboardDataService $service,
+        ActivityLogger $activityLogger,
     ): JsonResponse {
         $payload = $request->validated();
         $codeInput = trim((string) ($payload['code'] ?? ''));
@@ -64,6 +85,22 @@ class AdminInventoryController extends Controller
             'sort_order' => $payload['sort_order'] ?? $inventoryItem->sort_order,
         ]);
 
+        $activityLogger->log(
+            'inventory',
+            'updated',
+            $request->user()?->id,
+            InventoryItem::class,
+            (int) $inventoryItem->id,
+            [
+                'message' => sprintf('Inventory item %s diperbarui.', (string) $inventoryItem->name),
+                'label' => (string) $inventoryItem->code,
+                'item_name' => (string) $inventoryItem->name,
+                'available_stock' => (int) $inventoryItem->available_stock,
+                'low_stock_threshold' => (int) $inventoryItem->low_stock_threshold,
+                'updated_fields' => array_keys($payload),
+            ],
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Inventory item updated successfully.',
@@ -71,8 +108,25 @@ class AdminInventoryController extends Controller
         ]);
     }
 
-    public function destroy(InventoryItem $inventoryItem, AdminDashboardDataService $service): JsonResponse
+    public function destroy(
+        InventoryItem $inventoryItem,
+        AdminDashboardDataService $service,
+        ActivityLogger $activityLogger,
+    ): JsonResponse
     {
+        $activityLogger->log(
+            'inventory',
+            'deleted',
+            request()->user()?->id,
+            InventoryItem::class,
+            (int) $inventoryItem->id,
+            [
+                'message' => sprintf('Inventory item %s dihapus.', (string) $inventoryItem->name),
+                'label' => (string) $inventoryItem->code,
+                'item_name' => (string) $inventoryItem->name,
+            ],
+        );
+
         $inventoryItem->delete();
 
         return response()->json([

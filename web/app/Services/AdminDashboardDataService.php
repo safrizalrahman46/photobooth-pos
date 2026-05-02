@@ -1275,6 +1275,14 @@ class AdminDashboardDataService
             ],
             'package_popularity' => $packagePopularity,
             'cashier_performance' => $cashierPerformance,
+            'cashier_daily_series' => $this->buildCashierDailySeries(
+                $start,
+                $end,
+                $packageId,
+                $cashierId,
+                $revenueStatuses,
+                array_column($cashierPerformance, 'cashier_id'),
+            ),
             'add_on_performance' => $addOnPerformance,
             'daily_summary' => $dailySummary,
         ];
@@ -1388,29 +1396,99 @@ class AdminDashboardDataService
     {
         return Transaction::query()
             ->with([
+                'branch:id,name',
                 'cashier:id,name',
-                'booking:id,customer_name',
-                'payments:id,transaction_id,method',
+                'booking:id,customer_name,customer_phone',
+                'queueTicket:id,customer_name,customer_phone',
+                'items:id,transaction_id,item_type,item_ref_id,item_name,qty,unit_price,line_total',
+                'payments:id,transaction_id,payment_code,method,amount,reference_no,paid_at,cashier_id',
+                'payments.cashier:id,name',
             ])
             ->latest('created_at')
-            ->limit(5)
-            ->get(['id', 'transaction_code', 'cashier_id', 'booking_id', 'total_amount', 'paid_amount', 'status', 'created_at'])
+            ->limit(25)
+            ->get([
+                'id',
+                'transaction_code',
+                'branch_id',
+                'cashier_id',
+                'booking_id',
+                'queue_ticket_id',
+                'total_amount',
+                'paid_amount',
+                'change_amount',
+                'status',
+                'notes',
+                'paid_at',
+                'created_at',
+            ])
             ->map(function (Transaction $transaction): array {
                 $latestPaymentMethod = $transaction->payments
                     ->sortByDesc('id')
                     ->first()?->method?->value;
+                $customerName = (string) ($transaction->booking?->customer_name ?? $transaction->queueTicket?->customer_name ?? '-');
+                $customerPhone = (string) ($transaction->booking?->customer_phone ?? $transaction->queueTicket?->customer_phone ?? '');
+                $totalAmount = (float) $transaction->total_amount;
+                $paidAmount = (float) $transaction->paid_amount;
+                $remainingAmount = max($totalAmount - $paidAmount, 0);
 
                 return [
+                    'record_id' => (int) $transaction->id,
                     'code' => (string) $transaction->transaction_code,
-                    'customer' => (string) ($transaction->booking?->customer_name ?? '-'),
+                    'branch_name' => (string) ($transaction->branch?->name ?? '-'),
+                    'customer' => $customerName,
+                    'customer_phone' => $customerPhone,
                     'cashier' => (string) ($transaction->cashier?->name ?? '-'),
                     'method' => $latestPaymentMethod ? strtoupper($latestPaymentMethod) : '-',
-                    'amount' => (float) ($transaction->paid_amount > 0 ? $transaction->paid_amount : $transaction->total_amount),
-                    'total_text' => $this->formatRupiah((float) $transaction->total_amount),
-                    'paid_text' => $this->formatRupiah((float) $transaction->paid_amount),
+                    'amount' => (float) ($paidAmount > 0 ? $paidAmount : $totalAmount),
+                    'total_amount' => $totalAmount,
+                    'total_text' => $this->formatRupiah($totalAmount),
+                    'paid_amount' => $paidAmount,
+                    'paid_text' => $this->formatRupiah($paidAmount),
+                    'remaining_amount' => $remainingAmount,
+                    'remaining_text' => $this->formatRupiah($remainingAmount),
+                    'change_amount' => (float) $transaction->change_amount,
+                    'change_text' => $this->formatRupiah((float) $transaction->change_amount),
                     'status' => (string) $transaction->status->value,
+                    'notes' => (string) ($transaction->notes ?? ''),
+                    'items' => $transaction->items
+                        ->map(function ($item): array {
+                            $unitPrice = (float) $item->unit_price;
+                            $lineTotal = (float) $item->line_total;
+
+                            return [
+                                'item_type' => (string) $item->item_type,
+                                'item_name' => (string) $item->item_name,
+                                'qty' => (int) $item->qty,
+                                'unit_price' => $unitPrice,
+                                'unit_price_text' => $this->formatRupiah($unitPrice),
+                                'line_total' => $lineTotal,
+                                'line_total_text' => $this->formatRupiah($lineTotal),
+                            ];
+                        })
+                        ->values()
+                        ->all(),
+                    'payments' => $transaction->payments
+                        ->sortBy('paid_at')
+                        ->values()
+                        ->map(function (Payment $payment): array {
+                            $amount = (float) $payment->amount;
+
+                            return [
+                                'payment_code' => (string) $payment->payment_code,
+                                'method' => strtoupper((string) ($payment->method?->value ?? $payment->method)),
+                                'amount' => $amount,
+                                'amount_text' => $this->formatRupiah($amount),
+                                'reference_no' => (string) ($payment->reference_no ?? ''),
+                                'cashier_name' => (string) ($payment->cashier?->name ?? '-'),
+                                'paid_at' => $payment->paid_at?->toIso8601String(),
+                                'paid_at_text' => $payment->paid_at?->translatedFormat('d M Y, H:i') ?? '-',
+                            ];
+                        })
+                        ->all(),
                     'time' => $transaction->created_at?->diffForHumans() ?? '-',
                     'time_text' => $transaction->created_at?->translatedFormat('d M Y, H:i') ?? '-',
+                    'created_at' => $transaction->created_at?->toIso8601String(),
+                    'paid_at' => $transaction->paid_at?->toIso8601String(),
                 ];
             })
             ->values()
@@ -1422,14 +1500,25 @@ class AdminDashboardDataService
         return ActivityLog::query()
             ->with('actor:id,name')
             ->latest('created_at')
-            ->limit(6)
-            ->get(['id', 'actor_id', 'action', 'module', 'created_at'])
+            ->limit(100)
+            ->get(['id', 'actor_id', 'action', 'module', 'subject_type', 'subject_id', 'properties', 'created_at'])
             ->map(function (ActivityLog $log): array {
+                $properties = is_array($log->properties) ? $log->properties : [];
+
                 return [
+                    'id' => (int) $log->id,
                     'actor' => (string) ($log->actor?->name ?? 'System'),
-                    'action' => ucwords(str_replace('_', ' ', (string) $log->action)),
-                    'module' => (string) ($log->module ?: '-'),
+                    'action' => $this->formatActivityToken((string) $log->action),
+                    'action_key' => (string) $log->action,
+                    'module' => $this->formatActivityToken((string) ($log->module ?: '-')),
+                    'module_key' => (string) ($log->module ?: '-'),
+                    'label' => (string) ($properties['label'] ?? ''),
+                    'message' => (string) ($properties['message'] ?? $this->formatActivityToken((string) $log->action)),
+                    'details' => $this->activityDetailLines($properties),
+                    'changed_fields' => $this->activityChangedFields($properties),
                     'time' => $log->created_at?->diffForHumans() ?? '-',
+                    'time_text' => $log->created_at?->translatedFormat('d M Y, H:i') ?? '-',
+                    'created_at' => $log->created_at?->toIso8601String(),
                 ];
             })
             ->values()
@@ -1862,6 +1951,103 @@ class AdminDashboardDataService
         return [$start, $end];
     }
 
+    protected function buildCashierDailySeries(
+        Carbon $start,
+        Carbon $end,
+        ?int $packageId = null,
+        ?int $cashierId = null,
+        array $revenueStatuses = [],
+        array $cashierIds = [],
+    ): array {
+        $resolvedStatuses = $revenueStatuses !== [] ? $revenueStatuses : $this->revenueTransactionStatuses();
+
+        $selectedCashierIds = collect($cashierIds)
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->take(6)
+            ->values();
+
+        if ($selectedCashierIds->isEmpty()) {
+            return [
+                'labels' => [],
+                'datasets' => [],
+            ];
+        }
+
+        $cashierRows = User::query()
+            ->whereIn('id', $selectedCashierIds->all())
+            ->get(['id', 'name'])
+            ->keyBy('id');
+
+        $dailyRows = Transaction::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->whereIn('status', $resolvedStatuses)
+            ->whereIn('cashier_id', $selectedCashierIds->all())
+            ->when($cashierId !== null, function (Builder $query) use ($cashierId): void {
+                $query->where('cashier_id', $cashierId);
+            })
+            ->when($packageId !== null, function (Builder $query) use ($packageId): void {
+                $query->whereHas('booking', function (Builder $bookingQuery) use ($packageId): void {
+                    $bookingQuery->where('package_id', $packageId);
+                });
+            })
+            ->selectRaw('DATE(created_at) as period, cashier_id, SUM(paid_amount) as total_revenue')
+            ->groupBy('period', 'cashier_id')
+            ->get();
+
+        $dailyLookup = [];
+
+        foreach ($dailyRows as $row) {
+            $cashierRowId = (int) ($row->cashier_id ?? 0);
+            $period = (string) ($row->period ?? '');
+
+            if ($cashierRowId <= 0 || $period === '') {
+                continue;
+            }
+
+            $dailyLookup[$cashierRowId][$period] = (float) ($row->total_revenue ?? 0);
+        }
+
+        $labels = [];
+        $periodKeys = [];
+        $cursor = $start->copy()->startOfDay();
+
+        while ($cursor->lte($end)) {
+            $labels[] = $cursor->translatedFormat('j M');
+            $periodKeys[] = $cursor->toDateString();
+            $cursor->addDay();
+        }
+
+        $datasets = $selectedCashierIds
+            ->map(function (int $selectedCashierId) use ($cashierRows, $dailyLookup, $periodKeys): array {
+                $cashier = $cashierRows->get($selectedCashierId);
+                $data = [];
+                $totalRevenue = 0.0;
+
+                foreach ($periodKeys as $periodKey) {
+                    $value = (float) ($dailyLookup[$selectedCashierId][$periodKey] ?? 0);
+                    $data[] = $value;
+                    $totalRevenue += $value;
+                }
+
+                return [
+                    'cashier_id' => $selectedCashierId,
+                    'cashier_name' => (string) ($cashier?->name ?? ('Cashier #' . $selectedCashierId)),
+                    'data' => $data,
+                    'total_revenue' => $totalRevenue,
+                    'total_revenue_text' => $this->formatRupiah($totalRevenue),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'labels' => $labels,
+            'datasets' => $datasets,
+        ];
+    }
+
     protected function revenueTransactionStatuses(): array
     {
         return [
@@ -1907,6 +2093,72 @@ class AdminDashboardDataService
     protected function statusLabel(string $status): string
     {
         return ucwords(str_replace('_', ' ', $status));
+    }
+
+    protected function formatActivityToken(string $value): string
+    {
+        $normalized = trim(str_replace(['-', '_'], ' ', $value));
+
+        return $normalized !== '' ? ucwords($normalized) : '-';
+    }
+
+    protected function activityChangedFields(array $properties): array
+    {
+        $fields = $properties['updated_fields'] ?? $properties['changed_fields'] ?? [];
+
+        if (! is_array($fields)) {
+            return [];
+        }
+
+        return collect($fields)
+            ->map(fn ($field): string => $this->formatActivityToken((string) $field))
+            ->filter(fn (string $field): bool => $field !== '-')
+            ->take(6)
+            ->values()
+            ->all();
+    }
+
+    protected function activityDetailLines(array $properties): array
+    {
+        $details = [];
+
+        if (! empty($properties['customer_name'])) {
+            $details[] = 'Customer: ' . (string) $properties['customer_name'];
+        }
+
+        if (! empty($properties['transaction_code'])) {
+            $details[] = 'Transaksi: ' . (string) $properties['transaction_code'];
+        }
+
+        if (! empty($properties['booking_date'])) {
+            $details[] = 'Tanggal booking: ' . (string) $properties['booking_date'];
+        }
+
+        if (! empty($properties['queue_date'])) {
+            $details[] = 'Tanggal antrean: ' . (string) $properties['queue_date'];
+        }
+
+        if (! empty($properties['method'])) {
+            $details[] = 'Metode: ' . strtoupper((string) $properties['method']);
+        }
+
+        if (array_key_exists('amount', $properties)) {
+            $details[] = 'Nominal: ' . $this->formatRupiah((float) $properties['amount']);
+        }
+
+        if (! empty($properties['from_status']) || ! empty($properties['to_status'])) {
+            $details[] = sprintf(
+                'Status: %s -> %s',
+                (string) ($properties['from_status'] ?? '-'),
+                (string) ($properties['to_status'] ?? '-'),
+            );
+        }
+
+        if (! empty($properties['notes'])) {
+            $details[] = 'Catatan: ' . (string) $properties['notes'];
+        }
+
+        return array_slice($details, 0, 4);
     }
 
     protected function formatPeriodLabel(Carbon $date, string $labelFormat): string
