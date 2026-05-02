@@ -19,3 +19,4 @@ Folder ini menyimpan dokumentasi konfigurasi dan perubahan implementasi proyek.
 - `inventory-stock-flow-2026-04-30.md`: dokumentasi pemisahan add-on vs inventory item, mapping konsumsi, auto deduction saat verifikasi booking, dan endpoint stock baru.
 - `desktop-pos-api-integration-2026-05-01.md`: dokumentasi integrasi Flutter desktop POS dengan API Laravel, checkout walk-in, verifikasi booking, dan print struk.
 - `admin-history-dashboard-reports-2026-05-02.md`: dokumentasi perubahan dashboard admin minimal, History Perubahan, report cashier daily, export Excel, dan badge queue total waiting.
+- `admin-refactor-roadmap.md`: status boundary refactor backend/frontend admin dan owner service per modul.

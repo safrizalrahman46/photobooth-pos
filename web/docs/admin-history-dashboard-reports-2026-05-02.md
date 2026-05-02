@@ -64,6 +64,19 @@
   - `package_id`
   - `cashier_id`
 - `AdminDashboardDataService::reportSummary()` diperluas dengan `cashier_daily_series` agar report dan dashboard bisa memakai sumber data yang sama.
+- Batch refactor awal memindahkan owner logic analytics/report ke `app/Services/ReportService.php`, sementara `AdminDashboardDataService` tetap menjadi wrapper agar bootstrap payload dan endpoint admin tidak berubah.
+- Batch refactor lanjutan memindahkan owner read payload ke service domain masing-masing:
+  - `BookingReadService`
+  - `TransactionReadService`
+  - `ActivityLogger::recentRows()`
+  - `AdminQueuePageService::snapshot()`
+  - `InventoryService::managementPayload()`
+  - `AdminPackageService::managementRows()`
+  - `AdminAddOnService::managementRows()`
+  - `AdminDesignService::managementRows()`
+  - `AdminUserService::rows()` / `roleOptions()`
+  - service existing untuk branches, time slots, blackout dates, printer settings, dan payments
+- Setelah pemindahan ini, `AdminDashboardDataService` difungsikan ulang sebagai bootstrap aggregator tipis, bukan lagi lokasi utama query lintas modul.
 - Chart performa cashier dibuat sebagai stacked bar per hari. Donut chart tidak dipakai.
 - Export Excel dilakukan dari data report aktif di frontend, jadi tidak menambah request/endpoint baru.
 
@@ -117,6 +130,7 @@
   - `TransactionsPage`
   - `ReportsPage`
   - `ActivityLogsPage`
+- Fetch-on-enter modul admin sekarang juga mulai dirapikan melalui `resources/js/admin/moduleRegistry.js` agar watcher `activeModuleId` tidak lagi berulang untuk setiap modul.
 - `StackedBarChart.vue` tidak lagi mengimpor `chart.js` secara eager saat load awal admin.
 - `RevenueOverviewChart.vue` juga memakai dynamic import `chart.js` agar dashboard tetap ringan saat initial load app.
 - `chart.js/auto` baru di-load saat komponen chart benar-benar dipakai.

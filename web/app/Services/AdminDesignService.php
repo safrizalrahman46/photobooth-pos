@@ -86,6 +86,54 @@ class AdminDesignService
         $designCatalog->delete();
     }
 
+    public function managementRows(): array
+    {
+        $startOfMonth = now()->startOfMonth()->toDateString();
+        $endOfMonth = now()->toDateString();
+
+        return DesignCatalog::query()
+            ->with(['package:id,name'])
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->withCount([
+                'bookings as total_bookings',
+                'bookings as this_month_bookings' => function ($query) use ($startOfMonth, $endOfMonth): void {
+                    $query->whereBetween('booking_date', [$startOfMonth, $endOfMonth]);
+                },
+            ])
+            ->get([
+                'id',
+                'package_id',
+                'code',
+                'name',
+                'theme',
+                'preview_url',
+                'is_active',
+                'sort_order',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function (DesignCatalog $design): array {
+                return [
+                    'id' => (int) $design->id,
+                    'package_id' => $design->package_id ? (int) $design->package_id : null,
+                    'package_name' => (string) ($design->package?->name ?? '-'),
+                    'code' => (string) $design->code,
+                    'name' => (string) $design->name,
+                    'theme' => (string) ($design->theme ?? ''),
+                    'preview_url' => (string) ($design->preview_url ?? ''),
+                    'is_active' => (bool) $design->is_active,
+                    'sort_order' => (int) $design->sort_order,
+                    'total_bookings' => (int) ($design->total_bookings ?? 0),
+                    'this_month_bookings' => (int) ($design->this_month_bookings ?? 0),
+                    'created_at' => $design->created_at?->toIso8601String(),
+                    'updated_at' => $design->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
     private function nextCode(): string
     {
         $cursor = ((int) DesignCatalog::withTrashed()->max('id')) + 1;

@@ -2,8 +2,12 @@
 
 namespace App\Filament\Pages;
 
+use App\Services\ActivityLogger;
 use App\Services\AdminDashboardDataService;
 use App\Services\AdminQueuePageService;
+use App\Services\BookingReadService;
+use App\Services\ReportService;
+use App\Services\TransactionReadService;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Support\Htmlable;
 
@@ -42,19 +46,27 @@ class AdminDashboard extends Page
         $service = app(AdminDashboardDataService::class);
         /** @var AdminQueuePageService $queuePageService */
         $queuePageService = app(AdminQueuePageService::class);
-        $paginator = $service->paginatedRows('', 'all', 15);
+        /** @var BookingReadService $bookingReadService */
+        $bookingReadService = app(BookingReadService::class);
+        /** @var ReportService $reportService */
+        $reportService = app(ReportService::class);
+        /** @var TransactionReadService $transactionReadService */
+        $transactionReadService = app(TransactionReadService::class);
+        /** @var ActivityLogger $activityLogger */
+        $activityLogger = app(ActivityLogger::class);
+        $paginator = $bookingReadService->paginatedRows('', 'all', 15);
 
         return [
-            'initialStats' => $service->stats(),
-            'summaryCards' => $service->summaryCards(),
-            'revenueOverview' => $service->revenueOverview(),
-            'ownerHighlights' => $service->ownerHighlights(),
+            'initialStats' => $reportService->stats(),
+            'summaryCards' => $reportService->summaryCards(),
+            'revenueOverview' => $reportService->revenueOverview(),
+            'ownerHighlights' => $reportService->ownerHighlights(),
             'ownerModules' => $service->ownerModules(),
             'queueLive' => $queuePageService->live(),
             'queueBookingOptions' => $queuePageService->bookingOptions(),
-            'recentTransactions' => $service->recentTransactions(),
-            'recentActivities' => $service->recentActivities(),
-            'queueSnapshot' => $service->queueSnapshot(),
+            'recentTransactions' => $transactionReadService->recentDetailed(),
+            'recentActivities' => $activityLogger->recentRows(),
+            'queueSnapshot' => $queuePageService->snapshot(),
             'initialRows' => $paginator->items(),
             'initialPagination' => [
                 'current_page' => $paginator->currentPage(),

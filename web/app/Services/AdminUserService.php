@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 class AdminUserService
 {
@@ -122,6 +123,61 @@ class AdminUserService
         );
 
         $user->delete();
+    }
+
+    public function rows(): array
+    {
+        return User::query()
+            ->with(['roles:id,name'])
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'email',
+                'phone',
+                'is_active',
+                'last_login_at',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function (User $user): array {
+                $roleName = (string) ($user->roles->first()?->name ?? 'staff');
+
+                return [
+                    'id' => (int) $user->id,
+                    'name' => (string) $user->name,
+                    'email' => (string) $user->email,
+                    'phone' => (string) ($user->phone ?? ''),
+                    'role' => ucfirst($roleName),
+                    'role_key' => strtolower($roleName),
+                    'status' => $user->is_active ? 'active' : 'inactive',
+                    'is_active' => (bool) $user->is_active,
+                    'source' => 'database',
+                    'last_login_at' => $user->last_login_at?->toIso8601String(),
+                    'created_at' => $user->created_at?->toIso8601String(),
+                    'updated_at' => $user->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function roleOptions(): array
+    {
+        return Role::query()
+            ->where('guard_name', 'web')
+            ->orderBy('name')
+            ->get(['name'])
+            ->map(function (Role $role): array {
+                $name = (string) $role->name;
+
+                return [
+                    'value' => $name,
+                    'label' => ucfirst($name),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     private function ensureOwnerSafety(User $user, string $currentRole, string $nextRole, bool $nextIsActive): void

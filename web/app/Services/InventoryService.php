@@ -21,6 +21,172 @@ class InventoryService
         private readonly ActivityLogger $activityLogger,
     ) {}
 
+    public function managementPayload(): array
+    {
+        return [
+            'inventory_items' => $this->itemRows(),
+            'inventory_movements' => $this->movementRows(),
+        ];
+    }
+
+    public function itemRows(): array
+    {
+        return InventoryItem::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get([
+                'id',
+                'code',
+                'name',
+                'unit',
+                'available_stock',
+                'low_stock_threshold',
+                'is_active',
+                'sort_order',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function (InventoryItem $item): array {
+                return [
+                    'id' => (int) $item->id,
+                    'code' => (string) $item->code,
+                    'name' => (string) $item->name,
+                    'unit' => (string) ($item->unit ?? 'pcs'),
+                    'available_stock' => max(0, (int) $item->available_stock),
+                    'low_stock_threshold' => max(0, (int) $item->low_stock_threshold),
+                    'is_active' => (bool) $item->is_active,
+                    'sort_order' => (int) $item->sort_order,
+                    'created_at' => $item->created_at?->toIso8601String(),
+                    'updated_at' => $item->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function movementRows(int $limit = 100): array
+    {
+        return InventoryMovement::query()
+            ->with(['inventoryItem:id,code,name,unit', 'actor:id,name'])
+            ->latest()
+            ->limit(max(1, min($limit, 500)))
+            ->get([
+                'id',
+                'inventory_item_id',
+                'movement_type',
+                'qty',
+                'stock_before',
+                'stock_after',
+                'source_type',
+                'source_id',
+                'source_ref',
+                'notes',
+                'moved_by',
+                'created_at',
+            ])
+            ->map(function (InventoryMovement $movement): array {
+                return [
+                    'id' => (int) $movement->id,
+                    'inventory_item_id' => (int) $movement->inventory_item_id,
+                    'inventory_item_code' => (string) ($movement->inventoryItem?->code ?? ''),
+                    'inventory_item_name' => (string) ($movement->inventoryItem?->name ?? '-'),
+                    'unit' => (string) ($movement->inventoryItem?->unit ?? 'pcs'),
+                    'movement_type' => (string) $movement->movement_type,
+                    'qty' => (int) $movement->qty,
+                    'stock_before' => (int) $movement->stock_before,
+                    'stock_after' => (int) $movement->stock_after,
+                    'source_type' => (string) ($movement->source_type ?? ''),
+                    'source_id' => $movement->source_id ? (int) $movement->source_id : null,
+                    'source_ref' => (string) ($movement->source_ref ?? ''),
+                    'notes' => (string) ($movement->notes ?? ''),
+                    'actor_name' => (string) ($movement->actor?->name ?? 'System'),
+                    'created_at' => $movement->created_at?->toIso8601String(),
+                    'created_at_text' => $movement->created_at?->format('d M Y H:i') ?? '-',
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function mapAddOnInventoryItems(AddOn $addOn): array
+    {
+        return collect($addOn->inventoryItems ?? [])
+            ->map(function (InventoryItem $item): array {
+                return [
+                    'inventory_item_id' => (int) $item->id,
+                    'code' => (string) $item->code,
+                    'name' => (string) $item->name,
+                    'unit' => (string) ($item->unit ?? 'pcs'),
+                    'available_stock' => max(0, (int) $item->available_stock),
+                    'low_stock_threshold' => max(0, (int) $item->low_stock_threshold),
+                    'is_active' => (bool) $item->is_active,
+                    'qty_per_unit' => max(1, (int) ($item->pivot?->qty_per_unit ?? 1)),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function mapPackageInventoryItems(Package $package): array
+    {
+        return collect($package->inventoryItems ?? [])
+            ->map(function (InventoryItem $item): array {
+                return [
+                    'inventory_item_id' => (int) $item->id,
+                    'code' => (string) $item->code,
+                    'name' => (string) $item->name,
+                    'unit' => (string) ($item->unit ?? 'pcs'),
+                    'qty_per_booking' => max(1, (int) ($item->pivot?->qty_per_booking ?? 1)),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function effectiveAvailableStock(array $inventoryItems): ?int
+    {
+        if ($inventoryItems === []) {
+            return null;
+        }
+
+        $quantities = collect($inventoryItems)
+            ->map(function (array $item): int {
+                if (! (bool) ($item['is_active'] ?? false)) {
+                    return 0;
+                }
+
+                $availableStock = max(0, (int) ($item['available_stock'] ?? 0));
+                $qtyPerUnit = max(1, (int) ($item['qty_per_unit'] ?? 1));
+
+                return intdiv($availableStock, $qtyPerUnit);
+            })
+            ->values();
+
+        return $quantities->isEmpty() ? null : (int) $quantities->min();
+    }
+
+    public function effectiveStockTone(array $inventoryItems, ?int $effectiveStock): array
+    {
+        if ($effectiveStock === null) {
+            return ['status' => 'untracked', 'label' => 'Not mapped'];
+        }
+
+        if ($effectiveStock <= 0) {
+            return ['status' => 'out', 'label' => 'Out'];
+        }
+
+        $hasLowComponent = collect($inventoryItems)->contains(function (array $item): bool {
+            return (bool) ($item['is_active'] ?? false)
+                && max(0, (int) ($item['available_stock'] ?? 0)) <= max(0, (int) ($item['low_stock_threshold'] ?? 0));
+        });
+
+        if ($hasLowComponent) {
+            return ['status' => 'low', 'label' => 'Low'];
+        }
+
+        return ['status' => 'ready', 'label' => 'Ready'];
+    }
+
     public function syncAddOnConsumptions(AddOn $addOn, array $rows): void
     {
         $syncData = $this->normalizeConsumptionRows($rows, 'qty_per_unit');

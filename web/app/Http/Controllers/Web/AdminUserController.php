@@ -6,25 +6,24 @@ use App\Http\Requests\AdminStoreUserRequest;
 use App\Http\Requests\AdminUpdateUserRequest;
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\AdminDashboardDataService;
 use App\Services\AdminUserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AdminUserController extends Controller
 {
-    public function index(AdminDashboardDataService $service): JsonResponse
+    public function index(AdminUserService $service): JsonResponse
     {
         return response()->json([
             'success' => true,
             'data' => [
-                'users' => $service->userManagementRows(),
-                'roles' => $service->userRoleOptions(),
+                'users' => $service->rows(),
+                'roles' => $service->roleOptions(),
             ],
         ]);
     }
 
-    public function store(AdminStoreUserRequest $request, AdminUserService $userService, AdminDashboardDataService $service): JsonResponse
+    public function store(AdminStoreUserRequest $request, AdminUserService $userService): JsonResponse
     {
         abort_unless($request->user()?->hasRole('owner'), 403);
 
@@ -34,8 +33,8 @@ class AdminUserController extends Controller
             'success' => true,
             'message' => 'User created successfully.',
             'data' => [
-                'users' => $service->userManagementRows(),
-                'roles' => $service->userRoleOptions(),
+                'users' => $userService->rows(),
+                'roles' => $userService->roleOptions(),
             ],
         ], 201);
     }
@@ -44,7 +43,6 @@ class AdminUserController extends Controller
         AdminUpdateUserRequest $request,
         User $user,
         AdminUserService $userService,
-        AdminDashboardDataService $service,
     ): JsonResponse {
         abort_unless($request->user()?->hasRole('owner'), 403);
 
@@ -54,8 +52,8 @@ class AdminUserController extends Controller
             'success' => true,
             'message' => 'User updated successfully.',
             'data' => [
-                'users' => $service->userManagementRows(),
-                'roles' => $service->userRoleOptions(),
+                'users' => $userService->rows(),
+                'roles' => $userService->roleOptions(),
             ],
         ]);
     }
@@ -64,7 +62,6 @@ class AdminUserController extends Controller
         Request $request,
         User $user,
         AdminUserService $userService,
-        AdminDashboardDataService $service,
     ): JsonResponse {
         abort_unless($request->user()?->hasRole('owner'), 403);
 
@@ -74,8 +71,8 @@ class AdminUserController extends Controller
             'success' => true,
             'message' => 'User deleted successfully.',
             'data' => [
-                'users' => $service->userManagementRows(),
-                'roles' => $service->userRoleOptions(),
+                'users' => $userService->rows(),
+                'roles' => $userService->roleOptions(),
             ],
         ]);
     }

@@ -269,6 +269,60 @@ class AdminQueuePageService
             ->all();
     }
 
+    public function snapshot(int $limit = 6): array
+    {
+        $live = $this->live();
+        $rows = [];
+        $seenTicketIds = [];
+
+        $current = $live['current'] ?? null;
+        if (is_array($current)) {
+            $currentStatus = (string) ($current['status'] ?? '');
+
+            if (in_array($currentStatus, [
+                QueueStatus::InSession->value,
+                QueueStatus::Called->value,
+                QueueStatus::CheckedIn->value,
+            ], true)) {
+                $currentTicketId = (int) ($current['ticket_id'] ?? 0);
+                if ($currentTicketId > 0) {
+                    $seenTicketIds[$currentTicketId] = true;
+                }
+
+                $rows[] = [
+                    'queue_code' => (string) ($current['queue_code'] ?? '-'),
+                    'queue_number' => (int) ($current['queue_number'] ?? 0),
+                    'customer_name' => (string) ($current['customer_name'] ?? '-'),
+                    'status' => $currentStatus,
+                ];
+            }
+        }
+
+        foreach (($live['waiting'] ?? []) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $ticketId = (int) ($item['ticket_id'] ?? 0);
+            if ($ticketId > 0 && isset($seenTicketIds[$ticketId])) {
+                continue;
+            }
+
+            $rows[] = [
+                'queue_code' => (string) ($item['queue_code'] ?? '-'),
+                'queue_number' => (int) ($item['queue_number'] ?? 0),
+                'customer_name' => (string) ($item['customer_name'] ?? '-'),
+                'status' => (string) ($item['status'] ?? QueueStatus::Waiting->value),
+            ];
+
+            if ($ticketId > 0) {
+                $seenTicketIds[$ticketId] = true;
+            }
+        }
+
+        return array_slice($rows, 0, max(1, $limit));
+    }
+
     private function nextQueueStatus(string $status): ?string
     {
         return match ($status) {
