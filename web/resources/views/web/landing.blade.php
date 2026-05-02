@@ -106,11 +106,11 @@
         .font-display { font-family: ui-sans-serif, system-ui, sans-serif; }
         
         .animate-marquee-left { 
-            animation: marquee-left 30s linear infinite; 
+            animation: marquee-left 150s linear infinite; 
             will-change: transform;
         }
         .animate-marquee-right { 
-            animation: marquee-right 30s linear infinite; 
+            animation: marquee-right 150s linear infinite; 
             will-change: transform;
         }
         
@@ -171,11 +171,12 @@
     </header>
 
     <!-- MARQUEE GALLERY -->
-    <section id="home" class="bg-background py-6 space-y-4 scroll-mt-24 overflow-hidden">
+    <!-- MARQUEE GALLERY -->
+    <section id="home" class="w-full bg-background py-6 space-y-4 scroll-mt-24 overflow-hidden">
         <!-- Row A -->
         <div class="relative overflow-hidden">
             <div class="flex w-max animate-marquee-left gap-4">
-                @foreach(array_merge($marqueeRowA, $marqueeRowA) as $i => $item)
+                @foreach(array_merge($marqueeRowA, $marqueeRowA, $marqueeRowA, $marqueeRowA, $marqueeRowA, $marqueeRowA, $marqueeRowA, $marqueeRowA, $marqueeRowA, $marqueeRowA) as $i => $item)
                     <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
                         <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
@@ -186,7 +187,7 @@
         <!-- Row B -->
         <div class="relative overflow-hidden">
             <div class="flex w-max animate-marquee-right gap-4">
-                @foreach(array_merge($marqueeRowB, $marqueeRowB) as $i => $item)
+                @foreach(array_merge($marqueeRowB, $marqueeRowB, $marqueeRowB, $marqueeRowB, $marqueeRowB, $marqueeRowB, $marqueeRowB, $marqueeRowB, $marqueeRowB, $marqueeRowB) as $i => $item)
                     <button type="button" onclick="openLightbox('{{ $item['src'] }}', '{{ $item['package'] }}', '{{ $item['price'] }}')" class="relative h-[16rem] md:h-[28rem] w-[16rem] md:w-[28rem] shrink-0 overflow-hidden rounded-2xl bg-memphis-blue-soft cursor-zoom-in group">
                         <img src="{{ $item['src'] }}" alt="{{ $item['package'] }} {{ $i + 1 }}" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </button>
@@ -250,9 +251,9 @@
             </p>
         </div>
 
-        <div class="relative overflow-hidden">
+        <div class="relative overflow-hidden w-full">
             <div class="flex w-max animate-marquee-left gap-4">
-                @foreach(array_merge($marqueeRowC, $marqueeRowC) as $i => $item)
+                @foreach(array_merge($marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC) as $i => $item)
                     @php
                         $isVideo = str_ends_with($item['src'], '.mp4') || str_ends_with($item['src'], '.webm');
                     @endphp
