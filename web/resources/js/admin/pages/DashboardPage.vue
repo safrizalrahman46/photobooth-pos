@@ -20,7 +20,7 @@ const props = defineProps({
     formatRupiah: { type: Function, required: true },
 });
 
-const emit = defineEmits(['set-revenue-period']);
+const emit = defineEmits(['set-revenue-period', 'open-queue']);
 
 const resolveHighlightTone = (tone) => {
     const normalized = String(tone || '').toLowerCase();
@@ -142,10 +142,13 @@ const bookingChartData = () => props.revenueSeries.map((point) => Number(point?.
                     <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#2563EB]">Queue Monitor</p>
                     <h3 class="mt-1 text-[1.45rem] font-bold text-[#0F172A]">Pantau antrian aktif dalam satu panel</h3>
                 </div>
-                <div class="flex flex-wrap gap-2 text-xs">
+                <div class="flex flex-wrap items-center gap-2 text-xs">
                     <span class="rounded-full bg-[#EFF6FF] px-3 py-1 font-semibold text-[#2563EB]">Waiting {{ queueStats.waiting || 0 }}</span>
                     <span class="rounded-full bg-[#F5F3FF] px-3 py-1 font-semibold text-[#7C3AED]">In Session {{ queueStats.in_session || 0 }}</span>
                     <span class="rounded-full bg-[#ECFDF5] px-3 py-1 font-semibold text-[#059669]">Done {{ queueStats.completed_today || 0 }}</span>
+                    <button type="button" class="rounded-full bg-[#0F172A] px-3 py-1 font-semibold text-white transition hover:bg-[#1E293B]" @click="emit('open-queue')">
+                        Buka Queue
+                    </button>
                 </div>
             </div>
 

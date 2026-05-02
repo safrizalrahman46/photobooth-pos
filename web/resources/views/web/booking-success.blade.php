@@ -66,7 +66,7 @@
         ],
         'routes' => [
             'landing' => route('landing'),
-            'booking' => route('booking.create'),
+            'booking' => route('booking.customer'),
             'admin' => route('admin.login'),
             'queueBoard' => route('queue.board'),
         ],
@@ -77,7 +77,7 @@
         'site' => [
             'brand_name' => $general['brand_name'] ?? config('app.name', 'Ready To Pict'),
             'short_name' => $general['short_name'] ?? 'Studio',
-            'logo_url' => $general['logo_url'] ?? '/favicon.ico',
+            'logo_url' => $general['logo_url'] ?? asset('images/logo/logo.png'),
         ],
     ];
 @endphp

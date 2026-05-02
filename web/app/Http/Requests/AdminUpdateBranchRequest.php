@@ -22,8 +22,8 @@ class AdminUpdateBranchRequest extends FormRequest
             'timezone' => ['nullable', 'string', 'max:64'],
             'phone' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string', 'max:500'],
+            'payment_qr_url' => ['nullable', 'url', 'max:2048'],
             'is_active' => ['nullable', 'boolean'],
         ];
     }
 }
-

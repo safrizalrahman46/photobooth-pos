@@ -10,18 +10,22 @@ const props = defineProps({
     reportLoading: { type: Boolean, default: false },
     reportSummaryCards: { type: Array, default: () => [] },
     reportDailyRows: { type: Array, default: () => [] },
-    reportStatusRows: { type: Array, default: () => [] },
     reportPackageRows: { type: Array, default: () => [] },
     reportCashierRows: { type: Array, default: () => [] },
     reportAddOnRows: { type: Array, default: () => [] },
     reportPackageOptions: { type: Array, default: () => [] },
     reportCashierOptions: { type: Array, default: () => [] },
     reportRangeLabel: { type: String, default: '' },
-    reportCashierChartLabels: { type: Array, default: () => [] },
-    reportCashierChartDatasets: { type: Array, default: () => [] },
+    reportChartModes: { type: Array, default: () => [] },
+    reportChartMode: { type: String, default: '' },
+    reportChartDescription: { type: String, default: '' },
+    reportChartLabels: { type: Array, default: () => [] },
+    reportChartDatasets: { type: Array, default: () => [] },
+    reportChartStacked: { type: Boolean, default: false },
+    reportChartValueMode: { type: String, default: 'currency' },
 });
 
-const emit = defineEmits(['export-report']);
+const emit = defineEmits(['export-report', 'update:report-chart-mode']);
 
 const hasReportData = computed(() => {
     return Boolean(
@@ -117,30 +121,39 @@ const hasReportData = computed(() => {
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.25fr)_360px]">
+        <div class="grid grid-cols-1 gap-5">
             <div class="rounded-3xl border p-5" style="border-color: #DCFCE7; background: #FFFFFF; box-shadow: 0 1px 3px rgba(21,128,61,0.08), 0 8px 20px rgba(21,128,61,0.08);">
-                <h3 class="text-sm font-semibold text-[#1F2937]">Cashier Performance per Hari</h3>
-                <p class="mt-1 text-xs text-[#94A3B8]">Stacked bar tanpa donut chart, sesuai periode filter aktif.</p>
+                <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-[#1F2937]">Insight Chart</h3>
+                        <p class="mt-1 text-xs text-[#94A3B8]">Pilih metrik untuk melihat pola performa yang berbeda.</p>
+                    </div>
+
+                    <label class="block text-xs text-[#94A3B8]">
+                        Chart Mode
+                        <select :value="reportChartMode" class="mt-1 w-full rounded-xl border px-3 py-2 text-sm md:w-[280px]" style="border-color: #E2E8F0;" @change="emit('update:report-chart-mode', $event.target.value)">
+                            <option v-for="mode in reportChartModes" :key="`report-chart-mode-${mode.key}`" :value="mode.key">
+                                {{ mode.label }}
+                            </option>
+                        </select>
+                    </label>
+                </div>
+
+                <p v-if="reportChartDescription" class="mb-3 text-xs text-[#64748B]">{{ reportChartDescription }}</p>
+
+                <h3 class="text-sm font-semibold text-[#1F2937]">Insight Chart</h3>
+                <p class="mt-1 text-xs text-[#94A3B8]">Grafik analitik mengikuti mode chart yang sedang dipilih.</p>
 
                 <div v-if="reportLoading" class="py-16 text-center text-sm text-[#94A3B8]">Loading report...</div>
                 <StackedBarChart
                     v-else
-                    :labels="reportCashierChartLabels"
-                    :datasets="reportCashierChartDatasets"
+                    :labels="reportChartLabels"
+                    :datasets="reportChartDatasets"
+                    :stacked="reportChartStacked"
+                    :value-mode="reportChartValueMode"
                     :height="320"
-                    empty-label="Belum ada pendapatan cashier pada periode ini."
+                    empty-label="Belum ada data untuk mode chart ini pada periode aktif."
                 />
-            </div>
-
-            <div class="rounded-3xl border p-5" style="border-color: #DCFCE7; background: #FFFFFF; box-shadow: 0 1px 3px rgba(21,128,61,0.08), 0 8px 20px rgba(21,128,61,0.08);">
-                <h3 class="text-sm font-semibold text-[#1F2937]">Booking Status Mix</h3>
-                <div class="mt-3 space-y-2">
-                    <div v-for="status in reportStatusRows" :key="`report-status-${status.status}`" class="flex items-center justify-between rounded-2xl px-3 py-2" style="background: #F8FAFC;">
-                        <span class="text-xs text-[#64748B]">{{ status.label }}</span>
-                        <span class="text-xs font-semibold text-[#1F2937]">{{ status.count }}</span>
-                    </div>
-                    <p v-if="!reportStatusRows.length" class="text-xs text-[#94A3B8]">No status data available.</p>
-                </div>
             </div>
         </div>
 

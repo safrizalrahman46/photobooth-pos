@@ -53,6 +53,7 @@ const manualPaymentEnabled = computed(() => {
 
 const qrImageUrl = computed(() => {
     const candidates = [
+        props.branch?.payment_qr_url,
         props.paymentSettings.qr_image_url,
         props.paymentSettings.qris_image_url,
         props.paymentSettings.qr_url,

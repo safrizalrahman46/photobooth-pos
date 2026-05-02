@@ -18,6 +18,14 @@ const props = defineProps({
         type: String,
         default: 'Belum ada data untuk ditampilkan.',
     },
+    stacked: {
+        type: Boolean,
+        default: true,
+    },
+    valueMode: {
+        type: String,
+        default: 'currency',
+    },
 });
 
 const canvasRef = ref(null);
@@ -27,6 +35,14 @@ let ChartModule = null;
 
 const formatRupiah = (amount) => {
     return `Rp ${Number(amount || 0).toLocaleString('id-ID')}`;
+};
+
+const formatValue = (value) => {
+    if (props.valueMode === 'number') {
+        return Number(value || 0).toLocaleString('id-ID');
+    }
+
+    return formatRupiah(value);
 };
 
 const hasData = computed(() => {
@@ -84,7 +100,7 @@ const renderChart = async () => {
                 borderWidth: 1,
                 borderRadius: 8,
                 borderSkipped: false,
-                stack: 'cashier-performance',
+                stack: props.stacked ? 'admin-analytics' : undefined,
             })),
         },
         options: {
@@ -96,7 +112,7 @@ const renderChart = async () => {
             },
             scales: {
                 x: {
-                    stacked: true,
+                    stacked: props.stacked,
                     grid: {
                         display: false,
                     },
@@ -105,14 +121,14 @@ const renderChart = async () => {
                     },
                 },
                 y: {
-                    stacked: true,
+                    stacked: props.stacked,
                     beginAtZero: true,
                     grid: {
                         color: 'rgba(148, 163, 184, 0.18)',
                     },
                     ticks: {
                         color: '#64748B',
-                        callback: (value) => formatRupiah(value),
+                        callback: (value) => formatValue(value),
                     },
                 },
             },
@@ -128,7 +144,7 @@ const renderChart = async () => {
                 },
                 tooltip: {
                     callbacks: {
-                        label: (context) => `${context.dataset.label}: ${formatRupiah(context.parsed.y)}`,
+                        label: (context) => `${context.dataset.label}: ${formatValue(context.parsed.y)}`,
                     },
                 },
             },
@@ -139,7 +155,7 @@ const renderChart = async () => {
 };
 
 watch(
-    () => [props.labels, props.datasets],
+    () => [props.labels, props.datasets, props.stacked, props.valueMode],
     () => {
         renderChart();
     },

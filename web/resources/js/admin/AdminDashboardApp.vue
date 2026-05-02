@@ -417,6 +417,7 @@ let debounceTimer = null;
 let reportDebounceTimer = null;
 let activeRequestController = null;
 let queueRefreshInterval = null;
+let bookingsRefreshInterval = null;
 
 const filterTabs = computed(() => {
     const source = Array.isArray(props.uiConfig?.booking_filter_tabs)
@@ -546,6 +547,16 @@ const sidebarBrandName = computed(() => {
 });
 
 const sidebarDashboardLabel = computed(() => {
+    const role = String(props.currentUser?.role || '').trim().toLowerCase();
+
+    if (role === 'owner') {
+        return 'Owner Dashboard';
+    }
+
+    if (role === 'cashier') {
+        return 'Cashier Dashboard';
+    }
+
     const value = String(props.brand?.dashboard_label || '').trim();
 
     return value || 'Dashboard';
@@ -703,6 +714,7 @@ const navBadgeFor = (itemId) => {
 
 const disabledSidebarItemIds = new Set([
     'designs',
+    'payments',
     'settings',
     'app-settings',
 ]);
@@ -780,6 +792,10 @@ const activeModuleId = computed(() => {
 
     return matched?.id || fallback;
 });
+
+const topSearchModuleIds = new Set(['bookings', 'activity-logs']);
+
+const showTopbarSearchButton = computed(() => topSearchModuleIds.has(String(activeModuleId.value || '')));
 
 const syncRoutePathFromWindow = () => {
     if (typeof window === 'undefined') {
@@ -1360,6 +1376,41 @@ const filteredActivityRows = computed(() => {
     });
 });
 
+watch(activeModuleId, (nextValue) => {
+    const moduleId = String(nextValue || '');
+
+    if (!topSearchModuleIds.has(moduleId)) {
+        showTopSearch.value = false;
+        topSearchValue.value = '';
+        return;
+    }
+
+    if (moduleId === 'bookings') {
+        topSearchValue.value = String(search.value || '');
+        return;
+    }
+
+    if (moduleId === 'activity-logs') {
+        topSearchValue.value = String(activitySearch.value || '');
+    }
+}, { immediate: true });
+
+watch(topSearchValue, (value) => {
+    if (activeModuleId.value === 'bookings' && String(search.value || '') !== String(value || '')) {
+        search.value = String(value || '');
+    }
+
+    if (activeModuleId.value === 'activity-logs' && String(activitySearch.value || '') !== String(value || '')) {
+        activitySearch.value = String(value || '');
+    }
+});
+
+watch(activitySearch, (value) => {
+    if (activeModuleId.value === 'activity-logs' && String(topSearchValue.value || '') !== String(value || '')) {
+        topSearchValue.value = String(value || '');
+    }
+});
+
 const settingsTabs = computed(() => {
     const source = Array.isArray(props.uiConfig?.settings_tabs)
         ? props.uiConfig.settings_tabs
@@ -1417,6 +1468,7 @@ const reportFilters = ref({
     package_id: '',
     cashier_id: '',
 });
+const reportChartMode = ref('cashier_revenue_per_day');
 const reportLoading = ref(false);
 const reportError = ref('');
 const reportData = ref(null);
@@ -1715,6 +1767,42 @@ const reportCashierChartDatasets = computed(() => {
         borderColor: cashierChartPalette[index % cashierChartPalette.length],
     }));
 });
+
+const reportChartModes = computed(() => {
+    const source = Array.isArray(reportData.value?.chart_modes) ? reportData.value.chart_modes : [];
+
+    return source.map((mode) => ({
+        key: String(mode.key || '').trim(),
+        label: String(mode.label || mode.key || 'Chart'),
+        description: String(mode.description || ''),
+    })).filter((mode) => mode.key !== '');
+});
+
+const selectedReportChart = computed(() => {
+    const source = Array.isArray(reportData.value?.chart_modes) ? reportData.value.chart_modes : [];
+    const selected = source.find((mode) => String(mode.key || '') === String(reportChartMode.value || ''));
+
+    return selected || source[0] || null;
+});
+
+const reportChartLabels = computed(() => {
+    return Array.isArray(selectedReportChart.value?.labels) ? selectedReportChart.value.labels : [];
+});
+
+const reportChartDatasets = computed(() => {
+    const source = Array.isArray(selectedReportChart.value?.datasets) ? selectedReportChart.value.datasets : [];
+
+    return source.map((dataset, index) => ({
+        label: String(dataset.label || `Series ${index + 1}`),
+        data: Array.isArray(dataset.data) ? dataset.data.map((value) => Number(value || 0)) : [],
+        backgroundColor: String(dataset.backgroundColor || cashierChartPalette[index % cashierChartPalette.length]),
+        borderColor: String(dataset.borderColor || cashierChartPalette[index % cashierChartPalette.length]),
+    }));
+});
+
+const reportChartDescription = computed(() => String(selectedReportChart.value?.description || '').trim());
+const reportChartStacked = computed(() => Boolean(selectedReportChart.value?.stacked));
+const reportChartValueMode = computed(() => String(selectedReportChart.value?.value_mode || 'currency'));
 
 const exportReport = async () => {
     if (!reportData.value) {
@@ -2179,6 +2267,29 @@ const stopQueueAutoRefresh = () => {
 
     clearInterval(queueRefreshInterval);
     queueRefreshInterval = null;
+};
+
+const startBookingsAutoRefresh = () => {
+    if (bookingsRefreshInterval) {
+        return;
+    }
+
+    bookingsRefreshInterval = setInterval(() => {
+        if (activeModuleId.value !== 'bookings') {
+            return;
+        }
+
+        fetchRows(Number(pagination.value.current_page || 1), { silent: true });
+    }, 12000);
+};
+
+const stopBookingsAutoRefresh = () => {
+    if (!bookingsRefreshInterval) {
+        return;
+    }
+
+    clearInterval(bookingsRefreshInterval);
+    bookingsRefreshInterval = null;
 };
 
 const fetchPackagesData = async () => {
@@ -3016,6 +3127,10 @@ const moduleRegistry = computed(() => buildAdminModuleRegistry({
     reportFilters,
     setDefaultReportRange,
     fetchReportSummary,
+    pagination,
+    fetchRows,
+    startBookingsAutoRefresh,
+    stopBookingsAutoRefresh,
     packages,
     packageLoading,
     fetchPackagesData,
@@ -3477,7 +3592,7 @@ const resolveActivityTone = (module) => {
     return { bg: '#F8FAFC', color: '#64748B' };
 };
 
-const fetchRows = async (page = 1) => {
+const fetchRows = async (page = 1, { silent = false } = {}) => {
     if (!props.dataUrl) {
         return;
     }
@@ -3488,7 +3603,10 @@ const fetchRows = async (page = 1) => {
 
     const controller = new AbortController();
     activeRequestController = controller;
-    loading.value = true;
+
+    if (!silent) {
+        loading.value = true;
+    }
 
     try {
         const params = new URLSearchParams();
@@ -3537,7 +3655,10 @@ const fetchRows = async (page = 1) => {
     } finally {
         if (activeRequestController === controller) {
             activeRequestController = null;
-            loading.value = false;
+
+            if (!silent) {
+                loading.value = false;
+            }
         }
     }
 };
@@ -3609,6 +3730,23 @@ watch(
     },
 );
 
+watch(reportChartModes, (modes) => {
+    if (!modes.length) {
+        reportChartMode.value = 'cashier_revenue_per_day';
+        return;
+    }
+
+    if (!modes.some((mode) => mode.key === reportChartMode.value)) {
+        reportChartMode.value = modes[0].key;
+    }
+}, { immediate: true });
+
+watch(search, (value) => {
+    if (activeModuleId.value === 'bookings' && String(topSearchValue.value || '') !== String(value || '')) {
+        topSearchValue.value = String(value || '');
+    }
+});
+
 watch(search, () => {
     if (activeModuleId.value !== 'bookings') {
         return;
@@ -3649,6 +3787,7 @@ onBeforeUnmount(() => {
     }
 
     stopQueueAutoRefresh();
+    stopBookingsAutoRefresh();
 });
 </script>
 
@@ -3663,7 +3802,7 @@ onBeforeUnmount(() => {
 
             <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
                 <AdminTopBar :title="topbarTitle" :date-label="topbarDate" :show-top-search="showTopSearch"
-                    :top-search-value="topSearchValue" @open-mobile="mobileOpen = true"
+                    :top-search-value="topSearchValue" :show-search-button="showTopbarSearchButton" @open-mobile="mobileOpen = true"
                     @toggle-top-search="showTopSearch = $event" @update:top-search-value="topSearchValue = $event" />
 
                 <main class="flex-1 overflow-y-auto">
@@ -3676,7 +3815,7 @@ onBeforeUnmount(() => {
                             :cashier-chart-labels="reportCashierChartLabels"
                             :cashier-chart-datasets="reportCashierChartDatasets"
                             :report-range-label="reportRangeLabel" :format-rupiah="formatRupiah"
-                            @set-revenue-period="activeRevenuePeriod = $event" />
+                            @set-revenue-period="activeRevenuePeriod = $event" @open-queue="navigateFromSidebar('/admin/queue-tickets')" />
 
                         <PackagesPage v-else-if="activeModuleId === 'packages'" :package-cards="packageCards"
                             :branch-options="branchOptionsForManagement" :panel-base-url="panelBaseUrl"
@@ -3775,12 +3914,13 @@ onBeforeUnmount(() => {
                         <ReportsPage v-else-if="activeModuleId === 'reports'" :report-filters="reportFilters"
                             :report-error="reportError" :report-loading="reportLoading"
                             :report-summary-cards="reportSummaryCards" :report-daily-rows="reportDailyRows"
-                            :report-status-rows="reportStatusRows" :report-package-rows="reportPackageRows"
-                            :report-cashier-rows="reportCashierRows" :report-add-on-rows="reportAddOnRows"
+                            :report-package-rows="reportPackageRows" :report-cashier-rows="reportCashierRows" :report-add-on-rows="reportAddOnRows"
                             :report-package-options="reportPackageOptions"
                             :report-cashier-options="reportCashierOptions" :report-range-label="reportRangeLabel"
-                            :report-cashier-chart-labels="reportCashierChartLabels"
-                            :report-cashier-chart-datasets="reportCashierChartDatasets"
+                            :report-chart-modes="reportChartModes" :report-chart-mode="reportChartMode"
+                            :report-chart-description="reportChartDescription" :report-chart-labels="reportChartLabels"
+                            :report-chart-datasets="reportChartDatasets" :report-chart-stacked="reportChartStacked"
+                            :report-chart-value-mode="reportChartValueMode" @update:report-chart-mode="reportChartMode = $event"
                             @export-report="exportReport" />
 
                         <ActivityLogsPage v-else-if="activeModuleId === 'activity-logs'"

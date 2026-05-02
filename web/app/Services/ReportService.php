@@ -526,6 +526,193 @@ class ReportService
             ),
             'add_on_performance' => $addOnPerformance,
             'daily_summary' => $dailySummary,
+            'chart_modes' => $this->buildReportChartModes(
+                $dailySummary,
+                $start,
+                $end,
+                $bookingBase,
+                $transactionBase,
+                $cashierPerformance,
+                $packageId,
+                $cashierId,
+                $revenueStatuses,
+            ),
+        ];
+    }
+
+    protected function buildReportChartModes(
+        array $dailySummary,
+        Carbon $start,
+        Carbon $end,
+        Builder $bookingBase,
+        Builder $transactionBase,
+        array $cashierPerformance,
+        ?int $packageId,
+        ?int $cashierId,
+        array $revenueStatuses,
+    ): array {
+        $dailyLabels = array_map(fn (array $row): string => (string) ($row['label'] ?? '-'), $dailySummary);
+        $dailyRevenue = array_map(fn (array $row): float => (float) ($row['revenue'] ?? 0), $dailySummary);
+        $dailyBookings = array_map(fn (array $row): int => (int) ($row['bookings'] ?? 0), $dailySummary);
+        $dailyTransactions = array_map(fn (array $row): int => (int) ($row['transactions'] ?? 0), $dailySummary);
+        $dailyWalkIns = array_map(fn (array $row): int => (int) ($row['walk_ins'] ?? 0), $dailySummary);
+
+        $bookingHours = $this->buildHourlyBookingSeries(clone $bookingBase);
+        $transactionHours = $this->buildHourlyTransactionSeries(clone $transactionBase);
+        $cashierDailySeries = $this->buildCashierDailySeries(
+            $start,
+            $end,
+            $packageId,
+            $cashierId,
+            $revenueStatuses,
+            array_column($cashierPerformance, 'cashier_id'),
+        );
+
+        return [
+            [
+                'key' => 'cashier_revenue_per_day',
+                'label' => 'Pendapatan per Cashier',
+                'description' => 'Perbandingan pendapatan cashier per hari dalam periode aktif.',
+                'x_axis' => 'Hari',
+                'y_axis' => 'Pendapatan',
+                'stacked' => true,
+                'value_mode' => 'currency',
+                'labels' => $cashierDailySeries['labels'] ?? [],
+                'datasets' => collect($cashierDailySeries['datasets'] ?? [])
+                    ->map(fn (array $dataset, int $index): array => [
+                        'label' => (string) ($dataset['cashier_name'] ?? ('Cashier ' . ($index + 1))),
+                        'data' => array_map(fn ($value): float => (float) $value, $dataset['data'] ?? []),
+                    ])
+                    ->values()
+                    ->all(),
+            ],
+            [
+                'key' => 'revenue_per_day',
+                'label' => 'Revenue per Hari',
+                'description' => 'Trend pendapatan harian pada periode report.',
+                'x_axis' => 'Hari',
+                'y_axis' => 'Pendapatan',
+                'stacked' => false,
+                'value_mode' => 'currency',
+                'labels' => $dailyLabels,
+                'datasets' => [[
+                    'label' => 'Revenue',
+                    'data' => $dailyRevenue,
+                ]],
+            ],
+            [
+                'key' => 'bookings_per_day',
+                'label' => 'Booking per Hari',
+                'description' => 'Jumlah booking yang masuk setiap hari.',
+                'x_axis' => 'Hari',
+                'y_axis' => 'Jumlah Booking',
+                'stacked' => false,
+                'value_mode' => 'number',
+                'labels' => $dailyLabels,
+                'datasets' => [[
+                    'label' => 'Bookings',
+                    'data' => $dailyBookings,
+                ]],
+            ],
+            [
+                'key' => 'transactions_per_day',
+                'label' => 'Transaksi per Hari',
+                'description' => 'Jumlah transaksi selesai per hari.',
+                'x_axis' => 'Hari',
+                'y_axis' => 'Jumlah Transaksi',
+                'stacked' => false,
+                'value_mode' => 'number',
+                'labels' => $dailyLabels,
+                'datasets' => [[
+                    'label' => 'Transactions',
+                    'data' => $dailyTransactions,
+                ]],
+            ],
+            [
+                'key' => 'walk_ins_per_day',
+                'label' => 'Walk-in per Hari',
+                'description' => 'Jumlah transaksi walk-in yang terjadi setiap hari.',
+                'x_axis' => 'Hari',
+                'y_axis' => 'Jumlah Walk-in',
+                'stacked' => false,
+                'value_mode' => 'number',
+                'labels' => $dailyLabels,
+                'datasets' => [[
+                    'label' => 'Walk-ins',
+                    'data' => $dailyWalkIns,
+                ]],
+            ],
+            [
+                'key' => 'peak_booking_hours',
+                'label' => 'Ramai di Jam Berapa (Booking)',
+                'description' => 'Distribusi jam mulai booking paling ramai.',
+                'x_axis' => 'Jam',
+                'y_axis' => 'Jumlah Booking',
+                'stacked' => false,
+                'value_mode' => 'number',
+                'labels' => $bookingHours['labels'],
+                'datasets' => [[
+                    'label' => 'Bookings',
+                    'data' => $bookingHours['data'],
+                ]],
+            ],
+            [
+                'key' => 'peak_transaction_hours',
+                'label' => 'Ramai di Jam Berapa (Transaksi)',
+                'description' => 'Distribusi jam transaksi paling ramai.',
+                'x_axis' => 'Jam',
+                'y_axis' => 'Jumlah Transaksi',
+                'stacked' => false,
+                'value_mode' => 'number',
+                'labels' => $transactionHours['labels'],
+                'datasets' => [[
+                    'label' => 'Transactions',
+                    'data' => $transactionHours['data'],
+                ]],
+            ],
+        ];
+    }
+
+    protected function buildHourlyBookingSeries(Builder $bookingBase): array
+    {
+        $rows = $bookingBase->get(['start_at']);
+
+        return $this->buildHourlySeriesFromValues(
+            $rows->map(fn (Booking $booking): ?Carbon => $booking->start_at)->all(),
+        );
+    }
+
+    protected function buildHourlyTransactionSeries(Builder $transactionBase): array
+    {
+        $rows = $transactionBase->get(['created_at']);
+
+        return $this->buildHourlySeriesFromValues(
+            $rows->map(fn (Transaction $transaction): ?Carbon => $transaction->created_at)->all(),
+        );
+    }
+
+    protected function buildHourlySeriesFromValues(array $values): array
+    {
+        $hourCounts = array_fill(0, 24, 0);
+
+        foreach ($values as $value) {
+            if (! $value instanceof Carbon) {
+                continue;
+            }
+
+            $hour = (int) $value->format('H');
+
+            if ($hour >= 0 && $hour <= 23) {
+                $hourCounts[$hour]++;
+            }
+        }
+
+        return [
+            'labels' => array_map(
+                fn (int $hour): string => str_pad((string) $hour, 2, '0', STR_PAD_LEFT) . ':00',
+                array_keys($hourCounts),
+            ),
+            'data' => array_values($hourCounts),
         ];
     }
 
