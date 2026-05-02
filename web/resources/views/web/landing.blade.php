@@ -334,20 +334,6 @@
                 <p class="text-base text-muted-foreground leading-relaxed max-w-md">
                     Tim kami siap menjawab pertanyaanmu seputar paket, konsep, ataupun jadwal booking. Hubungi kami lewat kanal di bawah ini.
                 </p>
-                <div class="flex flex-col items-center md:items-start gap-4 pt-6 px-4">
-                    @forelse($branches as $branch)
-                        <div class="flex items-center gap-4 w-full max-w-[280px] md:max-w-none">
-                            <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-memphis-blue text-white flex items-center justify-center font-bold shrink-0 shadow-sm">📍</div>
-                            <div class="text-left">
-                                <p class="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">{{ $branch->city ?: 'Cabang' }}</p>
-                                <p class="text-sm font-semibold text-memphis-ink">{{ $branch->name }}</p>
-                                <p class="text-[10px] text-gray-400">{{ $branch->address }}</p>
-                            </div>
-                        </div>
-                    @empty
-                        <p class="text-sm text-gray-500 italic">Lokasi segera hadir!</p>
-                    @endforelse
-                </div>
             </div>
 
             <div class="bg-memphis-blue-soft/60 rounded-3xl p-6 md:p-10 border border-border/40 flex flex-col items-center justify-center text-center space-y-6">
@@ -393,23 +379,10 @@
 
     <!-- FOOTER -->
     <footer class="bg-background">
-        <div class="max-w-7xl mx-auto px-6 md:px-12 py-12 flex flex-col md:flex-row justify-between gap-10">
-            <div class="text-center md:text-left">
-                <h3 class="font-display text-2xl text-memphis-blue font-semibold">
-                    Ready to Pict
-                </h3>
-                <p class="mt-3 text-sm text-muted-foreground max-w-sm mx-auto md:mx-0 leading-relaxed">
-                    Foto self portrait mandiri, di mana kamu adalah sang sutradara, aktor, sekaligus penontonnya.
-                </p>
-            </div>
-            <div class="flex flex-wrap items-center justify-center md:justify-end gap-x-8 gap-y-4 text-sm font-bold text-memphis-ink/80">
-                <a href="#home" class="hover:text-memphis-blue transition-colors">Home</a>
-                <a href="#about" class="hover:text-memphis-blue transition-colors">About</a>
-                <a href="#pricelist" class="hover:text-memphis-blue transition-colors">Pricelist</a>
-                <a href="#contact" class="hover:text-memphis-blue transition-colors">Contact</a>
-            </div>
+        <div class="max-w-7xl mx-auto px-6 md:px-12 py-12 flex flex-col items-center">
+            
         </div>
-        <div class="py-5 text-center text-xs text-muted-foreground">
+        <div class="py-5 text-center text-xs text-muted-foreground border-t border-border/40">
             © {{ date('Y') }} Ready to Pict. All rights reserved.
         </div>
     </footer>
