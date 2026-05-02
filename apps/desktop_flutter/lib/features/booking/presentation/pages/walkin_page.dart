@@ -7,6 +7,7 @@ import '../../application/booking_controller.dart';
 import '../widgets/package/package_card.dart';
 import '../widgets/addon/addon_item.dart';
 import '../widgets/summary/order_summary.dart';
+import '../widgets/dialogs/checkout_success_dialog.dart';
 
 class WalkinPage extends StatefulWidget {
   const WalkinPage({super.key});
@@ -98,38 +99,34 @@ class _WalkinPageState extends State<WalkinPage> {
     }
 
     final session = ApiSession.current;
-    final shouldPrint = await showDialog<bool>(
+    
+    showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Checkout berhasil'),
-          content: Text(
-            'Transaksi ${result.transaction.transactionCode}\nAntrean ${result.queueTicket.queueCode}',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Tutup'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Cetak Struk'),
-            ),
-          ],
+        return CheckoutSuccessDialog(
+          result: result,
+          selectedPackage: _controller.selectedPackage,
+          onPrint: () async {
+            await ReceiptPrinter.printTransactionReceipt(
+              transaction: result.transaction,
+              brandName: 'Ready To Pict',
+              branchName: _controller.selectedBranchName,
+              cashierName: session?.user.name ?? '-',
+              queueCode: result.queueTicket.queueCode,
+              paperWidthMm: 80,
+            );
+          },
+          onDone: () {
+            Navigator.of(context).pop();
+            setState(() {
+              _controller = BookingController();
+              _controller.addListener(() => setState(() {}));
+            });
+          },
         );
       },
     );
-
-    if (shouldPrint == true) {
-      await ReceiptPrinter.printTransactionReceipt(
-        transaction: result.transaction,
-        brandName: 'Ready To Pict',
-        branchName: _controller.selectedBranchName,
-        cashierName: session?.user.name ?? '-',
-        queueCode: result.queueTicket.queueCode,
-        paperWidthMm: 80,
-      );
-    }
   }
 }
 
