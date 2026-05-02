@@ -94,18 +94,11 @@ class Sidebar extends StatelessWidget {
                 onTap: () => onItemTapped(4),
               ),
               _SidebarItem(
-                icon: Icons.inventory_2_rounded,
-                label: 'Paket',
+                icon: Icons.extension_rounded,
+                label: 'Add-ons',
                 isActive: selectedIndex == 5,
                 isExpanded: isExpanded,
                 onTap: () => onItemTapped(5),
-              ),
-              _SidebarItem(
-                icon: Icons.extension_rounded,
-                label: 'Add-ons',
-                isActive: selectedIndex == 6,
-                isExpanded: isExpanded,
-                onTap: () => onItemTapped(6),
               ),
 
               const Spacer(),
@@ -120,7 +113,7 @@ class Sidebar extends StatelessWidget {
   }
 }
 
-class _SidebarItem extends StatelessWidget {
+class _SidebarItem extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool isActive;
@@ -136,41 +129,90 @@ class _SidebarItem extends StatelessWidget {
   });
 
   @override
+  State<_SidebarItem> createState() => _SidebarItemState();
+}
+
+class _SidebarItemState extends State<_SidebarItem> with SingleTickerProviderStateMixin {
+  bool _isHovered = false;
+  late AnimationController _blinkController;
+  late Animation<Color?> _colorAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _colorAnimation = ColorTween(
+      begin: Colors.transparent,
+      end: Colors.orange.withOpacity(0.15),
+    ).animate(_blinkController);
+  }
+
+  @override
+  void dispose() {
+    _blinkController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Tooltip(
-        message: isExpanded ? '' : label,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: isActive ? AppColors.sidebarActive : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            mainAxisAlignment: isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: isActive
-                    ? AppColors.textWhite
-                    : AppColors.sidebarInactiveText,
-              ),
-              if (isExpanded) ...[
-                const SizedBox(width: 16),
-                Text(
-                  label,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: isActive
-                        ? AppColors.textWhite
-                        : AppColors.sidebarInactiveText,
-                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  ),
+    return MouseRegion(
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        if (!widget.isActive) _blinkController.repeat(reverse: true);
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        _blinkController.stop();
+        _blinkController.reset();
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Tooltip(
+          message: widget.isExpanded ? '' : widget.label,
+          child: AnimatedBuilder(
+            animation: _blinkController,
+            builder: (context, child) {
+              Color bgColor = widget.isActive
+                  ? AppColors.sidebarActive
+                  : (_isHovered ? (_colorAnimation.value ?? Colors.transparent) : Colors.transparent);
+
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                child: child,
+              );
+            },
+            child: Row(
+              mainAxisAlignment: widget.isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+              children: [
+                Icon(
+                  widget.icon,
+                  size: 20,
+                  color: widget.isActive
+                      ? AppColors.textWhite
+                      : AppColors.sidebarInactiveText,
+                ),
+                if (widget.isExpanded) ...[
+                  const SizedBox(width: 16),
+                  Text(
+                    widget.label,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: widget.isActive
+                          ? AppColors.textWhite
+                          : AppColors.sidebarInactiveText,
+                      fontWeight: widget.isActive ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

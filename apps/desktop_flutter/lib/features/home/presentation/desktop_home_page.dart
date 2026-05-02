@@ -9,7 +9,6 @@ import '../../booking/presentation/pages/walkin_page.dart';
 import '../../booking/presentation/pages/pure_booking_page.dart';
 import '../../history/presentation/pages/history_page.dart';
 import '../../laporan/presentation/pages/laporan_page.dart';
-import '../../paket/presentation/pages/paket_page.dart';
 import '../../addon/presentation/pages/addon_page.dart';
 import '../../antrian/presentation/pages/antrian_page.dart';
 
@@ -56,9 +55,6 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         return const LaporanPage();
 
       case 5:
-        return const PaketPage();
-
-      case 6:
         return const AddOnPage();
 
       default:
@@ -91,7 +87,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           Expanded(
             child: Column(
               children: [
-                if (_selectedIndex != 0 && _selectedIndex != 2 && _selectedIndex != 3 && _selectedIndex != 4 && _selectedIndex != 5 && _selectedIndex != 6) const AppHeader(),
+                if (_selectedIndex != 0 && _selectedIndex != 2 && _selectedIndex != 3 && _selectedIndex != 4 && _selectedIndex != 5) const AppHeader(),
 
                 /// 🔥 PAKAI BUILDER
                 Expanded(child: _buildPage(_selectedIndex)),

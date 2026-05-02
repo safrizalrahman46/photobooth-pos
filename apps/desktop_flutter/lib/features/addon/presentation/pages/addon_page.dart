@@ -39,7 +39,9 @@ class AddOnPage extends ConsumerWidget {
           Container(
             width: 340,
             padding: const EdgeInsets.fromLTRB(0, 64, 50, 50),
-            child: _StockSummarySidebar(),
+            child: SingleChildScrollView(
+              child: _StockSummarySidebar(),
+            ),
           ),
         ],
       ),

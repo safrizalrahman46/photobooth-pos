@@ -95,16 +95,19 @@ class AntrianMenungguCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                antrian.nomorAntrian,
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.textPrimary,
-                  letterSpacing: -0.5,
+              Expanded(
+                child: Text(
+                  antrian.nomorAntrian,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.textPrimary,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -135,7 +138,7 @@ class AntrianMenungguCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${antrian.jumlahOrang} Orang • ${antrian.paket}',
+            '${antrian.jumlahOrang} Orang',
             style: const TextStyle(
               fontFamily: AppTheme.fontFamily,
               fontSize: 13,
