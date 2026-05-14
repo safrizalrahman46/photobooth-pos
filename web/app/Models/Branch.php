@@ -46,4 +46,9 @@ class Branch extends Model
     {
         return $this->hasMany(Transaction::class);
     }
+
+    public function referralCodes(): HasMany
+    {
+        return $this->hasMany(ReferralCode::class);
+    }
 }

@@ -18,7 +18,7 @@ class AdminBookingController extends Controller
 {
     public function store(AdminStoreBookingRequest $request, AdminBookingManagementService $service): JsonResponse
     {
-        $booking = $service->create($request->validated());
+        $booking = $service->create($request->validated(), $request->user()?->id ? (int) $request->user()->id : null);
 
         return response()->json([
             'success' => true,
@@ -31,7 +31,7 @@ class AdminBookingController extends Controller
 
     public function update(AdminUpdateBookingRequest $request, Booking $booking, AdminBookingManagementService $service): JsonResponse
     {
-        $service->update($booking, $request->validated());
+        $service->update($booking, $request->validated(), $request->user()?->id ? (int) $request->user()->id : null);
 
         return response()->json([
             'success' => true,

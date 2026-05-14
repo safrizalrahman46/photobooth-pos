@@ -40,6 +40,7 @@ class PosWalkInCheckoutRequest extends FormRequest
             'paid_amount' => ['nullable', 'numeric', 'gt:0'],
             'reference_no' => ['nullable', 'string', 'max:120'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'referral_code' => ['nullable', 'string', 'max:40'],
             'tax_amount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];

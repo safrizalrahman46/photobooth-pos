@@ -85,87 +85,101 @@ class OrderSummaryPanel extends StatelessWidget {
 
                   const SizedBox(height: 8),
 
-                  // Voucher
+                  // Referral
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.white.withOpacity(0.1)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.confirmation_num_outlined, color: Colors.white, size: 14),
-                              const SizedBox(width: 6),
-                              Text(
-                                'VOUCHER / DISKON',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: Colors.white.withOpacity(0.9),
-                                  letterSpacing: 0.8,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'KODE REFERAL',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            letterSpacing: 0.8,
+                            fontSize: 9,
                           ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                initialValue: controller.referralCode,
+                                textCapitalization: TextCapitalization.characters,
+                                onChanged: controller.updateReferralCode,
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  hintText: 'CONTOH10',
+                                  filled: true,
+                                  fillColor: Colors.black.withOpacity(0.05),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 9,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.2),
-                                    borderRadius: const BorderRadius.only(
+                                  border: const OutlineInputBorder(
+                                    borderSide: BorderSide.none,
+                                    borderRadius: BorderRadius.only(
                                       topLeft: Radius.circular(8),
                                       bottomLeft: Radius.circular(8),
                                     ),
                                   ),
-                                  child: Text(
-                                    controller.voucherCode.isEmpty ? 'Masukkan kode voucher' : controller.voucherCode,
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: controller.voucherCode.isEmpty ? Colors.white.withOpacity(0.4) : Colors.white,
-                                      fontSize: 11,
-                                    ),
+                                ),
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: controller.isApplyingReferral
+                                  ? null
+                                  : () {
+                                      controller.applyReferral();
+                                    },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: const BorderRadius.only(
+                                    topRight: Radius.circular(8),
+                                    bottomRight: Radius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  controller.isApplyingReferral ? '...' : 'APPLY',
+                                  style: AppTextStyles.captionMedium.copyWith(
+                                    color: AppColors.primary,
+                                    fontSize: 10,
                                   ),
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: controller.applyVoucher,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
-                                  ),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.only(
-                                      topRight: Radius.circular(8),
-                                      bottomRight: Radius.circular(8),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'APPLY',
-                                    style: AppTextStyles.captionMedium.copyWith(
-                                      color: AppColors.primary,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
+                          ],
+                        ),
+                        if (controller.referralMessage != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            controller.referralMessage!,
+                            style: AppTextStyles.caption.copyWith(
+                              color: const Color(0xFF059669),
+                              fontSize: 9,
+                            ),
                           ),
                         ],
-                      ),
+                        if (controller.referralError != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            controller.referralError!,
+                            style: AppTextStyles.caption.copyWith(
+                              color: const Color(0xFFDC2626),
+                              fontSize: 9,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
 
@@ -209,6 +223,48 @@ class OrderSummaryPanel extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 2),
+                if (controller.referralDiscount > 0) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Subtotal',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                      Text(
+                        _formatPrice(controller.subtotalTotal),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Diskon Referal',
+                        style: AppTextStyles.caption.copyWith(
+                          color: const Color(0xFF059669),
+                          fontSize: 10,
+                        ),
+                      ),
+                      Text(
+                        '-${_formatPrice(controller.referralDiscount)}',
+                        style: AppTextStyles.caption.copyWith(
+                          color: const Color(0xFF059669),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                ],
                 Text(
                   _formatPrice(controller.grandTotal),
                   style: AppTextStyles.priceLarge.copyWith(color: AppColors.textPrimary),

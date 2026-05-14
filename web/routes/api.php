@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\PosController;
 use App\Http\Controllers\Api\V1\PrinterSettingController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\QueueController;
+use App\Http\Controllers\Api\V1\ReferralCodeController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\SlotAvailabilityController;
 use App\Http\Controllers\Api\V1\TimeSlotController;
@@ -32,6 +33,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/add-ons', [AddOnController::class, 'index']);
     Route::get('/design-catalogs', [DesignCatalogController::class, 'index']);
     Route::get('/design-catalogs/{designCatalog}', [DesignCatalogController::class, 'show']);
+    Route::post('/referral-codes/validate', [ReferralCodeController::class, 'validateCode']);
     Route::post('/slots/availability', SlotAvailabilityController::class);
     Route::post('/bookings', [BookingController::class, 'store']);
 

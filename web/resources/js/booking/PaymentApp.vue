@@ -129,7 +129,10 @@ const addonTotal = computed(() => {
     return selectedAddons.value.reduce((total, addon) => total + (addon.price * addon.qty), 0);
 });
 
-const totalPrice = computed(() => Number(props.package?.base_price || 0) + addonTotal.value);
+const subtotalPrice = computed(() => Number(props.package?.base_price || 0) + addonTotal.value);
+const referralCode = computed(() => asString(props.bookingPayload?.referral_code).trim());
+const referralDiscountAmount = computed(() => Math.min(Math.max(Number(props.bookingPayload?.referral_discount_amount || 0), 0), subtotalPrice.value));
+const totalPrice = computed(() => Math.max(subtotalPrice.value - referralDiscountAmount.value, 0));
 const dpAmount = computed(() => Math.round(totalPrice.value * 0.5));
 const remainingAfterDp = computed(() => Math.max(totalPrice.value - dpAmount.value, 0));
 
@@ -399,6 +402,16 @@ onBeforeUnmount(() => {
                             </div>
 
                             <div class="flex justify-between border-t border-gray-100 pt-2 text-sm">
+                                <span class="text-gray-500">Subtotal</span>
+                                <span class="text-[#1F2937]">{{ formatRupiah(subtotalPrice) }}</span>
+                            </div>
+
+                            <div v-if="referralDiscountAmount > 0" class="flex justify-between text-sm text-[#059669]">
+                                <span>Diskon Referal {{ referralCode }}</span>
+                                <span>-{{ formatRupiah(referralDiscountAmount) }}</span>
+                            </div>
+
+                            <div class="flex justify-between text-sm">
                                 <span class="text-gray-600" style="font-weight: 500;">Total Booking</span>
                                 <span class="text-[#1F2937]">{{ formatRupiah(totalPrice) }}</span>
                             </div>
@@ -498,6 +511,7 @@ onBeforeUnmount(() => {
                     <input type="hidden" name="customer_phone" :value="props.bookingPayload.customer_phone">
                     <input type="hidden" name="customer_email" :value="props.bookingPayload.customer_email || ''">
                     <input type="hidden" name="notes" :value="props.bookingPayload.notes || ''">
+                    <input type="hidden" name="referral_code" :value="referralCode">
                     <input type="hidden" name="payment_type" :value="paymentType">
                     <input type="hidden" name="addons_payload" :value="addonsPayloadJson">
 

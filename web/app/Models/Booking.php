@@ -38,6 +38,11 @@ class Booking extends Model
         'transfer_proof_uploaded_at',
         'addons',
         'addon_total',
+        'subtotal_amount',
+        'discount_amount',
+        'referral_code_id',
+        'referral_code',
+        'referral_discount_amount',
         'payment_expires_at',
         'paid_at',
         'total_amount',
@@ -63,6 +68,9 @@ class Booking extends Model
             'payment_payload' => 'array',
             'addons' => 'array',
             'addon_total' => 'decimal:2',
+            'subtotal_amount' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
+            'referral_discount_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'deposit_amount' => 'decimal:2',
             'paid_amount' => 'decimal:2',
@@ -109,5 +117,15 @@ class Booking extends Model
         return $this->belongsToMany(AddOn::class, 'booking_add_ons')
             ->withPivot(['qty', 'unit_price', 'line_total'])
             ->withTimestamps();
+    }
+
+    public function referralCode(): BelongsTo
+    {
+        return $this->belongsTo(ReferralCode::class);
+    }
+
+    public function referralRedemptions(): HasMany
+    {
+        return $this->hasMany(ReferralRedemption::class);
     }
 }

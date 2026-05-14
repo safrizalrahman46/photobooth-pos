@@ -12,7 +12,7 @@ use Throwable;
 class AppSettingService
 {
     public function __construct(
-        private readonly ActivityLogger $activityLogger,
+        private readonly ?ActivityLogger $activityLogger = null,
     ) {}
 
     public function settingsPayload(): array
@@ -55,7 +55,7 @@ class AppSettingService
 
         $this->set('booking', $bookingSettings, $userId);
 
-        $this->activityLogger->log(
+        $this->activityLogger?->log(
             'settings',
             'default_branch_updated',
             $userId,
@@ -89,7 +89,7 @@ class AppSettingService
             $this->set('booking', $bookingSettings, $userId);
         }
 
-        $this->activityLogger->log(
+        $this->activityLogger?->log(
             'branches',
             'created',
             $userId,
@@ -117,7 +117,7 @@ class AppSettingService
 
         $branch->save();
 
-        $this->activityLogger->log(
+        $this->activityLogger?->log(
             'branches',
             'updated',
             null,
@@ -161,7 +161,7 @@ class AppSettingService
             $this->set('booking', $bookingSettings, $userId);
         }
 
-        $this->activityLogger->log(
+        $this->activityLogger?->log(
             'branches',
             'deactivated',
             $userId,
@@ -240,7 +240,7 @@ class AppSettingService
             ]
         );
 
-        $this->activityLogger->log(
+        $this->activityLogger?->log(
             'app-settings',
             $existing ? 'updated' : 'created',
             $userId,
@@ -342,6 +342,7 @@ class AppSettingService
                 ['id' => 'payments', 'label' => 'Payments', 'icon' => 'receipt', 'href' => '/admin/payments', 'group' => 'operations'],
                 ['id' => 'reports', 'label' => 'Reports', 'icon' => 'chart', 'href' => '/admin/reports', 'group' => 'analytics'],
                 ['id' => 'activity-logs', 'label' => 'Activity Logs', 'icon' => 'activity', 'href' => '/admin/activity-logs', 'group' => 'analytics'],
+                ['id' => 'referrals', 'label' => 'Referal', 'icon' => 'receipt', 'href' => '/admin/referrals', 'group' => 'analytics'],
                 ['id' => 'printer-settings', 'label' => 'Printer Settings', 'icon' => 'settings', 'href' => '/admin/printer-settings', 'group' => 'system'],
                 ['id' => 'app-settings', 'label' => 'App Settings', 'icon' => 'settings', 'href' => '/admin/app-settings', 'group' => 'system'],
                 ['id' => 'settings', 'label' => 'Settings', 'icon' => 'settings', 'href' => '/admin/settings', 'group' => 'system'],
@@ -361,6 +362,7 @@ class AppSettingService
                 'payments' => ['title' => 'Payments', 'subtitle' => 'Record and review payment entries'],
                 'reports' => ['title' => 'Reports', 'subtitle' => 'Business analytics and insights'],
                 'activity-logs' => ['title' => 'Activity Logs', 'subtitle' => 'System activity and audit trail'],
+                'referrals' => ['title' => 'Kode Referal', 'subtitle' => 'Kelola diskon referal dan analisa sumber customer'],
                 'printer-settings' => ['title' => 'Printer Settings', 'subtitle' => 'Configure printer devices per branch'],
                 'app-settings' => ['title' => 'App Settings', 'subtitle' => 'Manage app-wide JSON configuration groups'],
                 'settings' => ['title' => 'Settings', 'subtitle' => 'Configure your business preferences'],

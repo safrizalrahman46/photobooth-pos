@@ -20,6 +20,9 @@ class Transaction extends Model
         'cashier_id',
         'subtotal',
         'discount_amount',
+        'referral_code_id',
+        'referral_code',
+        'referral_discount_amount',
         'tax_amount',
         'total_amount',
         'paid_amount',
@@ -34,6 +37,7 @@ class Transaction extends Model
         return [
             'subtotal' => 'decimal:2',
             'discount_amount' => 'decimal:2',
+            'referral_discount_amount' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'paid_amount' => 'decimal:2',
@@ -71,5 +75,15 @@ class Transaction extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function referralCode(): BelongsTo
+    {
+        return $this->belongsTo(ReferralCode::class);
+    }
+
+    public function referralRedemptions(): HasMany
+    {
+        return $this->hasMany(ReferralRedemption::class);
     }
 }

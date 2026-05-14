@@ -14,6 +14,10 @@ class BookingItem {
     required this.paymentType,
     required this.paymentStatus,
     required this.startAt,
+    required this.subtotalAmount,
+    required this.discountAmount,
+    required this.referralCode,
+    required this.referralDiscountAmount,
     required this.totalAmount,
     required this.depositAmount,
     required this.paidAmount,
@@ -39,6 +43,10 @@ class BookingItem {
   final String paymentType;
   final String paymentStatus;
   final String? startAt;
+  final double subtotalAmount;
+  final double discountAmount;
+  final String referralCode;
+  final double referralDiscountAmount;
   final double totalAmount;
   final double depositAmount;
   final double paidAmount;
@@ -67,6 +75,11 @@ class BookingItem {
       paymentType: json['payment_type']?.toString() ?? 'full',
       paymentStatus: json['payment_status']?.toString() ?? 'unpaid',
       startAt: json['start_at']?.toString(),
+      subtotalAmount: (json['subtotal_amount'] as num?)?.toDouble() ?? 0,
+      discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0,
+      referralCode: json['referral_code']?.toString() ?? '',
+      referralDiscountAmount:
+          (json['referral_discount_amount'] as num?)?.toDouble() ?? 0,
       totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
       depositAmount: (json['deposit_amount'] as num?)?.toDouble() ?? 0,
       paidAmount: (json['paid_amount'] as num?)?.toDouble() ?? 0,

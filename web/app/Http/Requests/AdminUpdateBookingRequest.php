@@ -35,6 +35,7 @@ class AdminUpdateBookingRequest extends FormRequest
             'customer_email' => ['nullable', 'email', 'max:255'],
             'booking_date' => ['required', 'date_format:Y-m-d'],
             'booking_time' => ['required', 'date_format:H:i'],
+            'referral_code' => ['nullable', 'string', 'max:40'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'add_ons' => ['sometimes', 'array'],
             'add_ons.*.add_on_id' => [

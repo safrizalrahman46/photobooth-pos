@@ -20,6 +20,7 @@ class BookingService
         private readonly CodeGenerator $codeGenerator,
         private readonly ActivityLogger $activityLogger,
         private readonly SlotService $slotService,
+        private readonly ReferralService $referralService,
     ) {}
 
     public function create(array $payload): Booking
@@ -28,6 +29,14 @@ class BookingService
             $package = Package::query()->findOrFail($payload['package_id']);
             $addons = $this->resolveAddOnsForPackage((int) $package->id, $payload['addons'] ?? []);
             $addonTotal = collect($addons)->sum('line_total');
+            $subtotal = (float) $package->base_price + (float) $addonTotal;
+            $referralPreview = $this->referralService->preview(
+                $payload['referral_code'] ?? null,
+                (int) $payload['branch_id'],
+                (int) $package->id,
+                $subtotal,
+            );
+            $discount = (float) ($referralPreview['discount_amount'] ?? 0);
             $startAt = Carbon::parse($payload['booking_date'].' '.$payload['booking_time']);
             $endAt = $startAt->copy()->addMinutes((int) $package->duration_minutes);
 
@@ -53,11 +62,26 @@ class BookingService
                 'payment_type' => $payload['payment_type'] ?? 'full',
                 'addons' => $addons,
                 'addon_total' => $addonTotal,
-                'total_amount' => (float) $package->base_price + (float) $addonTotal,
+                'subtotal_amount' => $subtotal,
+                'discount_amount' => $discount,
+                'referral_code_id' => $referralPreview['referral_code_id'] ?? null,
+                'referral_code' => $referralPreview['referral_code'] ?? null,
+                'referral_discount_amount' => $discount,
+                'total_amount' => max(0, $subtotal - $discount),
                 'notes' => $payload['notes'] ?? null,
             ]);
 
             $this->syncBookingAddOns($booking, $addons);
+
+            if (! empty($payload['referral_code'])) {
+                $this->referralService->applyToBooking(
+                    $booking,
+                    (string) $payload['referral_code'],
+                    $subtotal,
+                    $this->referralChannelForSource($payload['source'] ?? BookingSource::Web),
+                );
+                $booking = $booking->refresh();
+            }
 
             BookingStatusLog::query()->create([
                 'booking_id' => $booking->id,
@@ -68,9 +92,10 @@ class BookingService
 
             SendBookingNotificationJob::dispatch($booking->id, 'created');
 
-            $source = $payload['source'] instanceof BookingSource
-                ? $payload['source']
-                : BookingSource::from((string) ($payload['source'] ?? BookingSource::Web->value));
+            $sourceValue = $payload['source'] ?? BookingSource::Web;
+            $source = $sourceValue instanceof BookingSource
+                ? $sourceValue
+                : BookingSource::from((string) $sourceValue);
 
             if ($source !== BookingSource::Admin) {
                 $this->activityLogger->log(
@@ -94,7 +119,7 @@ class BookingService
                 );
             }
 
-            return $booking;
+            return $booking->refresh();
         });
     }
 
@@ -195,6 +220,14 @@ class BookingService
             $booking->status = $toStatus;
             $booking->save();
 
+            if ($toStatus === BookingStatus::Cancelled) {
+                $this->referralService->voidForBooking($booking, 'Booking cancelled.', $actorId);
+            } elseif ($toStatus === BookingStatus::Paid) {
+                $this->referralService->markBookingStatus($booking, 'paid');
+            } elseif ($toStatus === BookingStatus::Done) {
+                $this->referralService->markBookingStatus($booking, 'done');
+            }
+
             BookingStatusLog::query()->create([
                 'booking_id' => $booking->id,
                 'from_status' => $fromStatus->value,
@@ -242,5 +275,16 @@ class BookingService
         if ($remainingCapacity <= 0) {
             throw new RuntimeException('Kapasitas slot sudah penuh. Silakan pilih jadwal lain.');
         }
+    }
+
+    private function referralChannelForSource(BookingSource|string $source): string
+    {
+        $value = $source instanceof BookingSource ? $source->value : (string) $source;
+
+        return match ($value) {
+            BookingSource::Admin->value => ReferralService::CHANNEL_ADMIN_BOOKING,
+            BookingSource::WalkIn->value => ReferralService::CHANNEL_DESKTOP_POS,
+            default => ReferralService::CHANNEL_PUBLIC_WEB,
+        };
     }
 }

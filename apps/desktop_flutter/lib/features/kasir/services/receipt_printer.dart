@@ -103,6 +103,12 @@ class ReceiptPrinter {
             );
           }),
           pw.Divider(thickness: 0.7),
+          if (transaction.discountAmount > 0) ...[
+            _labelValue('Subtotal', _currency(transaction.subtotalAmount)),
+            if (transaction.referralCode.isNotEmpty)
+              _labelValue('Referal', transaction.referralCode),
+            _labelValue('Diskon', '-${_currency(transaction.discountAmount)}'),
+          ],
           _labelValue('Total', _currency(transaction.totalAmount), bold: true),
           _labelValue('Dibayar', _currency(transaction.paidAmount)),
           _labelValue('Kembalian', _currency(transaction.changeAmount)),

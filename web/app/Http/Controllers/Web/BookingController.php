@@ -12,6 +12,7 @@ use App\Models\Branch;
 use App\Models\DesignCatalog;
 use App\Models\Package;
 use App\Services\BookingService;
+use App\Services\ReferralService;
 use App\Services\SlotService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Throwable;
 
@@ -30,6 +32,7 @@ class BookingController extends Controller
     public function __construct(
         private readonly BookingService $bookingService,
         private readonly SlotService $slotService,
+        private readonly ReferralService $referralService,
     ) {}
 
     public function customer(Request $request): View
@@ -203,9 +206,25 @@ class BookingController extends Controller
                 (int) $payload['package_id'],
                 $payload['addons'] ?? []
             );
+            $package = $validation['package'];
+            $subtotal = (float) $package->base_price + (float) collect($payload['addons'])->sum('line_total');
+            $referralPreview = $this->referralService->preview(
+                $payload['referral_code'] ?? null,
+                (int) $payload['branch_id'],
+                (int) $payload['package_id'],
+                $subtotal,
+            );
+
+            $payload['subtotal_amount'] = $subtotal;
+            $payload['referral_discount_amount'] = (float) ($referralPreview['discount_amount'] ?? 0);
+            $payload['final_amount'] = max(0, $subtotal - (float) ($referralPreview['discount_amount'] ?? 0));
         } catch (RuntimeException $exception) {
             return back()
                 ->withErrors(['addons' => $exception->getMessage()])
+                ->withInput();
+        } catch (ValidationException $exception) {
+            return back()
+                ->withErrors($exception->errors())
                 ->withInput();
         }
 

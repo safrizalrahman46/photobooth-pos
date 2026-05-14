@@ -16,6 +16,7 @@ class PosWalkInCheckoutService
         private readonly QueueService $queueService,
         private readonly TransactionService $transactionService,
         private readonly InventoryService $inventoryService,
+        private readonly ReferralService $referralService,
     ) {}
 
     public function checkout(array $payload, int $cashierId): array
@@ -45,7 +46,16 @@ class PosWalkInCheckoutService
             );
             $items = $this->buildTransactionItems($package, $selectedAddOns);
             $subtotal = (float) collect($items)->sum('line_total');
-            $discount = max(0, (float) ($payload['discount_amount'] ?? 0));
+            $referralPreview = $this->referralService->preview(
+                $payload['referral_code'] ?? null,
+                (int) $payload['branch_id'],
+                (int) $package->id,
+                $subtotal,
+            );
+            $referralDiscount = (float) ($referralPreview['discount_amount'] ?? 0);
+            $discount = ! empty($payload['referral_code'])
+                ? $referralDiscount
+                : max(0, (float) ($payload['discount_amount'] ?? 0));
             $tax = max(0, (float) ($payload['tax_amount'] ?? 0));
             $total = max(0, $subtotal - $discount + $tax);
             $paymentAmount = array_key_exists('paid_amount', $payload)
@@ -66,10 +76,26 @@ class PosWalkInCheckoutService
                 'branch_id' => (int) $payload['branch_id'],
                 'queue_ticket_id' => (int) $queueTicket->id,
                 'discount_amount' => $discount,
+                'referral_code_id' => $referralPreview['referral_code_id'] ?? null,
+                'referral_code' => $referralPreview['referral_code'] ?? null,
+                'referral_discount_amount' => $referralDiscount,
                 'tax_amount' => $tax,
                 'notes' => $payload['notes'] ?? 'POS walk-in checkout.',
                 'items' => $items,
             ], $cashierId);
+
+            if (! empty($payload['referral_code'])) {
+                $this->referralService->applyToTransaction(
+                    $transaction,
+                    (string) $payload['referral_code'],
+                    $subtotal,
+                    ReferralService::CHANNEL_DESKTOP_POS,
+                    $cashierId,
+                    $queueTicket,
+                    (int) $package->id,
+                );
+                $transaction = $transaction->refresh();
+            }
 
             if ($paymentAmount > 0) {
                 $transaction = $this->transactionService->addPayment($transaction, [

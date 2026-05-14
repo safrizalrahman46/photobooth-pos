@@ -25,6 +25,7 @@ import PackagesPage from './pages/PackagesPage.vue';
 import PaymentsPage from './pages/PaymentsPage.vue';
 import PrinterSettingsPage from './pages/PrinterSettingsPage.vue';
 import QueuePage from './pages/QueuePage.vue';
+import ReferralsPage from './pages/ReferralsPage.vue';
 import SettingsPage from './pages/SettingsPage.vue';
 import TimeSlotsPage from './pages/TimeSlotsPage.vue';
 import UsersPage from './pages/UsersPage.vue';
@@ -279,6 +280,18 @@ const props = defineProps({
         type: String,
         default: '/admin/payments',
     },
+    referralsDataUrl: {
+        type: String,
+        default: '',
+    },
+    referralStoreUrl: {
+        type: String,
+        default: '',
+    },
+    referralBaseUrl: {
+        type: String,
+        default: '/admin/referrals',
+    },
     printerSettingsDataUrl: {
         type: String,
         default: '',
@@ -334,6 +347,16 @@ const props = defineProps({
     initialPaymentTransactionOptions: {
         type: Array,
         default: () => [],
+    },
+    initialReferralPayload: {
+        type: Object,
+        default: () => ({
+            summary: {},
+            codes: [],
+            redemptions: [],
+            breakdowns: {},
+            options: {},
+        }),
     },
     initialInventoryItems: {
         type: Array,
@@ -1512,6 +1535,18 @@ const userLoading = ref(false);
 const userSaving = ref(false);
 const userError = ref('');
 const deletingUserId = ref(null);
+const referralPayload = ref(props.initialReferralPayload && typeof props.initialReferralPayload === 'object'
+    ? props.initialReferralPayload
+    : {
+        summary: {},
+        codes: [],
+        redemptions: [],
+        breakdowns: {},
+        options: {},
+    });
+const referralLoading = ref(false);
+const referralSaving = ref(false);
+const referralError = ref('');
 const bookingSaving = ref(false);
 const bookingError = ref('');
 const deletingBookingId = ref(null);
@@ -1965,6 +2000,14 @@ const applyUsersPayload = (payload) => {
 
     if (Array.isArray(nextRoles)) {
         userRoles.value = nextRoles;
+    }
+};
+
+const applyReferralPayload = (payload) => {
+    const nextPayload = payload?.data || payload;
+
+    if (nextPayload && typeof nextPayload === 'object') {
+        referralPayload.value = nextPayload;
     }
 };
 
@@ -3026,6 +3069,132 @@ const deleteUser = async (id) => {
     }
 };
 
+const fetchReferralData = async (filters = {}) => {
+    if (!props.referralsDataUrl) {
+        return;
+    }
+
+    referralLoading.value = true;
+    referralError.value = '';
+
+    try {
+        const params = new URLSearchParams();
+
+        Object.entries(filters || {}).forEach(([key, value]) => {
+            const normalized = String(value ?? '').trim();
+
+            if (normalized !== '') {
+                params.set(key, normalized);
+            }
+        });
+
+        const url = params.toString()
+            ? `${props.referralsDataUrl}?${params.toString()}`
+            : props.referralsDataUrl;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyReferralPayload(result);
+    } catch (error) {
+        referralError.value = error instanceof Error ? error.message : 'Failed to load referral data.';
+    } finally {
+        referralLoading.value = false;
+    }
+};
+
+const saveReferral = async ({ id = null, payload = {}, onSuccess = null, onError = null } = {}) => {
+    const referralId = Number(id || 0);
+    const url = referralId > 0
+        ? `${props.referralBaseUrl}/${referralId}`
+        : props.referralStoreUrl;
+
+    if (!url) {
+        const message = 'Referral endpoint is not configured.';
+        referralError.value = message;
+        if (typeof onError === 'function') {
+            onError(message);
+        }
+        return;
+    }
+
+    referralSaving.value = true;
+    referralError.value = '';
+
+    try {
+        const response = await fetch(url, {
+            method: referralId > 0 ? 'PUT' : 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(payload || {}),
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyReferralPayload(result);
+
+        if (typeof onSuccess === 'function') {
+            onSuccess();
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to save referral code.';
+        referralError.value = message;
+
+        if (typeof onError === 'function') {
+            onError(message);
+        }
+    } finally {
+        referralSaving.value = false;
+    }
+};
+
+const deleteReferral = async (id) => {
+    const referralId = Number(id || 0);
+
+    if (referralId <= 0 || !props.referralBaseUrl) {
+        return;
+    }
+
+    referralError.value = '';
+
+    try {
+        const response = await fetch(`${props.referralBaseUrl}/${referralId}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await parseRequestError(response));
+        }
+
+        const result = await response.json();
+        applyReferralPayload(result);
+    } catch (error) {
+        referralError.value = error instanceof Error ? error.message : 'Failed to delete referral code.';
+    }
+};
+
 const {
     branchRows,
     branchLoading,
@@ -3158,6 +3327,9 @@ const moduleRegistry = computed(() => buildAdminModuleRegistry({
     paymentRows,
     paymentLoading,
     fetchPaymentsData,
+    referralPayload,
+    referralLoading,
+    fetchReferralData,
     printerSettingRows,
     printerSettingLoading,
     fetchPrinterSettingsData,
@@ -3910,6 +4082,11 @@ onBeforeUnmount(() => {
                             :transaction-options="paymentTransactionRows" :loading="paymentLoading"
                             :saving="paymentSaving" :error-message="paymentError" @refresh-payments="fetchPaymentsData"
                             @create-payment="createPayment" />
+
+                        <ReferralsPage v-else-if="activeModuleId === 'referrals'" :payload="referralPayload"
+                            :loading="referralLoading" :saving="referralSaving" :error-message="referralError"
+                            @refresh-referrals="fetchReferralData" @save-referral="saveReferral"
+                            @delete-referral="deleteReferral" />
 
                         <ReportsPage v-else-if="activeModuleId === 'reports'" :report-filters="reportFilters"
                             :report-error="reportError" :report-loading="reportLoading"

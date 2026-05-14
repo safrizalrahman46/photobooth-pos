@@ -61,6 +61,11 @@ const customerName = ref(asString(props.oldValues.customer_name));
 const customerPhone = ref(asString(props.oldValues.customer_phone));
 const customerEmail = ref(asString(props.oldValues.customer_email));
 const notes = ref(asString(props.oldValues.notes));
+const referralCode = ref(asString(props.oldValues.referral_code));
+const referralPreview = ref(null);
+const referralLoading = ref(false);
+const referralMessage = ref('');
+const referralError = ref('');
 
 const addonQty = ref({});
 const slots = ref([]);
@@ -204,6 +209,8 @@ const addOnTotal = computed(() => {
 const basePrice = computed(() => Number(selectedPackage.value?.base_price || 0));
 
 const totalPrice = computed(() => basePrice.value + addOnTotal.value);
+const referralDiscountAmount = computed(() => Math.max(0, Number(referralPreview.value?.discount_amount || 0)));
+const finalTotalPrice = computed(() => Math.max(totalPrice.value - referralDiscountAmount.value, 0));
 
 const extraPersonAddOn = computed(() => {
     return addOnCatalog.value.find((item) => item.code === 'AON-EXTRA-PERSON') ?? null;
@@ -219,6 +226,7 @@ const canSubmit = computed(() => {
         && bookingTime.value
         && customerName.value.trim()
         && customerPhone.value.trim()
+        && (!referralCode.value.trim() || (referralPreview.value && !referralError.value))
     );
 });
 
@@ -433,6 +441,59 @@ const decAddon = (addonId) => {
     };
 };
 
+const resetReferralPreview = () => {
+    referralPreview.value = null;
+    referralMessage.value = '';
+    referralError.value = '';
+};
+
+const applyReferralCode = async () => {
+    const code = referralCode.value.trim();
+
+    resetReferralPreview();
+
+    if (!code) {
+        return;
+    }
+
+    if (!branchId.value || !packageId.value || totalPrice.value <= 0) {
+        referralError.value = 'Pilih cabang dan paket sebelum memakai kode referal.';
+        return;
+    }
+
+    referralLoading.value = true;
+
+    try {
+        const response = await fetch(props.routes.referralValidate, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                referral_code: code,
+                branch_id: Number(branchId.value),
+                package_id: Number(packageId.value),
+                subtotal_amount: totalPrice.value,
+            }),
+        });
+        const payload = await response.json();
+
+        if (!response.ok || payload?.success !== true) {
+            referralError.value = payload?.message || 'Kode referal tidak valid.';
+            return;
+        }
+
+        referralPreview.value = payload.data || null;
+        referralCode.value = asString(payload.data?.referral_code || code);
+        referralMessage.value = `Diskon ${formatRupiah(referralDiscountAmount.value)} berhasil diterapkan.`;
+    } catch {
+        referralError.value = 'Tidak dapat memvalidasi kode referal saat ini.';
+    } finally {
+        referralLoading.value = false;
+    }
+};
+
 const nextStep = () => {
     if (activeMobileStep.value >= stepLabels.length - 1) {
         return;
@@ -490,6 +551,12 @@ const validateBeforeSubmit = () => {
         return false;
     }
 
+    if (referralCode.value.trim() && (!referralPreview.value || referralError.value)) {
+        submitError.value = 'Klik Apply dan pastikan kode referal valid sebelum lanjut pembayaran.';
+        activeMobileStep.value = 3;
+        return false;
+    }
+
     submitError.value = '';
     return true;
 };
@@ -529,6 +596,13 @@ watch(packageId, () => {
 watch([branchId, packageId, bookingDate], () => {
     loadAvailability();
 }, { immediate: true });
+
+watch([branchId, packageId, totalPrice], () => {
+    if (referralPreview.value) {
+        resetReferralPreview();
+        referralMessage.value = 'Kode referal perlu di-apply ulang setelah paket atau add-on berubah.';
+    }
+});
 
 onMounted(() => {
     if (!branchId.value && props.branches.length) {
@@ -576,6 +650,7 @@ onBeforeUnmount(() => {
                 <input type="hidden" name="customer_phone" :value="customerPhone">
                 <input type="hidden" name="customer_email" :value="customerEmail">
                 <input type="hidden" name="notes" :value="notes">
+                <input type="hidden" name="referral_code" :value="referralPreview ? referralCode : ''">
                 <input type="hidden" name="addons_payload" :value="addonsPayloadJson">
 
                 <div
@@ -863,6 +938,29 @@ onBeforeUnmount(() => {
                                 <div class="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4 text-sm text-[#1E3A8A]">
                                     Data pemesan sudah diisi pada langkah sebelumnya dan akan ikut diproses saat pembayaran.
                                 </div>
+
+                                <div class="rounded-xl border border-slate-200 bg-white p-4 lg:hidden">
+                                    <label class="text-sm font-medium text-[#1F2937]">Kode Referal</label>
+                                    <div class="mt-2 flex gap-2">
+                                        <input
+                                            v-model="referralCode"
+                                            type="text"
+                                            class="h-11 min-w-0 flex-1 rounded-xl border border-slate-300 px-3 text-sm uppercase outline-none focus:border-[#2563EB]"
+                                            placeholder="CONTOH10"
+                                            @input="resetReferralPreview"
+                                        >
+                                        <button
+                                            type="button"
+                                            class="h-11 rounded-xl bg-[#2563EB] px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                            :disabled="referralLoading || !referralCode.trim()"
+                                            @click="applyReferralCode"
+                                        >
+                                            {{ referralLoading ? '...' : 'Apply' }}
+                                        </button>
+                                    </div>
+                                    <p v-if="referralMessage" class="mt-2 text-xs text-[#059669]">{{ referralMessage }}</p>
+                                    <p v-if="referralError" class="mt-2 text-xs text-[#DC2626]">{{ referralError }}</p>
+                                </div>
                             </div>
                         </section>
                     </div>
@@ -918,10 +1016,41 @@ onBeforeUnmount(() => {
                                     </div>
                                 </div>
 
+                                <div class="rounded-lg border border-slate-300 bg-white p-3">
+                                    <label class="text-sm font-medium text-gray-600">Kode Referal</label>
+                                    <div class="mt-2 flex gap-2">
+                                        <input
+                                            v-model="referralCode"
+                                            type="text"
+                                            class="h-10 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 text-sm uppercase outline-none focus:border-[#2563EB]"
+                                            placeholder="CONTOH10"
+                                            @input="resetReferralPreview"
+                                        >
+                                        <button
+                                            type="button"
+                                            class="h-10 rounded-lg bg-[#2563EB] px-3 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                            :disabled="referralLoading || !referralCode.trim()"
+                                            @click="applyReferralCode"
+                                        >
+                                            {{ referralLoading ? '...' : 'Apply' }}
+                                        </button>
+                                    </div>
+                                    <p v-if="referralMessage" class="mt-2 text-xs text-[#059669]">{{ referralMessage }}</p>
+                                    <p v-if="referralError" class="mt-2 text-xs text-[#DC2626]">{{ referralError }}</p>
+                                </div>
+
                                 <div class="rounded-lg border border-dashed border-slate-400 p-3">
+                                    <div class="mb-1 flex items-center justify-between text-sm text-gray-600">
+                                        <span>Subtotal</span>
+                                        <span>{{ formatRupiah(totalPrice) }}</span>
+                                    </div>
+                                    <div v-if="referralDiscountAmount > 0" class="mb-1 flex items-center justify-between text-sm text-[#059669]">
+                                        <span>Diskon Referal</span>
+                                        <span>-{{ formatRupiah(referralDiscountAmount) }}</span>
+                                    </div>
                                     <div class="flex items-center justify-between">
                                         <span class="text-sm text-gray-600">Total</span>
-                                        <span class="text-[#1F2937]" style="font-size: 1.25rem; font-weight: 700;">{{ formatRupiah(totalPrice) }}</span>
+                                        <span class="text-[#1F2937]" style="font-size: 1.25rem; font-weight: 700;">{{ formatRupiah(finalTotalPrice) }}</span>
                                     </div>
                                 </div>
 
@@ -1009,7 +1138,8 @@ onBeforeUnmount(() => {
                         <span v-if="activeAddons.length" class="rounded-full bg-gray-100 px-2 py-0.5" style="font-size: 0.65rem;">
                             +{{ activeAddons.reduce((sum, item) => sum + Number(addonQty[item.id] || 0), 0) }} add-on
                         </span>
-                        <span class="ml-auto text-[#1F2937]" style="font-size: 0.8rem; font-weight: 700;">{{ formatRupiah(totalPrice) }}</span>
+                        <span v-if="referralDiscountAmount > 0" class="rounded-full bg-emerald-50 px-2 py-0.5 text-[#059669]" style="font-size: 0.65rem;">-{{ formatRupiah(referralDiscountAmount) }}</span>
+                        <span class="ml-auto text-[#1F2937]" style="font-size: 0.8rem; font-weight: 700;">{{ formatRupiah(finalTotalPrice) }}</span>
                     </div>
 
                     <div class="flex gap-3">

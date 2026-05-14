@@ -12,6 +12,7 @@ import 'package:desktop_flutter/shared/models/payment_record.dart';
 import 'package:desktop_flutter/shared/models/pos_walk_in_checkout_result.dart';
 import 'package:desktop_flutter/shared/models/printer_setting_item.dart';
 import 'package:desktop_flutter/shared/models/queue_ticket_item.dart';
+import 'package:desktop_flutter/shared/models/referral_preview.dart';
 import 'package:desktop_flutter/shared/models/report_summary.dart';
 import 'package:desktop_flutter/shared/models/auth_user.dart';
 import 'package:desktop_flutter/shared/models/desktop_session.dart';
@@ -836,6 +837,7 @@ class ApiClient {
     double? paidAmount,
     String? referenceNo,
     double discountAmount = 0,
+    String? referralCode,
     double taxAmount = 0,
     String? notes,
     List<Map<String, dynamic>> addons = const <Map<String, dynamic>>[],
@@ -856,6 +858,8 @@ class ApiClient {
         if (referenceNo != null && referenceNo.isNotEmpty)
           'reference_no': referenceNo,
         'discount_amount': discountAmount,
+        if (referralCode != null && referralCode.isNotEmpty)
+          'referral_code': referralCode,
         'tax_amount': taxAmount,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
         'addons': addons,
@@ -1025,6 +1029,7 @@ class ApiClient {
     required double qty,
     required double unitPrice,
     double discountAmount = 0,
+    String? referralCode,
     double taxAmount = 0,
     String? notes,
   }) async {
@@ -1035,6 +1040,8 @@ class ApiClient {
       body: {
         'branch_id': branchId,
         'discount_amount': discountAmount,
+        if (referralCode != null && referralCode.isNotEmpty)
+          'referral_code': referralCode,
         'tax_amount': taxAmount,
         'notes': notes,
         'items': [
@@ -1055,6 +1062,33 @@ class ApiClient {
     }
 
     return TransactionRecord.fromJson(data);
+  }
+
+  Future<ReferralPreview> validateReferralCode({
+    required String referralCode,
+    required int branchId,
+    required int packageId,
+    required double subtotalAmount,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/referral-codes/validate',
+      authenticated: false,
+      body: {
+        'referral_code': referralCode,
+        'branch_id': branchId,
+        'package_id': packageId,
+        'subtotal_amount': subtotalAmount,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons kode referal tidak valid.');
+    }
+
+    return ReferralPreview.fromJson(data);
   }
 
   Future<PaymentRecord?> addTransactionPayment({

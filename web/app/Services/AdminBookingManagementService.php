@@ -26,9 +26,10 @@ class AdminBookingManagementService
         private readonly InventoryService $inventoryService,
         private readonly ActivityLogger $activityLogger,
         private readonly SlotService $slotService,
+        private readonly ReferralService $referralService,
     ) {}
 
-    public function create(array $payload): Booking
+    public function create(array $payload, ?int $actorId = null): Booking
     {
         [$package, $design, $startAt, $endAt, $selectedAddOns] = $this->buildBookingContext($payload);
 
@@ -44,12 +45,15 @@ class AdminBookingManagementService
             ]);
         }
 
-        DB::transaction(function () use ($booking, $package, $selectedAddOns): void {
+        DB::transaction(function () use ($booking, $payload, $package, $selectedAddOns, $actorId): void {
             $this->syncBookingAddOns($booking, $selectedAddOns);
-
-            $booking->update([
-                'total_amount' => $this->calculateBookingTotal($package, $selectedAddOns),
-            ]);
+            $this->referralService->applyToBooking(
+                $booking,
+                $payload['referral_code'] ?? null,
+                $this->calculateBookingSubtotal($package, $selectedAddOns),
+                ReferralService::CHANNEL_ADMIN_BOOKING,
+                $actorId,
+            );
 
             $this->syncBookingTransactionItems($booking, $package, $selectedAddOns);
         });
@@ -79,15 +83,15 @@ class AdminBookingManagementService
         return $booking;
     }
 
-    public function update(Booking $booking, array $payload): Booking
+    public function update(Booking $booking, array $payload, ?int $actorId = null): Booking
     {
         [$package, $design, $startAt, $endAt, $selectedAddOns] = $this->buildBookingContext($payload);
 
         $this->assertNoConflict((int) $payload['branch_id'], $startAt, $endAt, (int) $booking->id);
 
-        $nextTotal = $this->calculateBookingTotal($package, $selectedAddOns);
+        $nextSubtotal = $this->calculateBookingSubtotal($package, $selectedAddOns);
 
-        DB::transaction(function () use ($booking, $payload, $package, $design, $startAt, $endAt, $selectedAddOns, $nextTotal): void {
+        DB::transaction(function () use ($booking, $payload, $package, $design, $startAt, $endAt, $selectedAddOns, $nextSubtotal, $actorId): void {
             $booking->update([
                 'branch_id' => (int) $payload['branch_id'],
                 'package_id' => (int) $payload['package_id'],
@@ -98,11 +102,17 @@ class AdminBookingManagementService
                 'booking_date' => $startAt->toDateString(),
                 'start_at' => $startAt,
                 'end_at' => $endAt,
-                'total_amount' => $nextTotal,
                 'notes' => $payload['notes'] ?: null,
             ]);
 
             $this->syncBookingAddOns($booking, $selectedAddOns);
+            $this->referralService->applyToBooking(
+                $booking,
+                $payload['referral_code'] ?? null,
+                $nextSubtotal,
+                ReferralService::CHANNEL_ADMIN_BOOKING,
+                $actorId,
+            );
             $this->syncBookingTransactionItems($booking, $package, $selectedAddOns);
         });
 
@@ -455,11 +465,16 @@ class AdminBookingManagementService
         $createdTransaction = $this->transactionService->create([
             'branch_id' => (int) $booking->branch_id,
             'booking_id' => (int) $booking->id,
-            'discount_amount' => 0,
+            'discount_amount' => (float) $booking->referral_discount_amount,
+            'referral_code_id' => $booking->referral_code_id ? (int) $booking->referral_code_id : null,
+            'referral_code' => $booking->referral_code ?: null,
+            'referral_discount_amount' => (float) $booking->referral_discount_amount,
             'tax_amount' => 0,
             'notes' => 'Auto-generated from booking payment confirmation.',
             'items' => $items,
         ], $cashierId);
+
+        $this->referralService->linkBookingRedemptionToTransaction($booking, $createdTransaction);
 
         $initialPaid = min(
             max((float) $booking->paid_amount, 0),
@@ -573,7 +588,7 @@ class AdminBookingManagementService
         return $selected;
     }
 
-    private function calculateBookingTotal(Package $package, array $selectedAddOns): float
+    private function calculateBookingSubtotal(Package $package, array $selectedAddOns): float
     {
         $addOnTotal = (float) collect($selectedAddOns)->sum('line_total');
 
@@ -653,7 +668,7 @@ class AdminBookingManagementService
         }
 
         $subtotal = (float) collect($items)->sum('line_total');
-        $discount = (float) $transaction->discount_amount;
+        $discount = min(max((float) $booking->referral_discount_amount, 0), $subtotal);
         $tax = (float) $transaction->tax_amount;
         $total = max(0, $subtotal - $discount + $tax);
         $paid = (float) $transaction->paid_amount;
@@ -666,6 +681,10 @@ class AdminBookingManagementService
 
         $transaction->update([
             'subtotal' => $subtotal,
+            'discount_amount' => $discount,
+            'referral_code_id' => $booking->referral_code_id ? (int) $booking->referral_code_id : null,
+            'referral_code' => $booking->referral_code ?: null,
+            'referral_discount_amount' => $discount,
             'total_amount' => $total,
             'change_amount' => max($paid - $total, 0),
             'status' => $status,
