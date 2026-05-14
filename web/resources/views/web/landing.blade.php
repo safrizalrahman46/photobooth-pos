@@ -26,31 +26,20 @@
     ];
 
     $marqueeRowC = [
-        ['src' => asset('images/landing/source tambahan/2025-07-26_175640636.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/2025-07-26_180006489.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/2025-07-27_234407925.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/2025-07-27_234531406.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20250704_141325_882.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20250704_152608_170.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20250727_161115272.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20250727_173634_111.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20250727_180948_030.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20250930_120707_461.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20250930_140001_528.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20250930_140526_642.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20260213_203935_348.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20260213_204007_698.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20260329_125031_649.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20260329_125102_684.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20260404_175201_597.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20260404_175452_585.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20260404_175900_243.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/20260404_214644_137.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/IMG_0031_20260329_125025_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/IMG_0034_20260329_125135_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/IMG_0117_20260404_175132_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/IMG_0125_20260404_175402_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
-        ['src' => asset('images/landing/source tambahan/IMG_0370_20250704_141212_3600.jpg'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/IMG_0117_20260404_175132_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/2025-07-26_180006489.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/IMG_0125_20260404_175402_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/20250727_180948_030.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/IMG_0117_20260404_175132_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/20250930_120707_461.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/IMG_0125_20260404_175402_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/20250930_140526_642.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/IMG_0117_20260404_175132_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/20260213_204007_698.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/IMG_0125_20260404_175402_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/20260404_175201_597.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/IMG_0117_20260404_175132_3600.webp'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
+        ['src' => asset('images/landing/source%20tambahan/20260404_175452_585.mp4'), 'package' => 'SPECIAL', 'price' => '50k / sesi'],
     ];
 
     
@@ -129,6 +118,10 @@
             animation: marquee-right 150s linear infinite; 
             will-change: transform;
         }
+        .animate-marquee-slow { 
+            animation: marquee-left 525s linear infinite; 
+            will-change: transform;
+        }
         
         @keyframes marquee-left {
             0% { transform: translate3d(0, 0, 0); }
@@ -158,10 +151,10 @@
     <!-- HEADER -->
     <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm">
         <div class="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12 py-4 md:py-6">
-            <a href="#home" class="flex items-center gap-2 md:gap-3">
-                <img src="{{ asset('images/logo/logo.png') }}" alt="Ready to Pict" class="h-8 md:h-12 w-auto" />
-                <span class="font-display text-lg md:text-2xl font-semibold tracking-tight text-memphis-blue">
-                    Ready to Pict
+            <a href="{{ url('/') }}" class="flex items-center gap-2 md:gap-3">
+                <img src="{{ asset('images/logo/logo.png') }}" alt="{{ $brandName }}" class="h-15 md:h-18 w-auto" />
+                <span class="font-display text-lg md:text-1x2 font-semibold tracking-tight text-memphis-blue">
+                    {{ $brandName }}
                 </span>
             </a>
             
@@ -268,7 +261,7 @@
         </div>
 
         <div class="relative overflow-hidden w-full">
-            <div class="flex w-max animate-marquee-left gap-4">
+            <div class="flex w-max animate-marquee-slow gap-4">
                 @foreach(array_merge($marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC, $marqueeRowC) as $i => $item)
                     @php
                         $isVideo = str_ends_with($item['src'], '.mp4') || str_ends_with($item['src'], '.webm');
@@ -393,14 +386,8 @@
         </div>
     </div>
 
-    <!-- FOOTER -->
-    <footer class="bg-background">
-        <div class="max-w-7xl mx-auto px-6 md:px-12 py-12 flex flex-col items-center">
-            
-        </div>
-        <div class="py-5 text-center text-xs text-muted-foreground border-t border-border/40">
-            © {{ date('Y') }} Ready to Pict. All rights reserved.
-        </div>
+    <footer class="py-8 text-center text-xs text-muted-foreground bg-memphis-blue-soft/30 border-t border-border/20">
+        © {{ date('Y') }} {{ $brandName }} All Right Reserved.
     </footer>
 
     <script>

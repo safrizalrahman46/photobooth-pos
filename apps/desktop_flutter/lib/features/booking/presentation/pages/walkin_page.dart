@@ -8,6 +8,7 @@ import '../widgets/package/package_card.dart';
 import '../widgets/addon/addon_item.dart';
 import '../widgets/summary/order_summary.dart';
 import '../widgets/dialogs/checkout_success_dialog.dart';
+import '../widgets/dialogs/payment_calculation_dialog.dart';
 
 class WalkinPage extends StatefulWidget {
   const WalkinPage({super.key});
@@ -83,7 +84,7 @@ class _WalkinPageState extends State<WalkinPage> {
             padding: const EdgeInsets.all(16),
             child: OrderSummaryPanel(
               controller: _controller,
-              onConfirm: () => _checkoutAndPrint(context),
+              onConfirm: () => _showPaymentDialog(context),
             ),
           ),
         ],
@@ -91,42 +92,99 @@ class _WalkinPageState extends State<WalkinPage> {
     );
   }
 
-  Future<void> _checkoutAndPrint(BuildContext context) async {
-    final result = await _controller.checkoutWalkIn();
-
-    if (!context.mounted || result == null) {
+  void _showPaymentDialog(BuildContext context) {
+    if (_controller.customerName.isEmpty || _controller.whatsapp.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nama dan WhatsApp wajib diisi')),
+      );
       return;
     }
 
-    final session = ApiSession.current;
-    
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => PaymentCalculationDialog(
+        controller: _controller,
+        onConfirm: () {
+          Navigator.pop(dialogContext); // Close payment dialog
+          _performCheckout(context); // Proceed with page context
+        },
+      ),
+    );
+  }
+
+  Future<void> _performCheckout(BuildContext context) async {
+    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        return CheckoutSuccessDialog(
-          result: result,
-          selectedPackage: _controller.selectedPackage,
-          onPrint: () async {
-            await ReceiptPrinter.printTransactionReceipt(
-              transaction: result.transaction,
-              brandName: 'Ready To Pict',
-              branchName: _controller.selectedBranchName,
-              cashierName: session?.user.name ?? '-',
-              queueCode: result.queueTicket.queueCode,
-              paperWidthMm: 80,
-            );
-          },
-          onDone: () {
-            Navigator.of(context).pop();
-            setState(() {
-              _controller = BookingController();
-              _controller.addListener(() => setState(() {}));
-            });
-          },
-        );
-      },
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      ),
     );
+
+    try {
+      // Add a timeout to the checkout process just in case
+      final result = await _controller.checkoutWalkIn().timeout(
+        const Duration(seconds: 20),
+        onTimeout: () => throw Exception('Waktu proses habis (Timeout). Silakan cek koneksi internet.'),
+      );
+
+      if (!context.mounted) return;
+      
+      // Close loading dialog
+      Navigator.pop(context);
+
+      if (result == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_controller.errorMessage ?? 'Terjadi kesalahan saat checkout'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
+
+      final session = ApiSession.current;
+      
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return CheckoutSuccessDialog(
+            result: result,
+            selectedPackage: _controller.selectedPackage,
+            onPrint: () async {
+              await ReceiptPrinter.printTransactionReceipt(
+                transaction: result.transaction,
+                brandName: 'Ready To Pict',
+                branchName: _controller.selectedBranchName,
+                cashierName: session?.user.name ?? '-',
+                queueCode: result.queueTicket.queueCode,
+                paperWidthMm: 80,
+              );
+            },
+            onDone: () {
+              Navigator.of(context).pop();
+              setState(() {
+                _controller = BookingController();
+                _controller.addListener(() => setState(() {}));
+              });
+            },
+          );
+        },
+      );
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Ensure loading is closed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 }
 
