@@ -50,6 +50,11 @@ class Package extends Model
         return $this->hasMany(Booking::class);
     }
 
+    public function referralCodes(): HasMany
+    {
+        return $this->hasMany(ReferralCode::class);
+    }
+
     public function addOns(): HasMany
     {
         return $this->hasMany(AddOn::class);

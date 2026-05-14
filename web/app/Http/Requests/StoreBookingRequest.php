@@ -45,6 +45,7 @@ class StoreBookingRequest extends FormRequest
                 Rule::exists('add_ons', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
             'addons.*.qty' => ['required_with:addons', 'integer', 'min:1', 'max:99'],
+            'referral_code' => ['nullable', 'string', 'max:40'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
 

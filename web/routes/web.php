@@ -15,6 +15,7 @@ use App\Http\Controllers\Web\AdminPackageController;
 use App\Http\Controllers\Web\AdminPaymentController;
 use App\Http\Controllers\Web\AdminPrinterSettingController;
 use App\Http\Controllers\Web\AdminQueueController;
+use App\Http\Controllers\Web\AdminReferralController;
 use App\Http\Controllers\Web\AdminSettingsController;
 use App\Http\Controllers\Web\AdminTimeSlotController;
 use App\Http\Controllers\Web\AdminUserController;
@@ -62,6 +63,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/queue-tickets', AdminDashboardController::class);
         Route::get('/transactions', AdminDashboardController::class);
         Route::get('/reports', AdminDashboardController::class);
+        Route::get('/referrals', AdminDashboardController::class);
         Route::get('/activity-logs', AdminDashboardController::class);
         Route::get('/settings', AdminDashboardController::class);
         Route::get('/branches', AdminDashboardController::class);
@@ -137,6 +139,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/payments-data', [AdminPaymentController::class, 'index'])->name('payments.data');
         Route::post('/payments/{transaction}/store', [AdminPaymentController::class, 'store'])->name('payments.store');
+
+        Route::get('/referrals-data', [AdminReferralController::class, 'index'])->name('referrals.data');
+        Route::post('/referrals', [AdminReferralController::class, 'store'])->name('referrals.store');
+        Route::put('/referrals/{referralCode}', [AdminReferralController::class, 'update']);
+        Route::delete('/referrals/{referralCode}', [AdminReferralController::class, 'destroy']);
 
         Route::get('/app-settings-data', [AdminAppSettingController::class, 'index'])->name('app-settings.data');
         Route::put('/app-settings/{group}', [AdminAppSettingController::class, 'update'])->name('app-settings.update');

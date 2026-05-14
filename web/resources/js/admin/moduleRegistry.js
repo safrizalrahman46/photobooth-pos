@@ -96,6 +96,13 @@ export const buildAdminModuleRegistry = (ctx) => ({
             }
         },
     },
+    referrals: {
+        onEnter: () => {
+            if (!ctx.referralLoading.value) {
+                ctx.fetchReferralData();
+            }
+        },
+    },
     'printer-settings': {
         onEnter: () => {
             if (!ctx.printerSettingRows.value.length && !ctx.printerSettingLoading.value) {

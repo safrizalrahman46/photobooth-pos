@@ -26,6 +26,7 @@ class AdminDashboardDataService
         private readonly AdminBlackoutDateService $adminBlackoutDateService,
         private readonly AdminPrinterSettingService $adminPrinterSettingService,
         private readonly AdminPaymentService $adminPaymentService,
+        private readonly AdminReferralService $adminReferralService,
     ) {}
 
     public function bootstrapPayload(
@@ -66,6 +67,7 @@ class AdminDashboardDataService
             'initialPrinterSettings' => $this->adminPrinterSettingService->rows(['include_inactive' => true]),
             'initialPayments' => $this->adminPaymentService->rows(),
             'initialPaymentTransactionOptions' => $this->adminPaymentService->transactionOptions(),
+            'initialReferralPayload' => $this->adminReferralService->payload(),
             'initialInventoryItems' => $this->inventoryService->itemRows(),
             'initialInventoryMovements' => $this->inventoryService->movementRows(),
         ];

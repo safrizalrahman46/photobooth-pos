@@ -56,7 +56,7 @@ class BookingReadService
                 'designCatalog:id,package_id,name',
                 'branch:id,name',
                 'addOns:id,code,name,price',
-                'transaction:id,booking_id,total_amount,paid_amount,status',
+                'transaction:id,booking_id,subtotal,discount_amount,referral_code_id,referral_code,referral_discount_amount,total_amount,paid_amount,status',
                 'transaction.payments:id,transaction_id,method',
                 'transaction.items:id,transaction_id,item_type,item_ref_id,item_name,qty,unit_price,line_total',
             ]);
@@ -180,8 +180,11 @@ class BookingReadService
         $storedPaidAmount = (float) $booking->paid_amount;
         $transactionTotalAmount = (float) ($booking->transaction?->total_amount ?? 0);
         $transactionPaidAmount = (float) ($booking->transaction?->paid_amount ?? 0);
-        $derivedTotalAmount = (float) (($booking->package?->base_price ?? 0) + (float) $addOns->sum('line_total'));
-        $effectiveTotalAmount = max($storedTotalAmount, $transactionTotalAmount, $derivedTotalAmount, 0);
+        $derivedSubtotalAmount = (float) (($booking->package?->base_price ?? 0) + (float) $addOns->sum('line_total'));
+        $storedSubtotalAmount = max((float) $booking->subtotal_amount, $derivedSubtotalAmount, 0);
+        $storedDiscountAmount = min(max((float) $booking->discount_amount, 0), $storedSubtotalAmount);
+        $derivedDiscountedTotalAmount = max($storedSubtotalAmount - $storedDiscountAmount, 0);
+        $effectiveTotalAmount = max($storedTotalAmount, $transactionTotalAmount, $derivedDiscountedTotalAmount, 0);
         $paidAmount = max($storedPaidAmount, $transactionPaidAmount, 0);
         $remainingAmount = max($effectiveTotalAmount - $paidAmount, 0);
         $paymentStatus = $this->resolveBookingPaymentStatus($booking, $effectiveTotalAmount, $paidAmount);
@@ -239,6 +242,11 @@ class BookingReadService
             'design_name' => (string) ($booking->designCatalog?->name ?? '-'),
             'amount' => $amount,
             'amount_text' => $amount > 0 ? $this->formatRupiah($amount) : '-',
+            'subtotal_amount' => $storedSubtotalAmount,
+            'discount_amount' => $storedDiscountAmount,
+            'referral_code_id' => $booking->referral_code_id ? (int) $booking->referral_code_id : null,
+            'referral_code' => (string) ($booking->referral_code ?? ''),
+            'referral_discount_amount' => (float) $booking->referral_discount_amount,
             'total_amount' => $effectiveTotalAmount,
             'paid_amount' => $paidAmount,
             'remaining_amount' => $remainingAmount,

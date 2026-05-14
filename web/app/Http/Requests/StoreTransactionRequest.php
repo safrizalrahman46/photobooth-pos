@@ -23,6 +23,7 @@ class StoreTransactionRequest extends FormRequest
             'booking_id' => ['nullable', 'integer', Rule::exists('bookings', 'id')],
             'queue_ticket_id' => ['nullable', 'integer', Rule::exists('queue_tickets', 'id')],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'referral_code' => ['nullable', 'string', 'max:40'],
             'tax_amount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'items' => ['required', 'array', 'min:1'],

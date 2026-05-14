@@ -13,6 +13,7 @@ class BookingPaymentService
 {
     public function __construct(
         private readonly MidtransService $midtransService,
+        private readonly ReferralService $referralService,
     ) {}
 
     public function startOnlinePayment(Booking $booking): Booking
@@ -76,6 +77,7 @@ class BookingPaymentService
                 $booking->save();
 
                 $this->transitionStatus($booking, BookingStatus::Paid, 'Pembayaran Midtrans berhasil diterima.');
+                $this->referralService->markBookingStatus($booking, 'paid');
 
                 return $booking->refresh();
             }
@@ -83,6 +85,7 @@ class BookingPaymentService
             if ($this->isCancelledStatus($transactionStatus) && (float) $booking->paid_amount <= 0) {
                 $booking->save();
                 $this->transitionStatus($booking, BookingStatus::Cancelled, 'Pembayaran Midtrans dibatalkan atau kedaluwarsa.');
+                $this->referralService->voidForBooking($booking, 'Pembayaran Midtrans dibatalkan atau kedaluwarsa.');
 
                 return $booking->refresh();
             }

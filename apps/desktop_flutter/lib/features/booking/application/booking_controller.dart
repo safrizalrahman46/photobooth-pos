@@ -1,6 +1,6 @@
 import 'package:desktop_flutter/core/session/api_session.dart';
-import 'package:desktop_flutter/shared/models/booking_item.dart' as api;
 import 'package:desktop_flutter/shared/models/pos_walk_in_checkout_result.dart';
+import 'package:desktop_flutter/shared/models/referral_preview.dart';
 import 'package:flutter/material.dart';
 import '../domain/entities/booking.dart';
 
@@ -36,9 +36,12 @@ class BookingController extends ChangeNotifier {
   // Addons
   List<Addon> addons = [];
 
-  // Voucher
-  String voucherCode = '';
-  bool voucherApplied = false;
+  // Referral
+  String referralCode = '';
+  ReferralPreview? referralPreview;
+  bool isApplyingReferral = false;
+  String? referralMessage;
+  String? referralError;
 
   // Payment
   String selectedPayment = 'TUNAI'; // 'TUNAI' or 'QRIS'
@@ -56,7 +59,14 @@ class BookingController extends ChangeNotifier {
   double get addonsTotal =>
       addons.fold(0, (sum, a) => sum + (a.price * a.quantity));
 
-  double get grandTotal => packagePrice + addonsTotal;
+  double get subtotalTotal => packagePrice + addonsTotal;
+
+  double get referralDiscount => referralPreview?.discountAmount ?? 0;
+
+  double get grandTotal {
+    final total = subtotalTotal - referralDiscount;
+    return total < 0 ? 0 : total;
+  }
 
   Future<void> loadInitialData() async {
     final client = ApiSession.client;
@@ -144,6 +154,7 @@ class BookingController extends ChangeNotifier {
     for (final addon in addons) {
       addon.quantity = 0;
     }
+    _clearReferralPreview();
     notifyListeners();
     _loadAddOnsForSelectedPackage();
   }
@@ -156,12 +167,14 @@ class BookingController extends ChangeNotifier {
     }
 
     addons[index].quantity++;
+    _clearReferralPreview();
     notifyListeners();
   }
 
   void decrementAddon(int index) {
     if (addons[index].quantity > 0) {
       addons[index].quantity--;
+      _clearReferralPreview();
       notifyListeners();
     }
   }
@@ -202,9 +215,54 @@ class BookingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void applyVoucher() {
-    voucherApplied = !voucherApplied;
+  void updateReferralCode(String val) {
+    referralCode = val.toUpperCase();
+    _clearReferralPreview(keepMessage: false);
     notifyListeners();
+  }
+
+  Future<void> applyReferral() async {
+    final client = ApiSession.client;
+    final branchId = selectedBranchId;
+    final packageId = int.tryParse(selectedPackage.id);
+    final code = referralCode.trim();
+
+    referralMessage = null;
+    referralError = null;
+
+    if (code.isEmpty) {
+      referralPreview = null;
+      notifyListeners();
+      return;
+    }
+
+    if (client == null || branchId == null || packageId == null || packageId <= 0) {
+      referralError = 'Data cabang/paket belum siap.';
+      notifyListeners();
+      return;
+    }
+
+    isApplyingReferral = true;
+    notifyListeners();
+
+    try {
+      final preview = await client.validateReferralCode(
+        referralCode: code,
+        branchId: branchId,
+        packageId: packageId,
+        subtotalAmount: subtotalTotal,
+      );
+
+      referralPreview = preview;
+      referralCode = preview.referralCode;
+      referralMessage = 'Diskon referal diterapkan.';
+    } catch (error) {
+      referralPreview = null;
+      referralError = error.toString();
+    } finally {
+      isApplyingReferral = false;
+      notifyListeners();
+    }
   }
 
   Future<void> accBooking() async {
@@ -319,6 +377,7 @@ class BookingController extends ChangeNotifier {
         customerPhone: whatsapp.trim(),
         paymentMethod: selectedPayment == 'QRIS' ? 'qris' : 'cash',
         paidAmount: grandTotal,
+        referralCode: referralPreview == null ? null : referralCode.trim(),
         notes: note.trim().isEmpty ? null : note.trim(),
         addons: selectedAddons
             .map((addon) => {
@@ -374,6 +433,17 @@ class BookingController extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  void _clearReferralPreview({bool keepMessage = true}) {
+    referralPreview = null;
+    referralError = null;
+
+    if (!keepMessage) {
+      referralMessage = null;
+    } else if (referralCode.trim().isNotEmpty) {
+      referralMessage = 'Apply ulang kode referal setelah paket/add-on berubah.';
+    }
   }
 
   String _formatBookingTime(String? value) {

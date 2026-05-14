@@ -71,6 +71,7 @@ const bookingForm = reactive({
     customer_email: '',
     booking_date: '',
     booking_time: '',
+    referral_code: '',
     notes: '',
 });
 
@@ -365,6 +366,7 @@ const resetBookingForm = () => {
     bookingForm.customer_email = '';
     bookingForm.booking_date = date;
     bookingForm.booking_time = '';
+    bookingForm.referral_code = '';
     bookingForm.notes = '';
 
     editingBookingId.value = null;
@@ -401,6 +403,7 @@ const openEditBookingModal = (row) => {
     bookingForm.customer_email = String(row.customer_email || '');
     bookingForm.booking_date = String(row.booking_date_iso || '');
     bookingForm.booking_time = String(row.start_time || row.time || '10:00');
+    bookingForm.referral_code = String(row.referral_code || '');
     bookingForm.notes = String(row.notes || '');
 
     localError.value = '';
@@ -485,6 +488,7 @@ const submitBookingForm = async () => {
         customer_email: String(bookingForm.customer_email || '').trim(),
         booking_date: String(bookingForm.booking_date || ''),
         booking_time: String(bookingForm.booking_time || ''),
+        referral_code: String(bookingForm.referral_code || '').trim(),
         notes: String(bookingForm.notes || '').trim(),
     };
 
@@ -1041,6 +1045,12 @@ watch(
                 </div>
 
                 <label class="mt-3 block text-sm text-[#475569]">
+                    Kode Referal
+                    <input v-model="bookingForm.referral_code" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 uppercase" style="border-color: #E2E8F0;" placeholder="Opsional" >
+                    <span class="mt-1 block text-xs text-[#94A3B8]">Diskon akan divalidasi dan dihitung oleh backend.</span>
+                </label>
+
+                <label class="mt-3 block text-sm text-[#475569]">
                     Notes
                     <textarea v-model="bookingForm.notes" rows="3" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></textarea>
                 </label>
@@ -1136,6 +1146,8 @@ watch(
                     <p><span class="font-semibold text-[#0F172A]">Design:</span> {{ bookingDetail?.design_name || '-' }}</p>
                     <p><span class="font-semibold text-[#0F172A]">Date:</span> {{ bookingDetail?.date || '-' }}</p>
                     <p><span class="font-semibold text-[#0F172A]">Time:</span> {{ bookingDetail?.time || '-' }}</p>
+                    <p><span class="font-semibold text-[#0F172A]">Referal:</span> {{ bookingDetail?.referral_code || '-' }}</p>
+                    <p><span class="font-semibold text-[#0F172A]">Diskon Referal:</span> {{ formatCurrency(bookingDetail?.referral_discount_amount || 0) }}</p>
                 </div>
 
                 <div class="mt-4 rounded-xl border" style="border-color: #E2E8F0; background: #FFFFFF;">

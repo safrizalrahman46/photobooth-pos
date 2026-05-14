@@ -10,6 +10,10 @@ class TransactionRecord {
     required this.customerName,
     required this.customerPhone,
     required this.status,
+    required this.subtotalAmount,
+    required this.discountAmount,
+    required this.referralCode,
+    required this.referralDiscountAmount,
     required this.totalAmount,
     required this.paidAmount,
     required this.changeAmount,
@@ -25,6 +29,10 @@ class TransactionRecord {
   final String customerName;
   final String customerPhone;
   final String status;
+  final double subtotalAmount;
+  final double discountAmount;
+  final String referralCode;
+  final double referralDiscountAmount;
   final double totalAmount;
   final double paidAmount;
   final double changeAmount;
@@ -44,6 +52,11 @@ class TransactionRecord {
       customerName: json['customer_name']?.toString() ?? '',
       customerPhone: json['customer_phone']?.toString() ?? '',
       status: json['status']?.toString() ?? 'unpaid',
+      subtotalAmount: (json['subtotal'] as num?)?.toDouble() ?? 0,
+      discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0,
+      referralCode: json['referral_code']?.toString() ?? '',
+      referralDiscountAmount:
+          (json['referral_discount_amount'] as num?)?.toDouble() ?? 0,
       totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
       paidAmount: (json['paid_amount'] as num?)?.toDouble() ?? 0,
       changeAmount: (json['change_amount'] as num?)?.toDouble() ?? 0,

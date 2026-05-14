@@ -13,6 +13,7 @@
         'customer_phone' => old('customer_phone', $sessionCustomer['customer_phone'] ?? null),
         'customer_email' => old('customer_email', $sessionCustomer['customer_email'] ?? null),
         'notes' => old('notes', $sessionCustomer['notes'] ?? null),
+        'referral_code' => old('referral_code'),
     ];
 
     $bootstrap = [
@@ -27,6 +28,7 @@
             'booking' => route('booking.customer'),
             'availability' => route('booking.availability'),
             'payment' => route('booking.payment.prepare'),
+            'referralValidate' => url('/api/v1/referral-codes/validate'),
             'store' => route('booking.store'),
             'queueBoard' => route('queue.board'),
         ],

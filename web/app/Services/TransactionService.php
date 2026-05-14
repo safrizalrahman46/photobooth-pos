@@ -17,6 +17,7 @@ class TransactionService
     public function __construct(
         private readonly CodeGenerator $codeGenerator,
         private readonly ActivityLogger $activityLogger,
+        private readonly ReferralService $referralService,
     ) {}
 
     public function create(array $payload, int $cashierId): Transaction
@@ -37,6 +38,9 @@ class TransactionService
                 'cashier_id' => $cashierId,
                 'subtotal' => $subtotal,
                 'discount_amount' => $discount,
+                'referral_code_id' => $payload['referral_code_id'] ?? null,
+                'referral_code' => $payload['referral_code'] ?? null,
+                'referral_discount_amount' => (float) ($payload['referral_discount_amount'] ?? 0),
                 'tax_amount' => $tax,
                 'total_amount' => $total,
                 'paid_amount' => 0,
@@ -71,6 +75,7 @@ class TransactionService
                     'queue_ticket_id' => $transaction->queue_ticket_id ? (int) $transaction->queue_ticket_id : null,
                     'subtotal' => $subtotal,
                     'discount_amount' => $discount,
+                    'referral_code' => $payload['referral_code'] ?? null,
                     'tax_amount' => $tax,
                     'total_amount' => $total,
                     'item_count' => count($items),
@@ -119,6 +124,10 @@ class TransactionService
 
             $transaction->save();
 
+            if ($transaction->status === TransactionStatus::Paid) {
+                $this->referralService->markTransactionStatus($transaction, 'paid');
+            }
+
             if ($transaction->booking && $transaction->status === TransactionStatus::Paid) {
                 $booking = Booking::query()->find($transaction->booking_id);
                 if ($booking) {
@@ -131,6 +140,7 @@ class TransactionService
                         $booking->status = BookingStatus::Paid;
                     }
                     $booking->save();
+                    $this->referralService->markBookingStatus($booking, 'paid');
 
                     $afterBookingStatus = $booking->status instanceof BookingStatus
                         ? $booking->status->value
