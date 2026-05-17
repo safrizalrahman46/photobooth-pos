@@ -108,7 +108,38 @@ const selectedPackagePhotoSet = computed(() => {
         return [];
     }
 
-    const samplePhotos = Array.isArray(selected.sample_photos) ? selected.sample_photos : [];
+    let samplePhotos = Array.isArray(selected.sample_photos) ? [...selected.sample_photos] : [];
+
+    if (samplePhotos.length === 0 && selected.code) {
+        if (selected.code === 'PKG-EXPRESS') {
+            samplePhotos = [
+                '/images/landing/Basic/IMG_0394.JPG',
+                '/images/landing/Mini/IMG_1228.JPG',
+                '/images/landing/Basic/IMG_0879.JPG',
+                '/images/landing/Mini/IMG_1555.JPG'
+            ];
+        } else if (selected.code === 'PKG-PARTY') {
+            samplePhotos = [
+                '/images/landing/manbol/IMG_0244.JPG',
+                '/images/landing/Vintage/IMG_0032.JPG',
+                '/images/landing/manbol/IMG_2968.JPG',
+                '/images/landing/Vintage/IMG_3356.JPG'
+            ];
+        } else if (selected.code === 'PKG-PREMIUM') {
+            samplePhotos = [
+                '/images/landing/Sofa/IMG_0350.JPG',
+                '/images/landing/Sofa/IMG_0689.JPG',
+                '/images/landing/Sofa/IMG_0900.JPG',
+                '/images/landing/Sofa/IMG_1406.JPG'
+            ];
+        } else {
+            samplePhotos = [
+                '/images/landing/Basic/IMG_9825.JPG',
+                '/images/landing/manbol/IMG_3096.JPG',
+                '/images/landing/Sofa/IMG_1406.JPG'
+            ];
+        }
+    }
 
     return samplePhotos
         .map((src, index) => ({
