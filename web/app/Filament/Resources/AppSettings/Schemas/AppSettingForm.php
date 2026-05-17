@@ -11,6 +11,7 @@ class AppSettingForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(['default' => 1, 'sm' => 2])
             ->components([
                 TextInput::make('key')
                     ->label('Grup')
