@@ -531,6 +531,43 @@ const handleSubmit = (event) => {
     }
 };
 
+const desktopPhotoScrollRef = ref(null);
+const mobilePhotoScrollRef = ref(null);
+
+const scrollPhotos = (direction) => {
+    const desktopEl = desktopPhotoScrollRef.value;
+    const mobileEl = mobilePhotoScrollRef.value;
+    const scrollAmount = 280;
+
+    if (desktopEl) desktopEl.scrollBy({ left: direction === 'right' ? scrollAmount : -scrollAmount, behavior: 'smooth' });
+    if (mobileEl) mobileEl.scrollBy({ left: direction === 'right' ? scrollAmount : -scrollAmount, behavior: 'smooth' });
+};
+
+const isDraggingPhotos = ref(false);
+const dragStartX = ref(0);
+const dragScrollLeft = ref(0);
+
+const startPhotoDrag = (e) => {
+    isDraggingPhotos.value = true;
+    const x = e.type.includes('touch') ? e.touches[0].pageX : e.pageX;
+    dragStartX.value = x - e.currentTarget.offsetLeft;
+    dragScrollLeft.value = e.currentTarget.scrollLeft;
+};
+
+const stopPhotoDrag = () => {
+    isDraggingPhotos.value = false;
+};
+
+const onPhotoDrag = (e) => {
+    if (!isDraggingPhotos.value) return;
+    if (!e.type.includes('touch')) {
+        e.preventDefault();
+        const x = e.pageX;
+        const walk = (x - dragStartX.value - e.currentTarget.offsetLeft) * 1.5;
+        e.currentTarget.scrollLeft = dragScrollLeft.value - walk;
+    }
+};
+
 watch(branchId, () => {
     const packageStillAllowed = filteredPackages.value.some((item) => asString(item.id) === asString(packageId.value));
 
@@ -661,7 +698,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="grid gap-8 lg:grid-cols-[1fr_380px]">
-                    <div class="space-y-6">
+                    <div class="space-y-6 min-w-0">
                         <section
                             v-show="!isMobile || activeMobileStep === 0"
                             class="overflow-hidden rounded-xl border-0 bg-white shadow-sm"
@@ -731,6 +768,54 @@ onBeforeUnmount(() => {
                                             {{ index % 2 === 0 ? 'Device 1' : 'Device 2' }}
                                         </div>
                                     </button>
+                                </div>
+                            </div>
+
+                            <div v-if="isMobile && packageId" class="border-t border-slate-100 bg-slate-50/50 lg:hidden">
+                                <div class="px-4 py-5">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h3 class="flex items-center gap-2 text-[#1F2937]" style="font-size: 0.875rem; font-weight: 600;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#2563EB]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                                <path d="M21 15l-5-5L5 21" />
+                                            </svg>
+                                            Hasil Foto - {{ selectedPackage?.name || 'Paket' }}
+                                        </h3>
+                                    </div>
+                                    <div v-if="!selectedPackagePhotoSet.length" class="py-6 text-center text-sm text-gray-400">
+                                        Belum ada contoh hasil foto untuk paket ini.
+                                    </div>
+                                    <div
+                                        v-else
+                                        ref="mobilePhotoScrollRef"
+                                        class="photo-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto select-none pb-2"
+                                        style="-ms-overflow-style: none; scrollbar-width: none;"
+                                    >
+                                        <div
+                                            v-for="(photo, index) in selectedPackagePhotoSet"
+                                            :key="`mobile-photo-${index}`"
+                                            class="group relative h-[180px] w-[260px] shrink-0 snap-center overflow-hidden rounded-xl border border-slate-200/60 shadow-sm"
+                                        >
+                                            <img :src="photo.src" :alt="photo.label" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                                            <div class="absolute inset-x-0 bottom-0 px-3 pb-3">
+                                                <span class="text-xs text-white" style="font-weight: 600;">{{ photo.label }}</span>
+                                                <p class="mt-0.5 text-[0.6rem] text-white/80">Paket {{ selectedPackage?.name || '-' }}</p>
+                                            </div>
+                                            <div class="absolute right-2 top-2 rounded-full bg-black/40 backdrop-blur-sm px-2 py-0.5 text-[0.6rem] text-white">
+                                                {{ index + 1 }}/{{ selectedPackagePhotoSet.length }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-if="selectedPackagePhotoSet.length" class="flex justify-center gap-1.5 mt-2">
+                                        <div
+                                            v-for="(photo, index) in selectedPackagePhotoSet"
+                                            :key="`mobile-photo-indicator-${index}`"
+                                            class="h-1.5 rounded-full bg-gray-300 transition-all"
+                                            :style="index === 0 ? { width: '16px', backgroundColor: '#2563EB' } : { width: '6px' }"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -986,7 +1071,14 @@ onBeforeUnmount(() => {
                                         </svg>
                                         Hasil Foto - {{ selectedPackage?.name || 'Paket' }}
                                     </h3>
-                                    <span class="flex items-center gap-1 text-[0.65rem] text-gray-400">geser</span>
+                                    <div v-if="selectedPackagePhotoSet.length > 1" class="flex items-center gap-1">
+                                        <button type="button" @click="scrollPhotos('left')" class="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 text-gray-500">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                                        </button>
+                                        <button type="button" @click="scrollPhotos('right')" class="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 text-gray-500">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="p-0">
@@ -995,7 +1087,8 @@ onBeforeUnmount(() => {
                                 </div>
                                 <div
                                     v-else
-                                    class="photo-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-3"
+                                    ref="desktopPhotoScrollRef"
+                                    class="photo-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-3 select-none"
                                     style="-ms-overflow-style: none; scrollbar-width: none;"
                                 >
                                     <div
