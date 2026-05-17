@@ -601,6 +601,14 @@ const handleSubmit = (event) => {
 const desktopPhotoScrollRef = ref(null);
 const mobilePhotoScrollRef = ref(null);
 
+const previewPhoto = ref(null);
+const openPreview = (photo) => {
+    previewPhoto.value = photo;
+};
+const closePreview = () => {
+    previewPhoto.value = null;
+};
+
 const scrollPhotos = (direction) => {
     const desktopEl = desktopPhotoScrollRef.value;
     const mobileEl = mobilePhotoScrollRef.value;
@@ -870,7 +878,8 @@ onBeforeUnmount(() => {
                                         <div
                                             v-for="(photo, index) in selectedPackagePhotoSet"
                                             :key="`mobile-photo-${index}`"
-                                            class="group relative h-[180px] w-[260px] shrink-0 snap-center overflow-hidden rounded-xl border border-slate-200/60 shadow-sm"
+                                            class="group relative h-[180px] w-[260px] shrink-0 snap-center overflow-hidden rounded-xl border border-slate-200/60 shadow-sm cursor-zoom-in"
+                                            @click="openPreview(photo)"
                                         >
                                             <img :src="photo.src" :alt="photo.label" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
                                             <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
@@ -1223,7 +1232,8 @@ onBeforeUnmount(() => {
                                     <div
                                         v-for="(photo, index) in selectedPackagePhotoSet"
                                         :key="`photo-${index}`"
-                                        class="group relative h-[200px] w-[280px] flex-shrink-0 snap-center overflow-hidden rounded-xl"
+                                        class="group relative h-[200px] w-[280px] flex-shrink-0 snap-center overflow-hidden rounded-xl cursor-zoom-in"
+                                        @click="openPreview(photo)"
                                     >
                                         <img :src="photo.src" :alt="photo.label" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
                                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -1301,6 +1311,19 @@ onBeforeUnmount(() => {
                 </div>
             </form>
         </main>
+
+        <div v-if="previewPhoto" class="fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity bg-black/90 backdrop-blur-sm" @click="closePreview">
+            <button type="button" @click.stop="closePreview" class="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20" aria-label="Tutup">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <div class="relative w-auto max-w-[95vw]" @click.stop>
+                <img :src="previewPhoto.src" :alt="previewPhoto.label" class="mx-auto max-h-[85vh] w-auto rounded-lg object-contain shadow-2xl" />
+                <div class="mt-4 text-center">
+                    <h3 class="text-xl font-semibold text-white">{{ previewPhoto.label }}</h3>
+                    <p class="mt-1 text-sm text-gray-300">Paket {{ selectedPackage?.name }}</p>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
