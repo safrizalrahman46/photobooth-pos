@@ -7,6 +7,7 @@ import 'package:desktop_flutter/shared/models/booking_item.dart';
 import 'package:desktop_flutter/shared/models/branch_management_item.dart';
 import 'package:desktop_flutter/shared/models/branch_option.dart';
 import 'package:desktop_flutter/shared/models/cashier_session_item.dart';
+import 'package:desktop_flutter/shared/models/inventory_monitoring_payload.dart';
 import 'package:desktop_flutter/shared/models/package_management_item.dart';
 import 'package:desktop_flutter/shared/models/payment_record.dart';
 import 'package:desktop_flutter/shared/models/pos_walk_in_checkout_result.dart';
@@ -287,6 +288,22 @@ class ApiClient {
         .whereType<Map<String, dynamic>>()
         .map(PackageManagementItem.fromJson)
         .toList();
+  }
+
+  Future<InventoryMonitoringPayload> fetchInventoryMonitoring() async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/manage/inventory-monitoring',
+      authenticated: true,
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Data monitoring stok tidak valid.');
+    }
+
+    return InventoryMonitoringPayload.fromJson(data);
   }
 
   Future<List<AddOnCatalogItem>> fetchAddOns({

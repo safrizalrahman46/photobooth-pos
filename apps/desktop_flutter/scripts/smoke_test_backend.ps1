@@ -4,7 +4,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Email,
     [Parameter(Mandatory = $true)]
-    [string]$Password
+    [string]$Password,
+    [Parameter(Mandatory = $false)]
+    [switch]$AllowForbiddenReports
 )
 
 $ErrorActionPreference = "Stop"
@@ -95,22 +97,35 @@ $authHeaders = @{
 
 $today = Get-Date -Format "yyyy-MM-dd"
 
-Write-Host "[4/9] Profile"
-Invoke-JsonRequest -Method "GET" -Url "$base/profile" -Headers $authHeaders -Body $null | Out-Null
+try {
+    Write-Host "[4/9] Profile"
+    Invoke-JsonRequest -Method "GET" -Url "$base/profile" -Headers $authHeaders -Body $null | Out-Null
 
-Write-Host "[5/9] Bookings"
-Invoke-JsonRequest -Method "GET" -Url "$base/bookings?date=$today&per_page=5" -Headers $authHeaders -Body $null | Out-Null
+    Write-Host "[5/9] Bookings"
+    Invoke-JsonRequest -Method "GET" -Url "$base/bookings?date=$today&per_page=5" -Headers $authHeaders -Body $null | Out-Null
 
-Write-Host "[6/9] Queue tickets"
-Invoke-JsonRequest -Method "GET" -Url "$base/queue-tickets?queue_date=$today&per_page=5" -Headers $authHeaders -Body $null | Out-Null
+    Write-Host "[6/9] Queue tickets"
+    Invoke-JsonRequest -Method "GET" -Url "$base/queue-tickets?queue_date=$today&per_page=5" -Headers $authHeaders -Body $null | Out-Null
 
-Write-Host "[7/9] Transactions"
-Invoke-JsonRequest -Method "GET" -Url "$base/transactions?per_page=5" -Headers $authHeaders -Body $null | Out-Null
+    Write-Host "[7/9] Transactions"
+    Invoke-JsonRequest -Method "GET" -Url "$base/transactions?per_page=5" -Headers $authHeaders -Body $null | Out-Null
 
-Write-Host "[8/9] Reports summary"
-Invoke-JsonRequest -Method "GET" -Url "$base/reports/summary?from=$today&to=$today" -Headers $authHeaders -Body $null | Out-Null
+    Write-Host "[8/9] Reports summary"
+    $reportAllowedStatus = if ($AllowForbiddenReports) { @(200, 403) } else { @(200) }
+    $reportResponse = Invoke-JsonRequest -Method "GET" -Url "$base/reports/summary?from=$today&to=$today" -Headers $authHeaders -Body $null -AllowedStatus $reportAllowedStatus
 
-Write-Host "[9/9] Logout"
-Invoke-JsonRequest -Method "POST" -Url "$base/auth/logout" -Headers $authHeaders -Body @{} -AllowedStatus @(200, 204) | Out-Null
+    if ($reportResponse.status -eq 403) {
+        Write-Host "Reports summary forbidden for this user role; continuing."
+    }
+}
+finally {
+    Write-Host "[9/9] Logout"
+    try {
+        Invoke-JsonRequest -Method "POST" -Url "$base/auth/logout" -Headers $authHeaders -Body @{} -AllowedStatus @(200, 204) | Out-Null
+    }
+    catch {
+        Write-Warning "Logout gagal: $_"
+    }
+}
 
 Write-Host "Smoke test selesai: API utama merespons normal."

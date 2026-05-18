@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:desktop_flutter/shared/models/desktop_session.dart';
 import '../../../shared/layout/sidebar/sidebar.dart';
 import '../../../shared/layout/header/app_header.dart';
 
@@ -11,6 +12,7 @@ import '../../history/presentation/pages/history_page.dart';
 import '../../laporan/presentation/pages/laporan_page.dart';
 import '../../addon/presentation/pages/addon_page.dart';
 import '../../antrian/presentation/pages/antrian_page.dart';
+import '../../stock/presentation/pages/stock_page.dart';
 
 // Injector
 import '../../antrian/antrian_injector.dart';
@@ -20,10 +22,10 @@ import '../../antrian/antrian_injector.dart';
 // ╚═╝╚═╝╚═╝╩ ╩╩    ╩ ╩╚═╝╝╚╝ ╩ ╚═╝╩═╝
 
 class DesktopHomePage extends StatefulWidget {
-  final dynamic session;
-  final VoidCallback? onLogout;
+  final DesktopSession session;
+  final Future<void> Function()? onLogout;
 
-  const DesktopHomePage({super.key, this.session, this.onLogout});
+  const DesktopHomePage({super.key, required this.session, this.onLogout});
 
   @override
   State<DesktopHomePage> createState() => _DesktopHomePageState();
@@ -57,6 +59,11 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
       case 5:
         return const AddOnPage();
 
+      case 6:
+        return widget.session.user.can('catalog.manage')
+            ? const StockPage()
+            : const Center(child: Text('Akun tidak memiliki akses monitoring stok.'));
+
       default:
         return const Center(child: Text("Page not found"));
     }
@@ -71,6 +78,11 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           Sidebar(
             selectedIndex: _selectedIndex,
             isExpanded: _isSidebarExpanded, // Pass state
+            userName: widget.session.user.name,
+            userRoleLabel: _roleLabel(widget.session.user.roles),
+            showReports: widget.session.user.can('report.view'),
+            showStock: widget.session.user.can('catalog.manage'),
+            onLogout: widget.onLogout,
             onToggle: () { // Toggle callback
               setState(() {
                 _isSidebarExpanded = !_isSidebarExpanded;
@@ -97,6 +109,19 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         ],
       ),
     );
+  }
+
+  String _roleLabel(List<String> roles) {
+    if (roles.isEmpty) {
+      return 'User';
+    }
+
+    final role = roles.first;
+    if (role.isEmpty) {
+      return 'User';
+    }
+
+    return '${role[0].toUpperCase()}${role.substring(1)}';
   }
 }
 

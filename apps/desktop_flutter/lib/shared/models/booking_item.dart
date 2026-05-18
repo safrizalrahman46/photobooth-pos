@@ -26,6 +26,7 @@ class BookingItem {
     required this.canConfirmBooking,
     required this.canConfirmPayment,
     required this.canDeclineBooking,
+    required this.approvedAt,
     required this.addOns,
   });
 
@@ -55,6 +56,7 @@ class BookingItem {
   final bool canConfirmBooking;
   final bool canConfirmPayment;
   final bool canDeclineBooking;
+  final String approvedAt;
   final List<BookingAddOnLine> addOns;
 
   factory BookingItem.fromJson(Map<String, dynamic> json) {
@@ -88,6 +90,7 @@ class BookingItem {
       canConfirmBooking: json['can_confirm_booking'] == true,
       canConfirmPayment: json['can_confirm_payment'] == true,
       canDeclineBooking: json['can_decline_booking'] == true,
+      approvedAt: json['approved_at']?.toString() ?? '',
       addOns: rawAddOns is List
           ? rawAddOns
               .whereType<Map<String, dynamic>>()

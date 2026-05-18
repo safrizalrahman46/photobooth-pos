@@ -77,11 +77,15 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
   Future<void> _handleLogout() async {
     final activeSession = _session;
 
-    if (activeSession != null) {
-      await ApiClient(
-        baseUrl: activeSession.baseUrl,
-        token: activeSession.token,
-      ).logout();
+    try {
+      if (activeSession != null) {
+        await ApiClient(
+          baseUrl: activeSession.baseUrl,
+          token: activeSession.token,
+        ).logout();
+      }
+    } catch (_) {
+      // Local logout must still succeed when the server is unreachable.
     }
 
     await _sessionStore.clear();

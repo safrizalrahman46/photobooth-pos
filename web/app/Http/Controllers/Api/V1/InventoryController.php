@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\InventoryItemResource;
 use App\Models\InventoryItem;
+use App\Services\InventoryService;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,5 +41,15 @@ class InventoryController extends Controller
         $items = $query->paginate($perPage)->withQueryString();
 
         return $this->responder->paginated($items, InventoryItemResource::collection($items), 'Daftar inventory item berhasil dimuat.');
+    }
+
+    public function monitoring(Request $request, InventoryService $service): JsonResponse
+    {
+        abort_unless($request->user()?->can('catalog.manage') || $request->user()?->hasRole('owner'), 403);
+
+        return $this->responder->success(
+            $service->managementPayload(),
+            'Data monitoring stok berhasil dimuat.'
+        );
     }
 }
