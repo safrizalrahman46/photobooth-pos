@@ -153,7 +153,7 @@ class _BookingTable extends StatelessWidget {
           _ColHeader(label: 'ID BOOKING', flex: 2),
           _ColHeader(label: 'WAKTU', flex: 2),
           _ColHeader(label: 'NAMA PELANGGAN', flex: 3),
-          _ColHeader(label: 'WHATSAPP', flex: 3),
+          _ColHeader(label: 'NOMOR TELEPON', flex: 3),
           _ColHeader(label: 'TOTAL', flex: 2),
           _ColHeader(label: 'STATUS', flex: 2),
           _ColHeader(label: 'AKSI', flex: 3),

@@ -50,6 +50,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/manage/packages', [PackageController::class, 'adminIndex']);
         Route::get('/manage/add-ons', [AddOnController::class, 'adminIndex']);
         Route::get('/manage/inventory-items', [InventoryController::class, 'adminIndex']);
+        Route::get('/manage/inventory-monitoring', [InventoryController::class, 'monitoring']);
         Route::post('/manage/packages', [PackageController::class, 'store']);
         Route::put('/manage/packages/{package}', [PackageController::class, 'update']);
         Route::delete('/manage/packages/{package}', [PackageController::class, 'destroy']);

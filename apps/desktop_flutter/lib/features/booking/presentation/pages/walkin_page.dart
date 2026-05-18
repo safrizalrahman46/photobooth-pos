@@ -1,6 +1,7 @@
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/features/kasir/services/receipt_printer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../application/booking_controller.dart';
@@ -95,7 +96,7 @@ class _WalkinPageState extends State<WalkinPage> {
   void _showPaymentDialog(BuildContext context) {
     if (_controller.customerName.isEmpty || _controller.whatsapp.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama dan WhatsApp wajib diisi')),
+        const SnackBar(content: Text('Nama dan nomor telepon wajib diisi')),
       );
       return;
     }
@@ -209,9 +210,10 @@ class _CustomerInfoRow extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: _InfoField(
-                label: 'WHATSAPP (WAJIB)',
+                label: 'NOMOR TELEPON (WAJIB)',
                 value: controller.whatsapp,
                 keyboardType: TextInputType.phone,
+                inputFormatters: const [FilteringTextInputFormatter.digitsOnly],
                 onChanged: controller.updateWhatsapp,
               ),
             ),
@@ -235,6 +237,7 @@ class _CustomerInfoRow extends StatelessWidget {
                 label: 'JUMLAH ORANG',
                 value: controller.jumlahOrang.toString(),
                 keyboardType: TextInputType.number,
+                inputFormatters: const [FilteringTextInputFormatter.digitsOnly],
                 onChanged: controller.updateJumlahOrang,
               ),
             ),
@@ -257,12 +260,14 @@ class _InfoField extends StatelessWidget {
   final String label;
   final String value;
   final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
 
   const _InfoField({
     required this.label,
     required this.value,
     this.keyboardType,
+    this.inputFormatters,
     this.onChanged,
   });
 
@@ -291,6 +296,7 @@ class _InfoField extends StatelessWidget {
             initialValue: value,
             readOnly: onChanged == null,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
             onChanged: onChanged,
             style: AppTextStyles.bodyMedium,
             decoration: const InputDecoration(

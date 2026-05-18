@@ -108,10 +108,13 @@ class BookingController extends ChangeNotifier {
 
       final bookingRows = await client.fetchBookings(
         branchId: selectedBranchId,
+        status: 'pending',
         perPage: 100,
       );
 
-      queues = bookingRows.asMap().entries.map((entry) {
+      final actionableBookings = bookingRows.where(_isActionableBooking).toList();
+
+      queues = actionableBookings.asMap().entries.map((entry) {
         final booking = entry.value;
         return Booking(
           recordId: booking.id,
@@ -159,6 +162,22 @@ class BookingController extends ChangeNotifier {
     _loadAddOnsForSelectedPackage();
   }
 
+  bool _isActionableBooking(dynamic booking) {
+    final status = booking.status.toString().toLowerCase();
+
+    if (status != 'pending') {
+      return false;
+    }
+
+    if (booking.approvedAt.toString().isNotEmpty) {
+      return false;
+    }
+
+    return booking.canConfirmPayment ||
+        booking.canConfirmBooking ||
+        booking.canDeclineBooking;
+  }
+
   void incrementAddon(int index) {
     final stock = addons[index].stock;
 
@@ -190,7 +209,7 @@ class BookingController extends ChangeNotifier {
   }
 
   void updateWhatsapp(String val) {
-    whatsapp = val;
+    whatsapp = val.replaceAll(RegExp(r'\D'), '');
     notifyListeners();
   }
 
@@ -360,7 +379,7 @@ class BookingController extends ChangeNotifier {
     }
 
     if (customerName.trim().isEmpty || whatsapp.trim().isEmpty) {
-      errorMessage = 'Nama pelanggan dan WhatsApp wajib diisi.';
+      errorMessage = 'Nama pelanggan dan nomor telepon wajib diisi.';
       notifyListeners();
       return null;
     }

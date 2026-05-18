@@ -16,12 +16,8 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
-  final TextEditingController _emailController = TextEditingController(
-    text: 'owner@readytopict.test',
-  );
-  final TextEditingController _passwordController = TextEditingController(
-    text: 'password',
-  );
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
 
@@ -59,6 +55,14 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> _submit() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _error = 'Email dan password wajib diisi.');
+      return;
+    }
+
     setState(() {
       _submitting = true;
       _error = null;
@@ -67,14 +71,14 @@ class _LoginPageState extends State<LoginPage>
     try {
       final session = await ApiClient(baseUrl: AppConfig.defaultApiBaseUrl)
           .login(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
+            email: email,
+            password: password,
           );
       widget.onLoggedIn(session);
     } on ApiException catch (error) {
       setState(() => _error = error.message);
     } catch (_) {
-      setState(() => _error = 'Tidak dapat terhubung ke server Laravel.');
+      setState(() => _error = 'Tidak dapat terhubung ke server. Pastikan Laravel sedang berjalan.');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -159,7 +163,7 @@ class _LoginPageState extends State<LoginPage>
 
           // Headline
           const Text(
-            'Kasir dan owner\ndalam satu\ndesktop app.',
+            'Login Admin\nReady To Pict.',
             style: TextStyle(
               color: Colors.white,
               fontSize: 36,
@@ -171,8 +175,7 @@ class _LoginPageState extends State<LoginPage>
 
           // Body
           const Text(
-            'Fondasi app ini sudah siap untuk login ke backend Laravel, '
-            'lalu berkembang ke modul queue, POS, laporan, cabang, dan pengaturan web.',
+            'Masuk untuk membuka POS desktop dan monitoring operasional Ready To Pict.',
             style: TextStyle(
               color: Color(0xFFB8AFA4),
               fontSize: 14,
@@ -273,9 +276,9 @@ class _LoginPageState extends State<LoginPage>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Masuk', style: AppTextStyles.h2),
+                  Text('Login Admin', style: AppTextStyles.h2),
                   Text(
-                    'Desktop App',
+                    'Ready To Pict',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -291,7 +294,7 @@ class _LoginPageState extends State<LoginPage>
 
           // Subtitle
           Text(
-            'Login ke API Laravel yang sama dengan website\ndan dashboard admin.',
+            'Gunakan akun yang sama dengan website dashboard.',
             style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
               height: 1.6,
@@ -344,11 +347,6 @@ class _LoginPageState extends State<LoginPage>
 
           // Login button
           _buildLoginButton(),
-
-          const SizedBox(height: 24),
-
-          // Demo credentials
-          _buildDemoCredentials(),
         ],
       ),
     );
@@ -514,105 +512,6 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  Widget _buildDemoCredentials() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline_rounded,
-                color: AppColors.primary,
-                size: 15,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Akun Demo',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _buildCredentialRow(
-            icon: Icons.manage_accounts_rounded,
-            role: 'Owner',
-            email: 'owner@readytopict.test',
-          ),
-          const SizedBox(height: 6),
-          _buildCredentialRow(
-            icon: Icons.point_of_sale_rounded,
-            role: 'Kasir',
-            email: 'cashier@readytopict.test',
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Password: password',
-            style: TextStyle(
-              color: AppColors.primaryDark.withOpacity(0.65),
-              fontSize: 11.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCredentialRow({
-    required IconData icon,
-    required String role,
-    required String email,
-  }) {
-    return GestureDetector(
-      onTap: () => setState(() => _emailController.text = email),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.6),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.primary.withOpacity(0.15)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.primaryDark, size: 15),
-            const SizedBox(width: 8),
-            Text(
-              role,
-              style: TextStyle(
-                color: AppColors.primaryDark,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                email,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Icon(
-              Icons.touch_app_rounded,
-              color: AppColors.primary.withOpacity(0.5),
-              size: 14,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ─── FEATURE CHIP ────────────────────────────────────────────────────────────

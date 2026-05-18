@@ -7,6 +7,11 @@ class Sidebar extends StatelessWidget {
   final ValueChanged<int> onItemTapped;
   final bool isExpanded;
   final VoidCallback onToggle;
+  final String userName;
+  final String userRoleLabel;
+  final bool showReports;
+  final bool showStock;
+  final Future<void> Function()? onLogout;
 
   const Sidebar({
     super.key,
@@ -14,6 +19,11 @@ class Sidebar extends StatelessWidget {
     required this.onItemTapped,
     required this.isExpanded,
     required this.onToggle,
+    required this.userName,
+    required this.userRoleLabel,
+    required this.showReports,
+    required this.showStock,
+    this.onLogout,
   });
 
   @override
@@ -97,25 +107,32 @@ class Sidebar extends StatelessWidget {
                 isExpanded: isExpanded,
                 onTap: () => onItemTapped(3),
               ),
-              _SidebarItem(
-                icon: Icons.bar_chart_rounded,
-                label: 'Laporan',
-                isActive: selectedIndex == 4,
-                isExpanded: isExpanded,
-                onTap: () => onItemTapped(4),
-              ),
-              _SidebarItem(
-                icon: Icons.inventory_2_outlined,
-                label: 'Stocks',
-                isActive: selectedIndex == 6,
-                isExpanded: isExpanded,
-                onTap: () => onItemTapped(6),
-              ),
+              if (showReports)
+                _SidebarItem(
+                  icon: Icons.bar_chart_rounded,
+                  label: 'Laporan',
+                  isActive: selectedIndex == 4,
+                  isExpanded: isExpanded,
+                  onTap: () => onItemTapped(4),
+                ),
+              if (showStock)
+                _SidebarItem(
+                  icon: Icons.inventory_2_outlined,
+                  label: 'Stock',
+                  isActive: selectedIndex == 6,
+                  isExpanded: isExpanded,
+                  onTap: () => onItemTapped(6),
+                ),
 
               const Spacer(),
 
               // Footer user
-              _SidebarFooter(isExpanded: isExpanded),
+              _SidebarFooter(
+                isExpanded: isExpanded,
+                userName: userName,
+                userRoleLabel: userRoleLabel,
+                onLogout: onLogout,
+              ),
             ],
           ),
         ),
@@ -243,41 +260,106 @@ class _SidebarItemState extends State<_SidebarItem>
 
 class _SidebarFooter extends StatelessWidget {
   final bool isExpanded;
-  const _SidebarFooter({required this.isExpanded});
+  final String userName;
+  final String userRoleLabel;
+  final Future<void> Function()? onLogout;
+
+  const _SidebarFooter({
+    required this.isExpanded,
+    required this.userName,
+    required this.userRoleLabel,
+    required this.onLogout,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Padding(
       padding: EdgeInsets.symmetric(
-        vertical: 24,
-        horizontal: isExpanded ? 24 : 8,
+        vertical: 18,
+        horizontal: isExpanded ? 16 : 8,
       ),
-      child: Row(
-        mainAxisAlignment: isExpanded
-            ? MainAxisAlignment.start
-            : MainAxisAlignment.center,
+      child: Column(
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppColors.primaryLight,
-            child: const Icon(
-              Icons.person_rounded,
-              color: AppColors.primary,
-              size: 20,
-            ),
-          ),
-          if (isExpanded) ...[
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Satria',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w700,
+          Row(
+            mainAxisAlignment: isExpanded
+                ? MainAxisAlignment.start
+                : MainAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppColors.primaryLight,
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: AppColors.primary,
+                  size: 20,
                 ),
-                overflow: TextOverflow.ellipsis,
+              ),
+              if (isExpanded) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        userName,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        userRoleLabel,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          Tooltip(
+            message: 'Logout',
+            child: InkWell(
+              onTap: onLogout == null ? null : () => onLogout!(),
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF1F1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFFFCDD2)),
+                ),
+                child: Row(
+                  mainAxisAlignment: isExpanded
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.logout_rounded,
+                      color: Colors.redAccent,
+                      size: 18,
+                    ),
+                    if (isExpanded) ...[
+                      const SizedBox(width: 10),
+                      Text(
+                        'Logout',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
         ],
       ),
     );
