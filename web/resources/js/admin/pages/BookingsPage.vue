@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { CheckCircle2, Eye, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-vue-next';
+import AdminModal from '../components/AdminModal.vue';
 
 const props = defineProps({
     search: { type: String, default: '' },
@@ -926,8 +927,7 @@ watch(
             </div>
         </div>
 
-        <div v-if="bookingModalOpen" class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto p-4 sm:py-6" style="background: rgba(15,23,42,0.45);">
-            <div class="w-full max-w-2xl rounded-2xl border bg-white p-5" style="max-height: calc(100dvh - 2rem); overflow-y: auto; border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+        <AdminModal :show="bookingModalOpen" panel-class="max-w-2xl">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#0F172A]">{{ bookingModalMode === 'create' ? 'Create Booking' : 'Edit Booking' }}</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeBookingModal">Close</button>
@@ -1067,11 +1067,9 @@ watch(
                         {{ saving ? 'Saving...' : (bookingModalMode === 'create' ? 'Create Booking' : 'Save Changes') }}
                     </button>
                 </div>
-            </div>
-        </div>
+        </AdminModal>
 
-        <div v-if="paymentModalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="w-full max-w-xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+        <AdminModal :show="paymentModalOpen" panel-class="max-w-xl">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#0F172A]">Confirm Payment - {{ paymentTargetCode }}</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closePaymentModal">Close</button>
@@ -1129,11 +1127,9 @@ watch(
                         {{ saving ? 'Saving...' : 'Confirm Payment' }}
                     </button>
                 </div>
-            </div>
-        </div>
+        </AdminModal>
 
-        <div v-if="bookingDetailModalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="w-full max-w-2xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+        <AdminModal :show="bookingDetailModalOpen" panel-class="max-w-2xl">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#0F172A]">Booking Detail - {{ bookingDetail?.booking_code || '-' }}</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeBookingDetailModal">Close</button>
@@ -1254,7 +1250,6 @@ watch(
                     </button>
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeBookingDetailModal">Close</button>
                 </div>
-            </div>
-        </div>
+        </AdminModal>
     </div>
 </template>

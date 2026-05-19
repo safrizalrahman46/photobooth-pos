@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref } from 'vue';
 import { Pencil, Plus, RefreshCw, Shield, Trash2, UserRound, UsersRound } from 'lucide-vue-next';
+import AdminModal from '../components/AdminModal.vue';
 
 const props = defineProps({
     userRows: { type: Array, default: () => [] },
@@ -300,8 +301,7 @@ const requestDelete = async (user) => {
             </table>
         </div>
 
-        <div v-if="modalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="w-full max-w-xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+        <AdminModal :show="modalOpen" panel-class="max-w-xl">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#0F172A]">{{ modalMode === 'create' ? 'Add User' : 'Edit User' }}</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeModal">Close</button>
@@ -360,7 +360,6 @@ const requestDelete = async (user) => {
                         {{ saving ? 'Saving...' : (modalMode === 'create' ? 'Create User' : 'Save Changes') }}
                     </button>
                 </div>
-            </div>
-        </div>
+        </AdminModal>
     </div>
 </template>

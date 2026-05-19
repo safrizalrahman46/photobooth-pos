@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { Plus, RefreshCw, Trash2, Pencil, X } from 'lucide-vue-next';
+import AdminModal from '../components/AdminModal.vue';
 
 const props = defineProps({
     payload: { type: Object, default: () => ({}) },
@@ -526,8 +527,7 @@ watch(() => form.branch_id, () => {
             </div>
         </section>
 
-        <div v-if="formOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border bg-white" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+        <AdminModal :show="formOpen" panel-class="max-w-3xl" panel-padding-class="p-0" panel-radius-class="rounded-3xl">
                 <div class="flex items-start justify-between gap-4 border-b px-5 py-4" style="border-color: #E2E8F0;">
                     <div>
                         <h3 class="text-lg font-semibold text-[#0F172A]">{{ editingId ? 'Edit Kode Referal' : 'Kode Referal Baru' }}</h3>
@@ -597,7 +597,6 @@ watch(() => form.branch_id, () => {
                         <button type="button" class="rounded-xl bg-[#047857] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70" :disabled="saving" @click="submitForm">{{ saving ? 'Saving...' : 'Save' }}</button>
                     </div>
                 </div>
-            </div>
-        </div>
+        </AdminModal>
     </div>
 </template>

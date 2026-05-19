@@ -12,6 +12,7 @@ import {
     Trash2,
     UserPlus,
 } from 'lucide-vue-next';
+import AdminModal from '../components/AdminModal.vue';
 
 const props = defineProps({
     queueStats: { type: Object, default: () => ({}) },
@@ -601,8 +602,7 @@ const submitQueue = async () => {
             <span class="text-xs text-[#94A3B8]">Branch: {{ activeBranchName }}</span>
         </div>
 
-        <div v-if="addModalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="w-full max-w-xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+        <AdminModal :show="addModalOpen" panel-class="max-w-xl">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#0F172A]">Add to Queue</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeAddModal">Close</button>
@@ -681,7 +681,6 @@ const submitQueue = async () => {
                         {{ queueActionLoading ? 'Saving...' : 'Add Queue' }}
                     </button>
                 </div>
-            </div>
-        </div>
+        </AdminModal>
     </div>
 </template>
