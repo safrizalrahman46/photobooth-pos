@@ -59,8 +59,7 @@ class InfoBannerWidget extends StatelessWidget {
                       height: 1.55,
                     ),
                     children: [
-                      const TextSpan(
-                          text: 'Daftar paket ini bersifat '),
+                      const TextSpan(text: 'Daftar paket ini bersifat '),
                       TextSpan(
                         text: 'tetap (fixed)',
                         style: GoogleFonts.plusJakartaSans(

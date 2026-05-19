@@ -58,7 +58,9 @@ class AddOnCardWidget extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 16),
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   child: Row(
                     children: [
                       // Icon
@@ -106,7 +108,7 @@ class AddOnCardWidget extends StatelessWidget {
                           ],
                         ),
                       ),
-                        // PRICE & STATUS REMOVED (AS REQUESTED)
+                      // PRICE & STATUS REMOVED (AS REQUESTED)
                     ],
                   ),
                 ),
@@ -131,9 +133,7 @@ class _StatusBadge extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 110),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: isStock
-            ? AppColors.primaryBlue
-            : const Color(0xFFEFF2F7),
+        color: isStock ? AppColors.primaryBlue : const Color(0xFFEFF2F7),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(

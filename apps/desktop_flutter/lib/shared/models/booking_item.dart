@@ -93,9 +93,9 @@ class BookingItem {
       approvedAt: json['approved_at']?.toString() ?? '',
       addOns: rawAddOns is List
           ? rawAddOns
-              .whereType<Map<String, dynamic>>()
-              .map(BookingAddOnLine.fromJson)
-              .toList()
+                .whereType<Map<String, dynamic>>()
+                .map(BookingAddOnLine.fromJson)
+                .toList()
           : <BookingAddOnLine>[],
     );
   }

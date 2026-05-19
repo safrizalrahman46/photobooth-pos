@@ -56,7 +56,10 @@ class DummyAntrianRepository implements AntrianRepository {
       return;
     }
 
-    await client.transitionQueueTicket(ticketId: int.parse(id), status: 'finished');
+    await client.transitionQueueTicket(
+      ticketId: int.parse(id),
+      status: 'finished',
+    );
   }
 
   @override

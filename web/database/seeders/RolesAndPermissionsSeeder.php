@@ -21,6 +21,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'queue.manage',
             'transaction.view',
             'transaction.manage',
+            'inventory.view',
             'payment.manage',
             'report.view',
             'catalog.manage',
@@ -48,6 +49,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'queue.manage',
             'transaction.view',
             'transaction.manage',
+            'inventory.view',
             'payment.manage',
             'report.view',
             'catalog.manage',
@@ -60,6 +62,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'queue.manage',
             'transaction.view',
             'transaction.manage',
+            'inventory.view',
             'payment.manage',
         ]);
         $viewer->syncPermissions(['report.view', 'booking.view', 'queue.view', 'transaction.view']);

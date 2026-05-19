@@ -88,7 +88,9 @@ class BookingController extends ChangeNotifier {
         selectedBranchName = branch.name;
       }
 
-      final packageRows = await client.fetchPackages(branchId: selectedBranchId);
+      final packageRows = await client.fetchPackages(
+        branchId: selectedBranchId,
+      );
 
       packages = packageRows.map((row) {
         return Package(
@@ -112,7 +114,9 @@ class BookingController extends ChangeNotifier {
         perPage: 100,
       );
 
-      final actionableBookings = bookingRows.where(_isActionableBooking).toList();
+      final actionableBookings = bookingRows
+          .where(_isActionableBooking)
+          .toList();
 
       queues = actionableBookings.asMap().entries.map((entry) {
         final booking = entry.value;
@@ -255,7 +259,10 @@ class BookingController extends ChangeNotifier {
       return;
     }
 
-    if (client == null || branchId == null || packageId == null || packageId <= 0) {
+    if (client == null ||
+        branchId == null ||
+        packageId == null ||
+        packageId <= 0) {
       referralError = 'Data cabang/paket belum siap.';
       notifyListeners();
       return;
@@ -303,8 +310,8 @@ class BookingController extends ChangeNotifier {
       if (booking.canConfirmPayment) {
         final paymentAmount = booking.paymentType == 'dp50'
             ? booking.depositAmount > 0
-                ? booking.depositAmount
-                : booking.totalAmount * 0.5
+                  ? booking.depositAmount
+                  : booking.totalAmount * 0.5
             : booking.totalAmount;
 
         await client.confirmBookingPayment(
@@ -399,10 +406,12 @@ class BookingController extends ChangeNotifier {
         referralCode: referralPreview == null ? null : referralCode.trim(),
         notes: note.trim().isEmpty ? null : note.trim(),
         addons: selectedAddons
-            .map((addon) => {
-                  'add_on_id': int.parse(addon.id),
-                  'qty': addon.quantity,
-                })
+            .map(
+              (addon) => {
+                'add_on_id': int.parse(addon.id),
+                'qty': addon.quantity,
+              },
+            )
             .toList(),
       );
 
@@ -461,7 +470,8 @@ class BookingController extends ChangeNotifier {
     if (!keepMessage) {
       referralMessage = null;
     } else if (referralCode.trim().isNotEmpty) {
-      referralMessage = 'Apply ulang kode referal setelah paket/add-on berubah.';
+      referralMessage =
+          'Apply ulang kode referal setelah paket/add-on berubah.';
     }
   }
 

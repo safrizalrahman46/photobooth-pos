@@ -100,7 +100,11 @@ class CheckoutSuccessDialog extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.image, color: Colors.grey, size: 24),
+                    child: const Icon(
+                      Icons.image,
+                      color: Colors.grey,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 16),
 

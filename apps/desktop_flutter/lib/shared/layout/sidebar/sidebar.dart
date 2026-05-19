@@ -2,27 +2,37 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 
+class SidebarDestination {
+  const SidebarDestination({
+    required this.id,
+    required this.icon,
+    required this.label,
+  });
+
+  final String id;
+  final IconData icon;
+  final String label;
+}
+
 class Sidebar extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onItemTapped;
+  final String selectedId;
+  final ValueChanged<String> onItemTapped;
+  final List<SidebarDestination> destinations;
   final bool isExpanded;
   final VoidCallback onToggle;
   final String userName;
   final String userRoleLabel;
-  final bool showReports;
-  final bool showStock;
   final Future<void> Function()? onLogout;
 
   const Sidebar({
     super.key,
-    required this.selectedIndex,
+    required this.selectedId,
     required this.onItemTapped,
+    required this.destinations,
     required this.isExpanded,
     required this.onToggle,
     required this.userName,
     required this.userRoleLabel,
-    required this.showReports,
-    required this.showStock,
     this.onLogout,
   });
 
@@ -78,50 +88,13 @@ class Sidebar extends StatelessWidget {
                 ),
               ),
 
-              // Nav items
-              _SidebarItem(
-                icon: Icons.calendar_today_rounded,
-                label: 'Walk-in',
-                isActive: selectedIndex == 0,
-                isExpanded: isExpanded,
-                onTap: () => onItemTapped(0),
-              ),
-              _SidebarItem(
-                icon: Icons.book_online_rounded,
-                label: 'Booking',
-                isActive: selectedIndex == 1,
-                isExpanded: isExpanded,
-                onTap: () => onItemTapped(1),
-              ),
-              _SidebarItem(
-                icon: Icons.people_alt_rounded,
-                label: 'Antrean',
-                isActive: selectedIndex == 2,
-                isExpanded: isExpanded,
-                onTap: () => onItemTapped(2),
-              ),
-              _SidebarItem(
-                icon: Icons.history_rounded,
-                label: 'History',
-                isActive: selectedIndex == 3,
-                isExpanded: isExpanded,
-                onTap: () => onItemTapped(3),
-              ),
-              if (showReports)
+              for (final destination in destinations)
                 _SidebarItem(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Laporan',
-                  isActive: selectedIndex == 4,
+                  icon: destination.icon,
+                  label: destination.label,
+                  isActive: selectedId == destination.id,
                   isExpanded: isExpanded,
-                  onTap: () => onItemTapped(4),
-                ),
-              if (showStock)
-                _SidebarItem(
-                  icon: Icons.inventory_2_outlined,
-                  label: 'Stock',
-                  isActive: selectedIndex == 6,
-                  isExpanded: isExpanded,
-                  onTap: () => onItemTapped(6),
+                  onTap: () => onItemTapped(destination.id),
                 ),
 
               const Spacer(),
@@ -329,7 +302,10 @@ class _SidebarFooter extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 11,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF1F1),
                   borderRadius: BorderRadius.circular(14),

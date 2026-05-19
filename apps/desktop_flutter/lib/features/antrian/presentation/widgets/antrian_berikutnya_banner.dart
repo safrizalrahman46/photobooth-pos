@@ -20,7 +20,9 @@ class AntrianBerikutnyaBanner extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(32), // More rounded corners like mockup
+        borderRadius: BorderRadius.circular(
+          32,
+        ), // More rounded corners like mockup
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF4AABF7).withOpacity(0.3),
@@ -33,7 +35,11 @@ class AntrianBerikutnyaBanner extends StatelessWidget {
           ? const Center(
               child: Text(
                 'Tidak ada antrian berikutnya',
-                style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             )
           : Column(

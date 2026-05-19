@@ -117,7 +117,7 @@ class HistoryRow extends StatelessWidget {
                   onPressed: () {
                     // Di production, panggil _controller.onReprint(transaction)
                     // Untuk sekarang kita asumsikan controller dikirim atau via callback
-                    onActionPressed(); 
+                    onActionPressed();
                   },
                   icon: const Icon(Icons.print_rounded, size: 16),
                   label: const Text(
@@ -126,10 +126,15 @@ class HistoryRow extends StatelessWidget {
                   ),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFF6366F1), // indigo-500
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
-                      side: const BorderSide(color: Color(0xFFE0E7FF)), // indigo-100
+                      side: const BorderSide(
+                        color: Color(0xFFE0E7FF),
+                      ), // indigo-100
                     ),
                     backgroundColor: const Color(0xFFF5F7FF),
                   ),

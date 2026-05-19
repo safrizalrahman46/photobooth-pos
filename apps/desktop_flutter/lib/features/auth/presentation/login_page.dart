@@ -69,16 +69,17 @@ class _LoginPageState extends State<LoginPage>
     });
 
     try {
-      final session = await ApiClient(baseUrl: AppConfig.defaultApiBaseUrl)
-          .login(
-            email: email,
-            password: password,
-          );
+      final session = await ApiClient(
+        baseUrl: AppConfig.defaultApiBaseUrl,
+      ).login(email: email, password: password);
       widget.onLoggedIn(session);
     } on ApiException catch (error) {
       setState(() => _error = error.message);
     } catch (_) {
-      setState(() => _error = 'Tidak dapat terhubung ke server. Pastikan Laravel sedang berjalan.');
+      setState(
+        () => _error =
+            'Tidak dapat terhubung ke server. Pastikan Laravel sedang berjalan.',
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -511,7 +512,6 @@ class _LoginPageState extends State<LoginPage>
       ),
     );
   }
-
 }
 
 // ─── FEATURE CHIP ────────────────────────────────────────────────────────────

@@ -19,7 +19,12 @@ class PaketPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.sidebarBg,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(50, 60, 50, 50), // Padding lega tapi nge-fit
+        padding: const EdgeInsets.fromLTRB(
+          50,
+          60,
+          50,
+          50,
+        ), // Padding lega tapi nge-fit
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -47,9 +52,7 @@ class PaketPage extends ConsumerWidget {
                   ),
                 ),
               ),
-              error: (e, _) => Center(
-                child: Text('Gagal memuat data: $e'),
-              ),
+              error: (e, _) => Center(child: Text('Gagal memuat data: $e')),
               data: (list) {
                 if (list.isEmpty) {
                   return const Center(
@@ -80,10 +83,7 @@ class PaketPage extends ConsumerWidget {
             const SizedBox(height: 40),
 
             // Info banner (Sekarang melebar penuh)
-            const SizedBox(
-              width: double.infinity,
-              child: InfoBannerWidget(),
-            ),
+            const SizedBox(width: double.infinity, child: InfoBannerWidget()),
           ],
         ),
       ),
@@ -110,10 +110,7 @@ class _PageHeader extends StatelessWidget {
             letterSpacing: -0.5,
           ),
         ),
-        SizedBox(
-          width: 300,
-          child: PaketSearchBar(onChanged: onSearchChanged),
-        ),
+        SizedBox(width: 300, child: PaketSearchBar(onChanged: onSearchChanged)),
       ],
     );
   }
