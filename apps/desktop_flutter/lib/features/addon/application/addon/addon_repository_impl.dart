@@ -26,7 +26,9 @@ class AddOnRepositoryImpl implements AddOnRepository {
                 ? AddOnStatusType.available
                 : AddOnStatusType.stockLevel,
             sisaStok: item.effectiveAvailableStock,
-            isHighlightedLeft: item.effectiveStockStatus == 'low' || item.effectiveStockStatus == 'out',
+            isHighlightedLeft:
+                item.effectiveStockStatus == 'low' ||
+                item.effectiveStockStatus == 'out',
           ),
         )
         .toList();
@@ -35,9 +37,7 @@ class AddOnRepositoryImpl implements AddOnRepository {
   @override
   Future<AddonInsight> getInsight() async {
     final addOns = await getAddOnList();
-    final lowStock = addOns
-        .where((item) => item.sisaStok != null)
-        .toList()
+    final lowStock = addOns.where((item) => item.sisaStok != null).toList()
       ..sort((a, b) => (a.sisaStok ?? 0).compareTo(b.sisaStok ?? 0));
 
     return AddonInsight(

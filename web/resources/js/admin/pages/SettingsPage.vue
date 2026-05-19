@@ -389,11 +389,11 @@ watch(
                     <div
                         v-for="day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']"
                         :key="`hours-${day}`"
-                        class="grid grid-cols-[120px_1fr] items-center gap-3 rounded-lg border px-3 py-2"
+                        class="grid grid-cols-1 gap-2 rounded-lg border px-3 py-2 sm:grid-cols-[120px_1fr] sm:items-center sm:gap-3"
                         style="border-color: #EEF2FF;"
                     >
                         <span class="text-sm text-[#374151]">{{ day }}</span>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                             <input type="time" value="10:00" class="rounded border px-2 py-1 text-xs" style="border-color: #E2E8F0;" >
                             <span class="text-xs text-[#94A3B8]">to</span>
                             <input type="time" value="21:00" class="rounded border px-2 py-1 text-xs" style="border-color: #E2E8F0;" >
@@ -414,7 +414,7 @@ watch(
                         Danger Zone: reset all settings and sessions.
                     </div>
 
-                    <div class="mt-5 flex justify-end">
+                    <div class="rtp-admin-actions mt-5">
                         <button
                             type="button"
                             class="rounded-xl bg-[#0F766E] px-5 py-2 text-sm text-white"

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { Plus, RefreshCw, Trash2, Pencil, X } from 'lucide-vue-next';
+import AdminModal from '../components/AdminModal.vue';
 
 const props = defineProps({
     payload: { type: Object, default: () => ({}) },
@@ -392,8 +393,8 @@ watch(() => form.branch_id, () => {
                     </div>
                     <button type="button" class="rounded-xl bg-[#ECFDF5] px-3 py-1.5 text-xs font-semibold text-[#047857]" @click="openCreate">Tambah kode</button>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                <div class="rtp-admin-table-wrap">
+                    <table class="rtp-admin-table rtp-admin-table--wide w-full text-sm">
                         <thead class="bg-[#F8FAFC] text-xs uppercase text-[#94A3B8]">
                             <tr>
                                 <th class="px-4 py-3 text-left">Kode</th>
@@ -485,8 +486,8 @@ watch(() => form.branch_id, () => {
                 <h3 class="font-semibold text-[#0F172A]">Riwayat Pemakaian</h3>
                 <p class="text-xs text-[#94A3B8]">Maksimal 250 transaksi terbaru sesuai filter aktif.</p>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+            <div class="rtp-admin-table-wrap">
+                <table class="rtp-admin-table rtp-admin-table--wide w-full text-sm">
                     <thead class="bg-[#F8FAFC] text-xs uppercase text-[#94A3B8]">
                         <tr>
                             <th class="px-4 py-3 text-left">Waktu</th>
@@ -526,8 +527,7 @@ watch(() => form.branch_id, () => {
             </div>
         </section>
 
-        <div v-if="formOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border bg-white" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+        <AdminModal :show="formOpen" panel-class="max-w-3xl" panel-padding-class="p-0" panel-radius-class="rounded-3xl">
                 <div class="flex items-start justify-between gap-4 border-b px-5 py-4" style="border-color: #E2E8F0;">
                     <div>
                         <h3 class="text-lg font-semibold text-[#0F172A]">{{ editingId ? 'Edit Kode Referal' : 'Kode Referal Baru' }}</h3>
@@ -539,7 +539,7 @@ watch(() => form.branch_id, () => {
                 </div>
                 <div class="p-5">
                     <p v-if="localError" class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #FECACA; background: #FEF2F2; color: #B91C1C;">{{ localError }}</p>
-                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div class="rtp-admin-form-grid">
                         <label class="text-sm text-[#475569]">Kode
                             <input v-model="form.code" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 uppercase" style="border-color: #E2E8F0;" placeholder="PROMO10">
                         </label>
@@ -592,12 +592,11 @@ watch(() => form.branch_id, () => {
                         <textarea v-model="form.description" rows="3" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" placeholder="Catatan internal untuk campaign atau partner."></textarea>
                     </label>
                     <label class="mt-3 flex items-center gap-2 text-sm text-[#475569]"><input v-model="form.is_active" type="checkbox"> Aktif</label>
-                    <div class="mt-5 flex justify-end gap-2">
+                    <div class="rtp-admin-actions mt-5">
                         <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeForm">Cancel</button>
                         <button type="button" class="rounded-xl bg-[#047857] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70" :disabled="saving" @click="submitForm">{{ saving ? 'Saving...' : 'Save' }}</button>
                     </div>
                 </div>
-            </div>
-        </div>
+        </AdminModal>
     </div>
 </template>

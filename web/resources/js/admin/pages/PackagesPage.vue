@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import { Camera, Clock3, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-vue-next';
+import AdminModal from '../components/AdminModal.vue';
 
 const props = defineProps({
     packageCards: { type: Array, default: () => [] },
@@ -472,8 +473,7 @@ const requestDelete = async (pkg) => {
             </div>
         </div>
 
-        <div v-if="modalOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background: rgba(15,23,42,0.45);">
-            <div class="w-full max-w-3xl rounded-2xl border bg-white p-5" style="border-color: #E2E8F0; box-shadow: 0 18px 40px rgba(15,23,42,0.2);">
+        <AdminModal :show="modalOpen" panel-class="max-w-3xl">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-[#0F172A]">{{ modalMode === 'create' ? 'Add Package' : 'Edit Package' }}</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeModal">Close</button>
@@ -483,7 +483,7 @@ const requestDelete = async (pkg) => {
                     {{ localError }}
                 </p>
 
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="rtp-admin-form-grid">
                     <label class="text-sm text-[#475569]">
                         Branch
                         <select v-model="form.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
@@ -536,7 +536,7 @@ const requestDelete = async (pkg) => {
                         <div
                             v-for="(row, rowIndex) in form.inventory_items"
                             :key="`pkg-inventory-row-${rowIndex}`"
-                            class="grid grid-cols-[1fr_120px_auto] gap-2"
+                            class="rtp-admin-inventory-row"
                         >
                             <select v-model="row.inventory_item_id" class="rounded-lg border bg-white px-3 py-2 text-sm" style="border-color: #E2E8F0;">
                                 <option value="">Pilih barang</option>
@@ -573,7 +573,7 @@ const requestDelete = async (pkg) => {
 
                 <div v-if="existingSamplePhotos.length" class="mt-3">
                     <p class="text-xs text-[#64748B]">Foto Tersimpan</p>
-                    <div class="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
+                    <div class="rtp-admin-photo-grid mt-2">
                         <div
                             v-for="(photoUrl, index) in existingSamplePhotos"
                             :key="`pkg-existing-photo-${index}`"
@@ -595,7 +595,7 @@ const requestDelete = async (pkg) => {
 
                 <div v-if="newSamplePhotoPreviewList.length" class="mt-3">
                     <p class="text-xs text-[#64748B]">Foto Baru (Belum Disimpan)</p>
-                    <div class="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
+                    <div class="rtp-admin-photo-grid mt-2">
                         <div
                             v-for="(item, index) in newSamplePhotoPreviewList"
                             :key="`pkg-new-photo-${index}`"
@@ -620,7 +620,7 @@ const requestDelete = async (pkg) => {
                     Active package
                 </label>
 
-                <div class="mt-5 flex items-center justify-end gap-2">
+                <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeModal">Cancel</button>
                     <button
                         type="button"
@@ -632,7 +632,6 @@ const requestDelete = async (pkg) => {
                         {{ saving ? 'Saving...' : (modalMode === 'create' ? 'Create Package' : 'Save Changes') }}
                     </button>
                 </div>
-            </div>
-        </div>
+        </AdminModal>
     </div>
 </template>

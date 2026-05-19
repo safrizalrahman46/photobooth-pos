@@ -335,7 +335,9 @@ class _MovementTable extends StatelessWidget {
                       DataCell(Text(movement.stockAfter.toString())),
                       DataCell(Text(movement.sourceLabel)),
                       DataCell(Text(movement.actorName)),
-                      DataCell(Text(movement.notes.isEmpty ? '-' : movement.notes)),
+                      DataCell(
+                        Text(movement.notes.isEmpty ? '-' : movement.notes),
+                      ),
                     ],
                   );
                 }).toList(),
@@ -501,9 +503,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(32),
-      child: Center(
-        child: Text(message, style: AppTextStyles.bodySmall),
-      ),
+      child: Center(child: Text(message, style: AppTextStyles.bodySmall)),
     );
   }
 }

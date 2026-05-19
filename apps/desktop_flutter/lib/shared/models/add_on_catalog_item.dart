@@ -38,8 +38,8 @@ class AddOnCatalogItem {
       maxQty: (json['max_qty'] as num?)?.toInt() ?? 1,
       isPhysical: json['is_physical'] == true,
       isActive: json['is_active'] == true,
-      effectiveAvailableStock:
-          (json['effective_available_stock'] as num?)?.toInt(),
+      effectiveAvailableStock: (json['effective_available_stock'] as num?)
+          ?.toInt(),
       effectiveStockStatus:
           json['effective_stock_status']?.toString() ?? 'untracked',
       effectiveStockLabel:

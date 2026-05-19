@@ -130,10 +130,7 @@ class MockAntrianRepository implements AntrianRepository {
       final item = _menunggu.removeAt(idx);
       _selesai.insert(
         0,
-        item.copyWith(
-          status: StatusAntrian.selesai,
-          catatanSelesai: catatan,
-        ),
+        item.copyWith(status: StatusAntrian.selesai, catatanSelesai: catatan),
       );
       _antrianMenungguController.add(_menunggu);
     }

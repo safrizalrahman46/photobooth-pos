@@ -16,6 +16,8 @@ class AuthUser {
   bool get isCashier => roles.contains('cashier') || roles.contains('admin');
   bool get isOwner => roles.contains('owner') || roles.contains('admin');
   bool get isViewer => roles.contains('viewer');
+  bool get canViewStock =>
+      can('inventory.view') || can('catalog.manage') || hasRole('cashier');
 
   bool hasRole(String role) => roles.contains(role);
 

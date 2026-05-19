@@ -26,9 +26,11 @@ final filteredPaketProvider = Provider<AsyncValue<List<PaketFoto>>>((ref) {
   return paketAsync.whenData((list) {
     if (query.isEmpty) return list;
     return list
-        .where((p) =>
-            p.nama.toLowerCase().contains(query) ||
-            p.deskripsi.toLowerCase().contains(query))
+        .where(
+          (p) =>
+              p.nama.toLowerCase().contains(query) ||
+              p.deskripsi.toLowerCase().contains(query),
+        )
         .toList();
   });
 });

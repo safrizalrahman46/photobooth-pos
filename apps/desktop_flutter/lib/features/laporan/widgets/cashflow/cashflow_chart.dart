@@ -49,18 +49,29 @@ class CashflowChart extends StatelessWidget {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFF64748B)),
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 14,
+                      color: Color(0xFF64748B),
+                    ),
                     SizedBox(width: 8),
                     Text(
                       'Bulan Ini',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF475569),
+                      ),
                     ),
                   ],
                 ),
@@ -171,10 +182,10 @@ class _DonutChartPainter extends CustomPainter {
 
     for (var item in data) {
       final sweepAngle = (item.value / total) * 2 * pi;
-      
+
       // Draw background/shadow for each segment slightly larger (optional for premium feel)
       paint.color = item.color;
-      
+
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius - (thickness / 2)),
         startAngle + 0.05, // Small padding for round caps
@@ -182,7 +193,7 @@ class _DonutChartPainter extends CustomPainter {
         false,
         paint,
       );
-      
+
       startAngle += sweepAngle;
     }
   }

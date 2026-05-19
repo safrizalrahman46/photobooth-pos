@@ -29,15 +29,15 @@ class AntrianPage extends StatelessWidget {
         }
 
         return Container(
-          color: const Color(0xFFF8FAFC), 
+          color: const Color(0xFFF8FAFC),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(40, 60, 40, 40), 
+            padding: const EdgeInsets.fromLTRB(40, 60, 40, 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Banner Antrian Berikutnya (Full Width)
                 AntrianBerikutnyaBanner(antrian: state.antrianBerikutnya),
-                
+
                 const SizedBox(height: 32),
 
                 // 3 Kolom utama (Row)
@@ -47,10 +47,13 @@ class AntrianPage extends StatelessWidget {
                     children: [
                       // ─── Kolom Menunggu ─────────────────────
                       Expanded(
-                        child: KolomMenungguWidget(antrian: state.antrianMenunggu),
+                        child: KolomMenungguWidget(
+                          antrian: state.antrianMenunggu,
+                        ),
                       ),
-                      const SizedBox(width: 24), // Spasi antar kolom lebh lebar (Lega)
-
+                      const SizedBox(
+                        width: 24,
+                      ), // Spasi antar kolom lebh lebar (Lega)
                       // ─── Kolom Sedang Foto ──────────────────
                       Expanded(
                         child: KolomSedangFotoWidget(

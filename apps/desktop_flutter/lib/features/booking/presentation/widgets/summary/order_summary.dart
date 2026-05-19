@@ -7,7 +7,11 @@ class OrderSummaryPanel extends StatelessWidget {
   final BookingController controller;
   final VoidCallback? onConfirm;
 
-  const OrderSummaryPanel({super.key, required this.controller, this.onConfirm});
+  const OrderSummaryPanel({
+    super.key,
+    required this.controller,
+    this.onConfirm,
+  });
 
   String _formatPrice(double price) {
     final int p = price.toInt();
@@ -66,16 +70,30 @@ class OrderSummaryPanel extends StatelessWidget {
                         ),
                         child: Column(
                           children: [
-                            for (int i = 0; i < controller.selectedAddons.length; i++) ...[
+                            for (
+                              int i = 0;
+                              i < controller.selectedAddons.length;
+                              i++
+                            ) ...[
                               _OrderSummaryItem(
                                 title: controller.selectedAddons[i].name,
-                                subtitle: 'x${controller.selectedAddons[i].quantity}',
-                                price: _formatPrice(controller.selectedAddons[i].price * controller.selectedAddons[i].quantity),
+                                subtitle:
+                                    'x${controller.selectedAddons[i].quantity}',
+                                price: _formatPrice(
+                                  controller.selectedAddons[i].price *
+                                      controller.selectedAddons[i].quantity,
+                                ),
                               ),
                               if (i < controller.selectedAddons.length - 1)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                                  child: Divider(color: Colors.white.withOpacity(0.1), height: 1),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 4,
+                                  ),
+                                  child: Divider(
+                                    color: Colors.white.withOpacity(0.1),
+                                    height: 1,
+                                  ),
                                 ),
                             ],
                           ],
@@ -105,7 +123,8 @@ class OrderSummaryPanel extends StatelessWidget {
                             Expanded(
                               child: TextFormField(
                                 initialValue: controller.referralCode,
-                                textCapitalization: TextCapitalization.characters,
+                                textCapitalization:
+                                    TextCapitalization.characters,
                                 onChanged: controller.updateReferralCode,
                                 decoration: InputDecoration(
                                   isDense: true,
@@ -149,7 +168,9 @@ class OrderSummaryPanel extends StatelessWidget {
                                   ),
                                 ),
                                 child: Text(
-                                  controller.isApplyingReferral ? '...' : 'APPLY',
+                                  controller.isApplyingReferral
+                                      ? '...'
+                                      : 'APPLY',
                                   style: AppTextStyles.captionMedium.copyWith(
                                     color: AppColors.primary,
                                     fontSize: 10,
@@ -199,7 +220,10 @@ class OrderSummaryPanel extends StatelessWidget {
                   children: [
                     Text(
                       'Grand Total',
-                      style: AppTextStyles.captionMedium.copyWith(fontSize: 11, color: AppColors.textPrimary),
+                      style: AppTextStyles.captionMedium.copyWith(
+                        fontSize: 11,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -267,7 +291,9 @@ class OrderSummaryPanel extends StatelessWidget {
                 ],
                 Text(
                   _formatPrice(controller.grandTotal),
-                  style: AppTextStyles.priceLarge.copyWith(color: AppColors.textPrimary),
+                  style: AppTextStyles.priceLarge.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ],
             ),
@@ -326,7 +352,9 @@ class OrderSummaryPanel extends StatelessWidget {
                   ],
                 ),
                 child: Text(
-                  controller.isSubmitting ? 'MEMPROSES...' : 'KONFIRMASI &\nPEMBAYARAN',
+                  controller.isSubmitting
+                      ? 'MEMPROSES...'
+                      : 'KONFIRMASI &\nPEMBAYARAN',
                   style: AppTextStyles.h4.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,

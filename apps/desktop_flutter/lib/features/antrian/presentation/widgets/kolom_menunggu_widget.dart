@@ -40,7 +40,10 @@ class KolomMenungguWidget extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(20),
@@ -61,7 +64,9 @@ class KolomMenungguWidget extends StatelessWidget {
 
         // List of Cards (No more unified container, following modern separated list)
         Column(
-          children: antrian.map((a) => AntrianMenungguCard(antrian: a)).toList(),
+          children: antrian
+              .map((a) => AntrianMenungguCard(antrian: a))
+              .toList(),
         ),
       ],
     );
@@ -109,7 +114,10 @@ class AntrianMenungguCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(8),

@@ -43,13 +43,19 @@ class _PureBookingPageState extends State<PureBookingPage> {
                   children: [
                     Text('Daftar Booking', style: AppTextStyles.h2),
                     const SizedBox(height: 4),
-                    Text('Kelola pesanan online dan konfirmasi antrean', style: AppTextStyles.bodySmall),
+                    Text(
+                      'Kelola pesanan online dan konfirmasi antrean',
+                      style: AppTextStyles.bodySmall,
+                    ),
                   ],
                 ),
                 // Search bar
                 Container(
                   width: 300,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(12),
@@ -57,10 +63,17 @@ class _PureBookingPageState extends State<PureBookingPage> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.search, size: 20, color: AppColors.textMuted),
+                      const Icon(
+                        Icons.search,
+                        size: 20,
+                        color: AppColors.textMuted,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text('Cari Booking...', style: AppTextStyles.bodySmall),
+                        child: Text(
+                          'Cari Booking...',
+                          style: AppTextStyles.bodySmall,
+                        ),
                       ),
                     ],
                   ),
@@ -113,7 +126,8 @@ class _BookingTable extends StatelessWidget {
           Expanded(
             child: ListView.separated(
               itemCount: controller.queues.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.divider),
+              separatorBuilder: (_, __) =>
+                  const Divider(height: 1, color: AppColors.divider),
               itemBuilder: (context, index) {
                 return _BookingRow(
                   booking: controller.queues[index],
@@ -204,17 +218,45 @@ class _BookingRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
         children: [
-          Expanded(flex: 2, child: Text(booking.id, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600))),
-          Expanded(flex: 2, child: Text(booking.time, style: AppTextStyles.bodySmall)),
-          Expanded(flex: 3, child: Text(booking.customerName, style: AppTextStyles.bodyMedium)),
-          Expanded(flex: 3, child: Text(booking.phone, style: AppTextStyles.bodySmall)),
-          Expanded(flex: 2, child: Text(_formatPrice(booking.totalAmount), style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700))),
+          Expanded(
+            flex: 2,
+            child: Text(
+              booking.id,
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(booking.time, style: AppTextStyles.bodySmall),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(booking.customerName, style: AppTextStyles.bodyMedium),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(booking.phone, style: AppTextStyles.bodySmall),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              _formatPrice(booking.totalAmount),
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
           Expanded(
             flex: 2,
             child: Align(
               alignment: Alignment.centerLeft,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(6),
@@ -236,11 +278,26 @@ class _BookingRow extends StatelessWidget {
             flex: 3,
             child: Row(
               children: [
-                _MiniActionBtn(icon: Icons.check_circle_rounded, color: const Color(0xFF10B981), onTap: onAcc, label: 'Acc'),
+                _MiniActionBtn(
+                  icon: Icons.check_circle_rounded,
+                  color: const Color(0xFF10B981),
+                  onTap: onAcc,
+                  label: 'Acc',
+                ),
                 const SizedBox(width: 16),
-                _MiniActionBtn(icon: Icons.cancel_rounded, color: const Color(0xFFF59E0B), onTap: onCancel, label: 'Batal'),
+                _MiniActionBtn(
+                  icon: Icons.cancel_rounded,
+                  color: const Color(0xFFF59E0B),
+                  onTap: onCancel,
+                  label: 'Batal',
+                ),
                 const SizedBox(width: 16),
-                _MiniActionBtn(icon: Icons.delete_rounded, color: const Color(0xFFEF4444), onTap: onDelete, label: 'Hapus'),
+                _MiniActionBtn(
+                  icon: Icons.delete_rounded,
+                  color: const Color(0xFFEF4444),
+                  onTap: onDelete,
+                  label: 'Hapus',
+                ),
               ],
             ),
           ),

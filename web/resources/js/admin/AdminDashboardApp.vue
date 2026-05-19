@@ -3964,7 +3964,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-[#F8FAFC]" style="font-family: Poppins, sans-serif;">
+    <div class="rtp-admin min-h-screen bg-[#F8FAFC]" style="font-family: Poppins, sans-serif;">
         <div class="flex h-screen overflow-hidden">
             <AdminSidebar :nav-items="navItems" :nav-groups="navGroups" :active-module-id="activeModuleId"
                 :mobile-open="mobileOpen" :sidebar-collapsed="sidebarCollapsed" :brand-name="sidebarBrandName"
@@ -3978,7 +3978,7 @@ onBeforeUnmount(() => {
                     @toggle-top-search="showTopSearch = $event" @update:top-search-value="topSearchValue = $event" />
 
                 <main class="flex-1 overflow-y-auto">
-                    <div class="mx-auto w-full max-w-[1600px] p-5 lg:p-7">
+                    <div class="rtp-admin-page">
                         <DashboardPage v-if="activeModuleId === 'dashboard'" :summary-cards="normalizedSummaryCards"
                             :revenue-series="normalizedRevenueSeries" :active-revenue-period="activeRevenuePeriod"
                             :revenue-total="revenueTotal" :booking-total="bookingTotal" :queue-stats="queueStats"

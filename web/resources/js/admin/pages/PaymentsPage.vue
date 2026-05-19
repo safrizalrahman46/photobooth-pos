@@ -66,7 +66,7 @@ const submitCreate = () => {
 
         <section class="rounded-2xl border p-4" style="border-color: #E2E8F0; background: #FFFFFF;">
             <h3 class="text-sm font-semibold text-[#581C87]">Add Payment</h3>
-            <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div class="rtp-admin-form-grid mt-3 xl:grid-cols-5">
                 <label class="text-xs text-[#64748B] xl:col-span-2">Transaction
                     <select v-model="form.transaction_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;">
                         <option value="">Select open transaction</option>
@@ -93,13 +93,13 @@ const submitCreate = () => {
             <label class="mt-3 block text-xs text-[#64748B]">Notes
                 <input v-model="form.notes" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;" >
             </label>
-            <button type="button" class="mt-3 rounded-xl bg-[#7E22CE] px-4 py-2 text-sm text-white" :disabled="saving" @click="submitCreate">
+            <button type="button" class="mt-3 w-full rounded-xl bg-[#7E22CE] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
                 {{ saving ? 'Saving...' : 'Add Payment' }}
             </button>
         </section>
 
-        <section class="overflow-hidden rounded-2xl border" style="border-color: #E2E8F0; background: #FFFFFF;">
-            <table class="w-full">
+        <section class="rtp-admin-table-wrap rounded-2xl border" style="border-color: #E2E8F0; background: #FFFFFF;">
+            <table class="rtp-admin-table w-full">
                 <thead>
                     <tr style="border-bottom: 1px solid #E2E8F0; background: #FAF5FF;">
                         <th class="px-4 py-3 text-left text-xs uppercase text-[#94A3B8]">Payment</th>
@@ -131,4 +131,3 @@ const submitCreate = () => {
         </section>
     </div>
 </template>
-

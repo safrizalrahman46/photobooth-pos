@@ -80,15 +80,24 @@ class HistoryController extends ChangeNotifier {
       final rows = await client.fetchTransactions(perPage: 100);
 
       _allTransactions = rows.map((row) {
-        final packageItems = row.items.where((item) => item.itemType == 'package' || item.itemType == 'booking').toList();
-        final addOnItems = row.items.where((item) => item.itemType == 'add_on').toList();
+        final packageItems = row.items
+            .where(
+              (item) =>
+                  item.itemType == 'package' || item.itemType == 'booking',
+            )
+            .toList();
+        final addOnItems = row.items
+            .where((item) => item.itemType == 'add_on')
+            .toList();
 
         return Transaction(
           id: row.transactionCode,
           waktu: DateTime.tryParse(row.createdAt ?? '') ?? DateTime.now(),
           namaPelanggan: row.customerName.isEmpty ? '-' : row.customerName,
           paket: packageItems.isNotEmpty ? packageItems.first.itemName : '-',
-          addOns: addOnItems.isEmpty ? null : addOnItems.map((item) => item.itemName).join(', '),
+          addOns: addOnItems.isEmpty
+              ? null
+              : addOnItems.map((item) => item.itemName).join(', '),
           totalBayar: row.totalAmount.round(),
           status: _mapTransactionStatus(row.status),
         );

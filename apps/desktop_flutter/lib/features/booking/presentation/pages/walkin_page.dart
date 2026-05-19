@@ -56,7 +56,7 @@ class _WalkinPageState extends State<WalkinPage> {
                     ),
                   ],
                   const SizedBox(height: 24),
-                  
+
                   // Customer info row (Stretched)
                   _CustomerInfoRow(controller: _controller),
                   const SizedBox(height: 32),
@@ -119,27 +119,30 @@ class _WalkinPageState extends State<WalkinPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      ),
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: Colors.white)),
     );
 
     try {
       // Add a timeout to the checkout process just in case
       final result = await _controller.checkoutWalkIn().timeout(
         const Duration(seconds: 20),
-        onTimeout: () => throw Exception('Waktu proses habis (Timeout). Silakan cek koneksi internet.'),
+        onTimeout: () => throw Exception(
+          'Waktu proses habis (Timeout). Silakan cek koneksi internet.',
+        ),
       );
 
       if (!context.mounted) return;
-      
+
       // Close loading dialog
       Navigator.pop(context);
 
       if (result == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_controller.errorMessage ?? 'Terjadi kesalahan saat checkout'),
+            content: Text(
+              _controller.errorMessage ?? 'Terjadi kesalahan saat checkout',
+            ),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -147,7 +150,7 @@ class _WalkinPageState extends State<WalkinPage> {
       }
 
       final session = ApiSession.current;
-      
+
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -213,7 +216,7 @@ class _CustomerInfoRow extends StatelessWidget {
                 label: 'NOMOR TELEPON (WAJIB)',
                 value: controller.whatsapp,
                 keyboardType: TextInputType.phone,
-                inputFormatters: const [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onChanged: controller.updateWhatsapp,
               ),
             ),
@@ -237,7 +240,7 @@ class _CustomerInfoRow extends StatelessWidget {
                 label: 'JUMLAH ORANG',
                 value: controller.jumlahOrang.toString(),
                 keyboardType: TextInputType.number,
-                inputFormatters: const [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onChanged: controller.updateJumlahOrang,
               ),
             ),

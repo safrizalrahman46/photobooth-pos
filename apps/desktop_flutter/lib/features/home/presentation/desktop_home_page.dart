@@ -32,65 +32,138 @@ class DesktopHomePage extends StatefulWidget {
 }
 
 class _DesktopHomePageState extends State<DesktopHomePage> {
-  int _selectedIndex = 0;
+  String _selectedPageId = _DesktopPageIds.walkIn;
   bool _isSidebarExpanded = true; // State baru untuk sidebar
+  bool _loggingOut = false;
 
-  /// 🔥 BUILDER (WAJIB - bukan List statis)
-  Widget _buildPage(int index) {
-    switch (index) {
-      case 0:
-        return const WalkinPage();
+  List<_DesktopDestination> _buildDestinations() {
+    final user = widget.session.user;
 
-      case 1:
-        return const PureBookingPage();
-
-      case 2:
-        return ChangeNotifierProvider(
+    return [
+      const _DesktopDestination(
+        id: _DesktopPageIds.walkIn,
+        label: 'Walk-in',
+        icon: Icons.calendar_today_rounded,
+        builder: WalkinPage.new,
+      ),
+      const _DesktopDestination(
+        id: _DesktopPageIds.booking,
+        label: 'Booking',
+        icon: Icons.book_online_rounded,
+        builder: PureBookingPage.new,
+      ),
+      _DesktopDestination(
+        id: _DesktopPageIds.queue,
+        label: 'Antrean',
+        icon: Icons.people_alt_rounded,
+        builder: () => ChangeNotifierProvider(
           create: (_) => AntrianInjector.create(),
           child: const AntrianPage(),
+        ),
+      ),
+      const _DesktopDestination(
+        id: _DesktopPageIds.history,
+        label: 'History',
+        icon: Icons.history_rounded,
+        builder: HistoryPage.new,
+      ),
+      if (user.can('report.view'))
+        const _DesktopDestination(
+          id: _DesktopPageIds.reports,
+          label: 'Laporan',
+          icon: Icons.bar_chart_rounded,
+          builder: LaporanPage.new,
+        ),
+      if (user.can('catalog.manage'))
+        const _DesktopDestination(
+          id: _DesktopPageIds.addOns,
+          label: 'Add-ons',
+          icon: Icons.extension_rounded,
+          builder: AddOnPage.new,
+        ),
+      if (user.canViewStock)
+        const _DesktopDestination(
+          id: _DesktopPageIds.stock,
+          label: 'Stock',
+          icon: Icons.inventory_2_outlined,
+          builder: StockPage.new,
+        ),
+    ];
+  }
+
+  Future<void> _confirmLogout() async {
+    if (_loggingOut || widget.onLogout == null) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Yakin ingin keluar dari aplikasi desktop?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
         );
+      },
+    );
 
-      case 3:
-        return const HistoryPage();
+    if (confirmed != true || !mounted) {
+      return;
+    }
 
-      case 4:
-        return const LaporanPage();
+    setState(() => _loggingOut = true);
 
-      case 5:
-        return const AddOnPage();
-
-      case 6:
-        return widget.session.user.can('catalog.manage')
-            ? const StockPage()
-            : const Center(child: Text('Akun tidak memiliki akses monitoring stok.'));
-
-      default:
-        return const Center(child: Text("Page not found"));
+    try {
+      await widget.onLogout?.call();
+    } finally {
+      if (mounted) {
+        setState(() => _loggingOut = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final destinations = _buildDestinations();
+    final activeDestination = destinations.firstWhere(
+      (destination) => destination.id == _selectedPageId,
+      orElse: () => destinations.first,
+    );
+    final roleLabel = _roleLabel(widget.session.user.roles);
+
     return Scaffold(
       body: Row(
         children: [
           // ── Sidebar ─────────────────────────────
           Sidebar(
-            selectedIndex: _selectedIndex,
+            selectedId: activeDestination.id,
+            destinations: destinations
+                .map((destination) => destination.toSidebarDestination())
+                .toList(),
             isExpanded: _isSidebarExpanded, // Pass state
             userName: widget.session.user.name,
-            userRoleLabel: _roleLabel(widget.session.user.roles),
-            showReports: widget.session.user.can('report.view'),
-            showStock: widget.session.user.can('catalog.manage'),
-            onLogout: widget.onLogout,
-            onToggle: () { // Toggle callback
+            userRoleLabel: roleLabel,
+            onLogout: widget.onLogout == null || _loggingOut
+                ? null
+                : _confirmLogout,
+            onToggle: () {
+              // Toggle callback
               setState(() {
                 _isSidebarExpanded = !_isSidebarExpanded;
               });
             },
-            onItemTapped: (index) {
+            onItemTapped: (pageId) {
               setState(() {
-                _selectedIndex = index;
+                _selectedPageId = pageId;
               });
             },
           ),
@@ -99,10 +172,14 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           Expanded(
             child: Column(
               children: [
-                if (_selectedIndex != 0 && _selectedIndex != 2 && _selectedIndex != 3 && _selectedIndex != 4 && _selectedIndex != 5) const AppHeader(),
+                AppHeader(
+                  userName: widget.session.user.name,
+                  userRoleLabel: roleLabel,
+                  onLogout: widget.onLogout == null ? null : _confirmLogout,
+                  logoutInProgress: _loggingOut,
+                ),
 
-                /// 🔥 PAKAI BUILDER
-                Expanded(child: _buildPage(_selectedIndex)),
+                Expanded(child: activeDestination.builder()),
               ],
             ),
           ),
@@ -122,6 +199,34 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
     }
 
     return '${role[0].toUpperCase()}${role.substring(1)}';
+  }
+}
+
+class _DesktopPageIds {
+  static const walkIn = 'walk-in';
+  static const booking = 'booking';
+  static const queue = 'queue';
+  static const history = 'history';
+  static const reports = 'reports';
+  static const addOns = 'add-ons';
+  static const stock = 'stock';
+}
+
+class _DesktopDestination {
+  const _DesktopDestination({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.builder,
+  });
+
+  final String id;
+  final String label;
+  final IconData icon;
+  final Widget Function() builder;
+
+  SidebarDestination toSidebarDestination() {
+    return SidebarDestination(id: id, icon: icon, label: label);
   }
 }
 

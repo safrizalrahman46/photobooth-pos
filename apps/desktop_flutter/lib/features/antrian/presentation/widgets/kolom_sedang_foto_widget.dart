@@ -52,16 +52,14 @@ class KolomSedangFotoWidget extends StatelessWidget {
         // Booth Cards
         Column(
           children: booths.map((booth) {
-            if (booth.status == StatusBooth.aktif && booth.antrianAktif != null) {
+            if (booth.status == StatusBooth.aktif &&
+                booth.antrianAktif != null) {
               return BoothAktifCard(
                 booth: booth,
                 onKirimKeSelesai: onKirimKeSelesai,
               );
             }
-            return BoothTersediaCard(
-              booth: booth,
-              onSetReady: onSetReady,
-            );
+            return BoothTersediaCard(booth: booth, onSetReady: onSetReady);
           }).toList(),
         ),
       ],
@@ -87,7 +85,9 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
   @override
   void initState() {
     super.initState();
-    _sisaDetik = widget.booth.antrianAktif?.sisaWaktuDetik ?? 252; // Default 04:12 like mockup
+    _sisaDetik =
+        widget.booth.antrianAktif?.sisaWaktuDetik ??
+        252; // Default 04:12 like mockup
     _startTimer();
   }
 
@@ -143,16 +143,25 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                     height: 180,
                     decoration: const BoxDecoration(
                       image: DecorationImage(
-                        image: NetworkImage('https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&q=80&w=800'),
+                        image: NetworkImage(
+                          'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&q=80&w=800',
+                        ),
                         fit: BoxFit.cover,
-                        colorFilter: ColorFilter.mode(Colors.black26, BlendMode.darken),
+                        colorFilter: ColorFilter.mode(
+                          Colors.black26,
+                          BlendMode.darken,
+                        ),
                       ),
                     ),
                     child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 40),
+                          const Icon(
+                            Icons.camera_alt_rounded,
+                            color: Colors.white,
+                            size: 40,
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'SESSION ACTIVE',
@@ -174,7 +183,10 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                   top: 12,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(8),
@@ -265,7 +277,9 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                       child: Container(
                         height: 8,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A), // Dark blue progress like mockup
+                          color: const Color(
+                            0xFF0F172A,
+                          ), // Dark blue progress like mockup
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -279,7 +293,10 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                   child: OutlinedButton(
                     onPressed: widget.onKirimKeSelesai,
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                      side: const BorderSide(
+                        color: Color(0xFF0F172A),
+                        width: 1.5,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -324,7 +341,8 @@ class BoothTersediaCard extends StatelessWidget {
         border: Border.all(
           color: const Color(0xFFCBD5E1),
           width: 2,
-          style: BorderStyle.solid, // Note: real dashed needs CustomPainter, but solid border works for clean look
+          style: BorderStyle
+              .solid, // Note: real dashed needs CustomPainter, but solid border works for clean look
         ),
       ),
       child: Column(
@@ -336,7 +354,11 @@ class BoothTersediaCard extends StatelessWidget {
               color: const Color(0xFFF1F5F9),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.sensor_door_outlined, color: Color(0xFF64748B), size: 32),
+            child: const Icon(
+              Icons.sensor_door_outlined,
+              color: Color(0xFF64748B),
+              size: 32,
+            ),
           ),
           const SizedBox(height: 20),
           Text(
@@ -373,10 +395,7 @@ class BoothTersediaCard extends StatelessWidget {
               ),
               child: const Text(
                 'SET READY',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
               ),
             ),
           ),

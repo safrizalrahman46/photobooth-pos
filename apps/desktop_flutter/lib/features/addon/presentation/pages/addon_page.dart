@@ -84,7 +84,11 @@ class _StockSummaryTable extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             child: Row(
               children: [
-                const Icon(Icons.inventory_2_rounded, color: AppColors.primaryBlue, size: 22),
+                const Icon(
+                  Icons.inventory_2_rounded,
+                  color: AppColors.primaryBlue,
+                  size: 22,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   'RINGKASAN STOK',
@@ -99,14 +103,16 @@ class _StockSummaryTable extends ConsumerWidget {
             ),
           ),
           const Divider(height: 1, thickness: 1, color: Color(0xFFF3F4F6)),
-          
+
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
             child: addonsAsync.when(
               data: (list) {
                 return Column(
                   children: list.map((item) {
-                    final isLow = item.statusType == AddOnStatusType.stockLevel && (item.sisaStok ?? 0) < 15;
+                    final isLow =
+                        item.statusType == AddOnStatusType.stockLevel &&
+                        (item.sisaStok ?? 0) < 15;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 18),
                       child: Row(
@@ -124,22 +130,31 @@ class _StockSummaryTable extends ConsumerWidget {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
-                              color: isLow ? const Color(0xFFFEF2F2) : const Color(0xFFF9FAFB),
+                              color: isLow
+                                  ? const Color(0xFFFEF2F2)
+                                  : const Color(0xFFF9FAFB),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: isLow ? const Color(0xFFFEE2E2) : Colors.transparent,
+                                color: isLow
+                                    ? const Color(0xFFFEE2E2)
+                                    : Colors.transparent,
                               ),
                             ),
                             child: Text(
-                              item.statusType == AddOnStatusType.stockLevel 
-                                ? '${item.sisaStok}' 
-                                : 'Ready',
+                              item.statusType == AddOnStatusType.stockLevel
+                                  ? '${item.sisaStok}'
+                                  : 'Ready',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
-                                color: isLow ? const Color(0xFFEF4444) : AppColors.textPrimary,
+                                color: isLow
+                                    ? const Color(0xFFEF4444)
+                                    : AppColors.textPrimary,
                               ),
                             ),
                           ),
@@ -149,10 +164,12 @@ class _StockSummaryTable extends ConsumerWidget {
                   }).toList(),
                 );
               },
-              loading: () => const Center(child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )),
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
               error: (_, __) => const Text('Error loading stock'),
             ),
           ),
@@ -161,4 +178,3 @@ class _StockSummaryTable extends ConsumerWidget {
     );
   }
 }
-

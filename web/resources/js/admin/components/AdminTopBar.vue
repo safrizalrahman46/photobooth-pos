@@ -29,7 +29,7 @@ const emit = defineEmits(['open-mobile', 'toggle-top-search', 'update:topSearchV
 
 <template>
     <header
-        class="sticky top-0 z-10 flex items-center gap-3 px-5 py-0"
+        class="sticky top-0 z-10 flex items-center gap-3 px-3 py-0 sm:px-5"
         style="background: #FFFFFF; border-bottom: 1px solid #EEF2FF; backdrop-filter: blur(12px); min-height: 64px; box-shadow: 0 1px 8px rgba(37,99,235,0.05);"
     >
         <button
@@ -51,8 +51,7 @@ const emit = defineEmits(['open-mobile', 'toggle-top-search', 'update:topSearchV
         <div v-if="showSearchButton" class="relative">
             <div
                 v-if="showTopSearch"
-                class="flex items-center gap-2 rounded-xl border-[1.5px] border-[#2563EB] bg-[#F8FAFC] px-3 py-2"
-                style="width: 220px;"
+                class="flex w-[min(220px,calc(100vw-6rem))] items-center gap-2 rounded-xl border-[1.5px] border-[#2563EB] bg-[#F8FAFC] px-3 py-2"
             >
                 <Search class="h-3.5 w-3.5 shrink-0 text-[#2563EB]" />
                 <input

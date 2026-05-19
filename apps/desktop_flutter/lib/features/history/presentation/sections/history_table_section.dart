@@ -5,7 +5,7 @@ import '../widgets/history/history_table.dart';
 import '../../domain/entities/transaction.dart';
 
 /// Section yang membungkus [HistoryTable].
-/// Sekarang tidak lagi menggunakan SingleChildScrollView horizontal 
+/// Sekarang tidak lagi menggunakan SingleChildScrollView horizontal
 /// karena tabel sudah menggunakan Flexible/Expanded columns.
 class HistoryTableSection extends StatelessWidget {
   final List<Transaction> transactions;
@@ -19,11 +19,8 @@ class HistoryTableSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Kita hapus SingleChildScrollView horizontal-nya agar Expanded di dalam tabel 
+    // Kita hapus SingleChildScrollView horizontal-nya agar Expanded di dalam tabel
     // bisa menghitung lebar dengan benar berdasarkan ruang yang tersedia.
-    return HistoryTable(
-      transactions: transactions,
-      onRowAction: onRowAction,
-    );
+    return HistoryTable(transactions: transactions, onRowAction: onRowAction);
   }
 }

@@ -376,7 +376,7 @@ const applyTodayFilter = () => {
                     <p class="mt-1 text-xs text-[#64748B]">Gunakan untuk tanggal atau rentang jam khusus yang tidak ikut pola harian normal.</p>
                 </div>
 
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="rtp-admin-form-grid">
                     <label class="text-xs text-[#64748B]">Branch
                         <select v-model="createForm.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;">
                             <option value="">Select branch</option>
@@ -403,7 +403,7 @@ const applyTodayFilter = () => {
                     </label>
                 </div>
 
-                <button type="button" class="mt-3 rounded-xl bg-[#15803D] px-4 py-2 text-sm text-white" :disabled="saving" @click="submitCreate">
+                <button type="button" class="mt-3 w-full rounded-xl bg-[#15803D] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
                     {{ saving ? 'Saving...' : 'Create Slot' }}
                 </button>
             </div>
@@ -414,7 +414,7 @@ const applyTodayFilter = () => {
                     <p class="mt-1 text-xs text-[#64748B]">Gunakan untuk membentuk jadwal satu hari penuh atau satu periode sekaligus dengan pola yang konsisten.</p>
                 </div>
 
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="rtp-admin-form-grid">
                     <label class="text-xs text-[#64748B]">Branch
                         <select v-model="generateForm.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;">
                             <option value="">Select branch</option>
@@ -447,7 +447,7 @@ const applyTodayFilter = () => {
                     </label>
                 </div>
 
-                <button type="button" class="mt-3 rounded-xl bg-[#166534] px-4 py-2 text-sm text-white" :disabled="saving" @click="submitGenerate">
+                <button type="button" class="mt-3 w-full rounded-xl bg-[#166534] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitGenerate">
                     {{ saving ? 'Generating...' : 'Generate Slots' }}
                 </button>
             </div>
@@ -565,7 +565,7 @@ const applyTodayFilter = () => {
                             </div>
                         </div>
 
-                        <div class="grid min-w-[280px] grid-cols-1 gap-3 sm:grid-cols-2 xl:w-[320px] xl:grid-cols-1">
+                        <div class="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:w-[320px] xl:grid-cols-1">
                             <div class="grid grid-cols-2 gap-2">
                                 <label class="text-xs text-[#64748B]">Jam Mulai
                                     <input v-model="slotDraftFor(row).start_time" type="time" class="mt-1 w-full rounded border px-2 py-2 text-xs" style="border-color: #CBD5E1;" >

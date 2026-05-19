@@ -148,8 +148,11 @@ class _ReportRow extends StatelessWidget {
           Expanded(
             flex: ReportTable._flexTotal,
             child: Text(
-              NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0)
-                  .format(transaction.totalBayar),
+              NumberFormat.currency(
+                locale: 'id',
+                symbol: 'Rp ',
+                decimalDigits: 0,
+              ).format(transaction.totalBayar),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
           ),
@@ -160,7 +163,7 @@ class _ReportRow extends StatelessWidget {
               child: TransactionStatusBadge(status: transaction.status),
             ),
           ),
-           SizedBox(
+          SizedBox(
             width: ReportTable._colAction,
             child: Align(
               alignment: Alignment.centerRight,
@@ -171,7 +174,10 @@ class _ReportRow extends StatelessWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF6366F1),
                   backgroundColor: const Color(0xFFF5F7FF),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                     side: const BorderSide(color: Color(0xFFE0E7FF)),

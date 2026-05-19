@@ -45,11 +45,24 @@ class InventoryController extends Controller
 
     public function monitoring(Request $request, InventoryService $service): JsonResponse
     {
-        abort_unless($request->user()?->can('catalog.manage') || $request->user()?->hasRole('owner'), 403);
+        abort_unless($this->canViewInventory($request), 403);
 
         return $this->responder->success(
             $service->managementPayload(),
             'Data monitoring stok berhasil dimuat.'
+        );
+    }
+
+    private function canViewInventory(Request $request): bool
+    {
+        $user = $request->user();
+
+        return (bool) (
+            $user?->can('inventory.view')
+            || $user?->can('catalog.manage')
+            || $user?->hasRole('owner')
+            || $user?->hasRole('admin')
+            || $user?->hasRole('cashier')
         );
     }
 }

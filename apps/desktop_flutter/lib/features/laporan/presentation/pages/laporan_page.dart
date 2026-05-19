@@ -52,10 +52,12 @@ class LaporanPage extends StatelessWidget {
                           children: [
                             Text('Laporan Keuangan', style: AppTextStyles.h2),
                             const SizedBox(height: 4),
-                            Obx(() => Text(
-                              'Data terakhir diperbarui: ${controller.lastUpdated.value}',
-                              style: AppTextStyles.bodySmall,
-                            )),
+                            Obx(
+                              () => Text(
+                                'Data terakhir diperbarui: ${controller.lastUpdated.value}',
+                                style: AppTextStyles.bodySmall,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -68,12 +70,13 @@ class LaporanPage extends StatelessWidget {
                       final period = controller.selectedPeriod.value;
                       final date = controller.selectedDate.value;
                       String label = "";
-                      
+
                       if (period == LaporanPeriod.hari) {
                         label = DateFormat('dd MMMM yyyy').format(date);
                       } else if (period == LaporanPeriod.minggu) {
                         final weekNum = ((date.day - 1) / 7).floor() + 1;
-                        label = "Minggu ke-$weekNum, ${DateFormat('MMMM yyyy').format(date)}";
+                        label =
+                            "Minggu ke-$weekNum, ${DateFormat('MMMM yyyy').format(date)}";
                       } else if (period == LaporanPeriod.bulan) {
                         label = DateFormat('MMMM yyyy').format(date);
                       } else {
@@ -83,7 +86,10 @@ class LaporanPage extends StatelessWidget {
                       return GestureDetector(
                         onTap: () => _selectDate(context, controller),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(10),
@@ -92,7 +98,11 @@ class LaporanPage extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.event_note_rounded, size: 18, color: Color(0xFF64748B)),
+                              const Icon(
+                                Icons.event_note_rounded,
+                                size: 18,
+                                color: Color(0xFF64748B),
+                              ),
                               const SizedBox(width: 10),
                               Text(
                                 label,
@@ -103,7 +113,10 @@ class LaporanPage extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF64748B)),
+                              const Icon(
+                                Icons.arrow_drop_down_rounded,
+                                color: Color(0xFF64748B),
+                              ),
                             ],
                           ),
                         ),
@@ -143,13 +156,19 @@ class LaporanPage extends StatelessWidget {
                     const SizedBox(height: 48),
 
                     /// ───────── LAPORAN TRANSAKSI ─────────
-                    Text('Rincian Transaksi Terkonfirmasi', style: AppTextStyles.h3),
+                    Text(
+                      'Rincian Transaksi Terkonfirmasi',
+                      style: AppTextStyles.h3,
+                    ),
                     const SizedBox(height: 16),
                     FutureBuilder<List<Transaction>>(
                       future: _loadTransactions(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
                         }
 
                         if (snapshot.hasError) {
@@ -159,15 +178,19 @@ class LaporanPage extends StatelessWidget {
                           );
                         }
 
-                        return ReportTable(transactions: snapshot.data ?? const <Transaction>[]);
+                        return ReportTable(
+                          transactions: snapshot.data ?? const <Transaction>[],
+                        );
                       },
                     ),
-                    
+
                     const SizedBox(height: 24),
                     // Label info
                     Text(
                       '* Menampilkan transaksi Lunas, Pending, dan Batal dari API.',
-                      style: AppTextStyles.caption.copyWith(fontStyle: FontStyle.italic),
+                      style: AppTextStyles.caption.copyWith(
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ],
                 ),
@@ -179,7 +202,10 @@ class LaporanPage extends StatelessWidget {
     );
   }
 
-  Future<void> _selectDate(BuildContext context, LaporanController controller) async {
+  Future<void> _selectDate(
+    BuildContext context,
+    LaporanController controller,
+  ) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: controller.selectedDate.value,
@@ -213,15 +239,23 @@ class LaporanPage extends StatelessWidget {
     final rows = await client.fetchTransactions(perPage: 50);
 
     return rows.map((row) {
-      final packageItems = row.items.where((item) => item.itemType == 'package' || item.itemType == 'booking').toList();
-      final addOnItems = row.items.where((item) => item.itemType == 'add_on').toList();
+      final packageItems = row.items
+          .where(
+            (item) => item.itemType == 'package' || item.itemType == 'booking',
+          )
+          .toList();
+      final addOnItems = row.items
+          .where((item) => item.itemType == 'add_on')
+          .toList();
 
       return Transaction(
         id: row.transactionCode,
         waktu: DateTime.tryParse(row.createdAt ?? '') ?? DateTime.now(),
         namaPelanggan: row.customerName.isEmpty ? '-' : row.customerName,
         paket: packageItems.isNotEmpty ? packageItems.first.itemName : '-',
-        addOns: addOnItems.isEmpty ? null : addOnItems.map((item) => item.itemName).join(', '),
+        addOns: addOnItems.isEmpty
+            ? null
+            : addOnItems.map((item) => item.itemName).join(', '),
         totalBayar: row.totalAmount.round(),
         status: _mapTransactionStatus(row.status),
       );

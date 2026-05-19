@@ -91,12 +91,12 @@ class AntrianBloc extends ChangeNotifier {
     required GetAllBoothUseCase getAllBooth,
     required PindahKeSelesaiUseCase pindahKeSelesai,
     required SetBoothReadyUseCase setBoothReady,
-  })  : _getAntrianMenunggu = getAntrianMenunggu,
-        _getAntrianSelesai = getAntrianSelesai,
-        _getAntrianBerikutnya = getAntrianBerikutnya,
-        _getAllBooth = getAllBooth,
-        _pindahKeSelesai = pindahKeSelesai,
-        _setBoothReady = setBoothReady {
+  }) : _getAntrianMenunggu = getAntrianMenunggu,
+       _getAntrianSelesai = getAntrianSelesai,
+       _getAntrianBerikutnya = getAntrianBerikutnya,
+       _getAllBooth = getAllBooth,
+       _pindahKeSelesai = pindahKeSelesai,
+       _setBoothReady = setBoothReady {
     _init();
   }
 
@@ -110,11 +110,13 @@ class AntrianBloc extends ChangeNotifier {
     try {
       final selesai = await _getAntrianSelesai();
       final berikutnya = await _getAntrianBerikutnya();
-      _emit(_state.copyWith(
-        isLoading: false,
-        antrianSelesai: selesai,
-        antrianBerikutnya: berikutnya,
-      ));
+      _emit(
+        _state.copyWith(
+          isLoading: false,
+          antrianSelesai: selesai,
+          antrianBerikutnya: berikutnya,
+        ),
+      );
 
       _antrianSub = _getAntrianMenunggu.watch().listen((list) {
         _emit(_state.copyWith(antrianMenunggu: list));
@@ -132,10 +134,9 @@ class AntrianBloc extends ChangeNotifier {
       await _pindahKeSelesai(antrianId, catatan);
       final selesai = await _getAntrianSelesai();
       final berikutnya = await _getAntrianBerikutnya();
-      _emit(_state.copyWith(
-        antrianSelesai: selesai,
-        antrianBerikutnya: berikutnya,
-      ));
+      _emit(
+        _state.copyWith(antrianSelesai: selesai, antrianBerikutnya: berikutnya),
+      );
     } catch (e) {
       _emit(_state.copyWith(errorMessage: e.toString()));
     }
