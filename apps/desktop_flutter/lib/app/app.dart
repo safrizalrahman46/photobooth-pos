@@ -1,3 +1,4 @@
+import 'package:desktop_flutter/core/config/app_config.dart';
 import 'package:desktop_flutter/core/network/api_client.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/core/session/session_store.dart';
@@ -32,12 +33,12 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
     if (storedSession != null) {
       try {
         final profile = await ApiClient(
-          baseUrl: storedSession.baseUrl,
+          baseUrl: AppConfig.defaultApiBaseUrl,
           token: storedSession.token,
         ).fetchProfile();
 
         session = DesktopSession(
-          baseUrl: storedSession.baseUrl,
+          baseUrl: AppConfig.defaultApiBaseUrl,
           token: storedSession.token,
           user: profile,
         );

@@ -41,6 +41,9 @@ class ApiClient {
       }),
     );
 
+    print(response.statusCode);
+    print(response.body);
+
     final payload = _decode(response.body);
 
     if (response.statusCode >= 400 || payload['success'] != true) {
@@ -1196,6 +1199,9 @@ class ApiClient {
   }) async {
     final uri = Uri.parse('$baseUrl$path').replace(queryParameters: query);
 
+    print('BASE URL: $baseUrl');
+    print('PATH: $path');
+    print('FULL URL: ${'$baseUrl$path'}');
     final response = switch (method.toUpperCase()) {
       'GET' => await http.get(
         uri,
