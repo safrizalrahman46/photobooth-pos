@@ -234,8 +234,8 @@ const requestDelete = async (user) => {
             </article>
         </section>
 
-        <div class="overflow-hidden rounded-2xl border" style="border-color: #E2E8F0; background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 6px 18px rgba(15,23,42,0.06);">
-            <table class="w-full">
+        <div class="rtp-admin-table-wrap rounded-2xl border" style="border-color: #E2E8F0; background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 6px 18px rgba(15,23,42,0.06);">
+            <table class="rtp-admin-table w-full">
                 <thead>
                     <tr style="border-bottom: 1px solid #E2E8F0; background: #F8FAFC;">
                         <th class="px-5 py-3 text-left text-xs uppercase tracking-wider text-[#94A3B8]">Name</th>
@@ -311,7 +311,7 @@ const requestDelete = async (user) => {
                     {{ localError }}
                 </p>
 
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="rtp-admin-form-grid">
                     <label class="text-sm text-[#475569]">
                         Full Name
                         <input v-model="form.name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
@@ -348,7 +348,7 @@ const requestDelete = async (user) => {
                     Active user
                 </label>
 
-                <div class="mt-5 flex items-center justify-end gap-2">
+                <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeModal">Cancel</button>
                     <button
                         type="button"

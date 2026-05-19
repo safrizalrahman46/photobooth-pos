@@ -641,7 +641,7 @@ const submitQueue = async () => {
                         </div>
                     </div>
 
-                    <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div v-else class="rtp-admin-form-grid">
                         <label class="text-sm text-[#475569]">
                             Branch
                             <select v-model="walkInForm.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
@@ -669,7 +669,7 @@ const submitQueue = async () => {
                     </div>
                 </div>
 
-                <div class="mt-5 flex items-center justify-end gap-2">
+                <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeAddModal">Cancel</button>
                     <button
                         type="button"

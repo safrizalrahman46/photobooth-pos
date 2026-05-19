@@ -283,7 +283,7 @@ const requestDelete = async (design) => {
                     {{ localError }}
                 </p>
 
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="rtp-admin-form-grid">
                     <label class="text-sm text-[#475569]">
                         Design Name
                         <input v-model="form.name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
@@ -320,7 +320,7 @@ const requestDelete = async (design) => {
                     Active design
                 </label>
 
-                <div class="mt-5 flex items-center justify-end gap-2">
+                <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeModal">Cancel</button>
                     <button
                         type="button"

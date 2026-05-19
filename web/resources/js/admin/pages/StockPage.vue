@@ -250,8 +250,8 @@ const requestDelete = async (item) => {
         </div>
 
         <div class="overflow-hidden rounded-2xl border bg-white" style="border-color: #DBEAFE; box-shadow: 0 1px 3px rgba(37,99,235,0.08), 0 6px 18px rgba(37,99,235,0.08);">
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
+            <div class="rtp-admin-table-wrap">
+                <table class="rtp-admin-table min-w-full text-sm">
                     <thead style="background: #ECFDF5; color: #334155;">
                         <tr>
                             <th class="whitespace-nowrap px-3 py-2 text-left font-semibold">Kode</th>
@@ -311,8 +311,8 @@ const requestDelete = async (item) => {
                 <h3 class="text-sm font-semibold text-[#1E293B]">Riwayat Movement</h3>
                 <p class="text-xs text-[#64748B]">Termasuk stok manual dan auto deduction dari booking terverifikasi.</p>
             </header>
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
+            <div class="rtp-admin-table-wrap">
+                <table class="rtp-admin-table rtp-admin-table--wide min-w-full text-sm">
                     <thead style="background: #F8FAFC; color: #475569;">
                         <tr>
                             <th class="px-3 py-2 text-left">Waktu</th>
@@ -357,7 +357,7 @@ const requestDelete = async (item) => {
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeItemModal">Close</button>
                 </div>
                 <p v-if="localError" class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #FECACA; background: #FEF2F2; color: #B91C1C;">{{ localError }}</p>
-                <div class="grid gap-3 sm:grid-cols-2">
+                <div class="rtp-admin-form-grid">
                     <label class="text-sm text-[#475569]">Kode (optional)<input v-model="itemForm.code" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
                     <label class="text-sm text-[#475569]">Nama Barang<input v-model="itemForm.name" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
                     <label class="text-sm text-[#475569]">Unit<input v-model="itemForm.unit" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
@@ -366,7 +366,7 @@ const requestDelete = async (item) => {
                     <label class="text-sm text-[#475569]">Sort Order<input v-model.number="itemForm.sort_order" type="number" min="0" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
                 </div>
                 <label class="mt-3 inline-flex items-center gap-2 text-sm text-[#475569]"><input v-model="itemForm.is_active" type="checkbox"> Active item</label>
-                <div class="mt-5 flex items-center justify-end gap-2">
+                <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeItemModal">Cancel</button>
                     <button type="button" class="rounded-xl px-4 py-2 text-sm font-semibold text-white" style="background: #0F766E;" :disabled="saving" @click="submitItemForm">
                         {{ saving ? 'Saving...' : 'Save' }}
@@ -381,7 +381,7 @@ const requestDelete = async (item) => {
                 </div>
                 <p class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #BFDBFE; background: #EFF6FF; color: #1E3A8A;">Stock saat ini: <strong>{{ Number(stockTarget?.available_stock || 0) }}</strong> {{ stockTarget?.unit || 'pcs' }}</p>
                 <p v-if="localError" class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #FECACA; background: #FEF2F2; color: #B91C1C;">{{ localError }}</p>
-                <div class="grid gap-3 sm:grid-cols-2">
+                <div class="rtp-admin-form-grid">
                     <button type="button" class="rounded-xl border px-4 py-3 text-left" :style="stockForm.movement_type === 'in' ? { borderColor: '#0F766E', background: '#ECFDF5', color: '#0F766E' } : { borderColor: '#E2E8F0', color: '#475569' }" @click="stockForm.movement_type = 'in'">
                         <TrendingUp class="mb-1 h-4 w-4" /> Stock In
                     </button>
@@ -392,7 +392,7 @@ const requestDelete = async (item) => {
                 <label class="mt-3 block text-sm text-[#475569]">Jumlah<input v-model.number="stockForm.qty" type="number" min="1" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
                 <label class="mt-3 block text-sm text-[#475569]">Catatan<input v-model="stockForm.notes" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" placeholder="Mis: restock supplier / adjustment"></label>
                 <p class="mt-3 text-sm text-[#475569]">Proyeksi setelah disimpan: <strong class="text-[#0F172A]">{{ projectedStock }}</strong></p>
-                <div class="mt-5 flex items-center justify-end gap-2">
+                <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeStockModal">Cancel</button>
                     <button type="button" class="rounded-xl px-4 py-2 text-sm font-semibold text-white" style="background: #0F766E;" :disabled="saving" @click="submitMovement">
                         {{ saving ? 'Saving...' : 'Save Stock Movement' }}

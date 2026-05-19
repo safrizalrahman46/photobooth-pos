@@ -352,8 +352,8 @@ const requestDelete = async (addOn) => {
                     </span>
                 </header>
 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm">
+                <div class="rtp-admin-table-wrap">
+                    <table class="rtp-admin-table rtp-admin-table--wide min-w-full text-sm">
                         <thead style="background: #EFF6FF; color: #334155;">
                             <tr>
                                 <th class="whitespace-nowrap px-3 py-2 text-left font-semibold">Code</th>
@@ -448,7 +448,7 @@ const requestDelete = async (addOn) => {
                 </p>
 
                 <div class="overflow-hidden rounded-xl border" style="border-color: #E2E8F0;">
-                    <table class="min-w-full text-sm">
+                    <table class="rtp-admin-field-table text-sm">
                         <thead style="background: #F8FAFC; color: #475569;">
                             <tr>
                                 <th class="px-3 py-2 text-left font-semibold">Field</th>
@@ -513,7 +513,7 @@ const requestDelete = async (addOn) => {
                                         <div
                                             v-for="(row, rowIndex) in form.inventory_items"
                                             :key="`addon-inventory-row-${rowIndex}`"
-                                            class="grid grid-cols-[1fr_110px_auto] gap-2"
+                                            class="rtp-admin-inventory-row"
                                         >
                                             <select v-model="row.inventory_item_id" class="rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
                                                 <option value="">Pilih barang</option>
@@ -553,7 +553,7 @@ const requestDelete = async (addOn) => {
                     </table>
                 </div>
 
-                <div class="mt-5 flex items-center justify-end gap-2">
+                <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeModal">Cancel</button>
                     <button
                         type="button"

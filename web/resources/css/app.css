@@ -22,3 +22,159 @@
 }
 
 @variant dark (&:where(.dark, .dark *));
+
+@layer components {
+    .rtp-admin {
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+    }
+
+    .rtp-admin .rtp-admin-page {
+        width: 100%;
+        max-width: 1600px;
+        margin-inline: auto;
+        padding: 0.75rem;
+    }
+
+    .rtp-admin .rtp-admin-modal-overlay {
+        padding: 0.5rem;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background: rgba(15, 23, 42, 0.45);
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .rtp-admin .rtp-admin-modal-panel {
+        max-height: calc(100dvh - 1rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border-color: #E2E8F0;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .rtp-admin .rtp-admin-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .rtp-admin .rtp-admin-table {
+        min-width: 720px;
+    }
+
+    .rtp-admin .rtp-admin-table--wide {
+        min-width: 960px;
+    }
+
+    .rtp-admin .rtp-admin-form-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.75rem;
+    }
+
+    .rtp-admin .rtp-admin-actions {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 0.5rem;
+    }
+
+    .rtp-admin .rtp-admin-actions > button,
+    .rtp-admin .rtp-admin-actions > a {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .rtp-admin .rtp-admin-inventory-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.5rem;
+    }
+
+    .rtp-admin .rtp-admin-photo-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.5rem;
+    }
+
+    .rtp-admin .rtp-admin-field-table {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 639px) {
+    .rtp-admin .rtp-admin-field-table,
+    .rtp-admin .rtp-admin-field-table tbody,
+    .rtp-admin .rtp-admin-field-table tr,
+    .rtp-admin .rtp-admin-field-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .rtp-admin .rtp-admin-field-table thead {
+        display: none;
+    }
+
+    .rtp-admin .rtp-admin-field-table tr {
+        border-top: 1px solid #E2E8F0;
+    }
+
+    .rtp-admin .rtp-admin-field-table td {
+        padding: 0.75rem;
+    }
+
+    .rtp-admin .rtp-admin-field-table td + td {
+        padding-top: 0;
+    }
+}
+
+@media (min-width: 640px) {
+    .rtp-admin .rtp-admin-page {
+        padding: 1.25rem;
+    }
+
+    .rtp-admin .rtp-admin-modal-overlay {
+        padding: 1rem;
+        padding-block: 1.5rem;
+    }
+
+    .rtp-admin .rtp-admin-modal-panel {
+        max-height: calc(100dvh - 2rem);
+    }
+
+    .rtp-admin .rtp-admin-actions {
+        flex-direction: row;
+        justify-content: flex-end;
+    }
+
+    .rtp-admin .rtp-admin-actions > button,
+    .rtp-admin .rtp-admin-actions > a {
+        width: auto;
+    }
+
+    .rtp-admin .rtp-admin-inventory-row {
+        grid-template-columns: minmax(0, 1fr) minmax(7rem, 8rem) auto;
+        align-items: stretch;
+    }
+
+    .rtp-admin .rtp-admin-photo-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 768px) {
+    .rtp-admin .rtp-admin-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rtp-admin .rtp-admin-photo-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .rtp-admin .rtp-admin-page {
+        padding: 1.75rem;
+    }
+}
