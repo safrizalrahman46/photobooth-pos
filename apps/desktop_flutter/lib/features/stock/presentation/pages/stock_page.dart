@@ -27,47 +27,73 @@ class _StockPageState extends State<StockPage> {
   }
 
   Future<void> _loadStock() async {
-    final client = ApiSession.client;
+  final client = ApiSession.client;
 
-    if (client == null) {
-      setState(() {
-        _loading = false;
-        _error = 'Sesi login tidak ditemukan.';
-      });
+  if (client == null) {
+    setState(() {
+      _loading = false;
+      _error = 'Sesi login tidak ditemukan.';
+    });
+    return;
+  }
+
+  // ================= DEBUG TOKEN =================
+  print('=========== STOCK PAGE DEBUG ===========');
+  print('CLIENT: $client');
+  print('TOKEN: ${client.token}');
+  print('=======================================');
+  // ==============================================
+
+  setState(() {
+    _loading = true;
+    _error = null;
+  });
+
+  try {
+    // ============== DEBUG SEBELUM REQUEST ==============
+    print('Memulai request inventory monitoring...');
+    // ===================================================
+
+    final payload = await client.fetchInventoryMonitoring();
+
+    // ============== DEBUG SETELAH REQUEST ==============
+    print('Request berhasil!');
+    print('Jumlah items: ${payload.items.length}');
+    print('Jumlah movements: ${payload.movements.length}');
+    // ==================================================
+
+    if (!mounted) {
       return;
     }
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _payload = payload);
+  } on ApiException catch (error) {
+    // ============== DEBUG ERROR API ====================
+    print('ApiException: ${error.message}');
+    // ==================================================
 
-    try {
-      final payload = await client.fetchInventoryMonitoring();
+    if (!mounted) {
+      return;
+    }
 
-      if (!mounted) {
-        return;
-      }
+    setState(() => _error = error.message);
+  } catch (e, stackTrace) {
+    // ============== DEBUG ERROR UMUM ===================
+    print('ERROR UMUM: $e');
+    print('STACK TRACE: $stackTrace');
+    // ==================================================
 
-      setState(() => _payload = payload);
-    } on ApiException catch (error) {
-      if (!mounted) {
-        return;
-      }
+    if (!mounted) {
+      return;
+    }
 
-      setState(() => _error = error.message);
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() => _error = 'Tidak dapat memuat data monitoring stok.');
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+    setState(() => _error = 'Tidak dapat memuat data monitoring stok.');
+  } finally {
+    if (mounted) {
+      setState(() => _loading = false);
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
