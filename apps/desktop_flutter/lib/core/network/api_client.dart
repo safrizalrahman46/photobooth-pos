@@ -41,8 +41,7 @@ class ApiClient {
       }),
     );
 
-    print(response.statusCode);
-    print(response.body);
+    
 
     final payload = _decode(response.body);
 
@@ -294,20 +293,29 @@ class ApiClient {
   }
 
   Future<InventoryMonitoringPayload> fetchInventoryMonitoring() async {
-    final payload = await _send(
-      method: 'GET',
-      path: '/manage/inventory-monitoring',
-      authenticated: true,
-    );
+  final payload = await _send(
+    method: 'GET',
+    path: '/manage/inventory-items',
+    authenticated: true,
+  );
 
-    final data = payload['data'];
+  print('PAYLOAD: $payload');
 
-    if (data is! Map<String, dynamic>) {
-      throw ApiException('Data monitoring stok tidak valid.');
-    }
+  final data = payload['data'];
 
-    return InventoryMonitoringPayload.fromJson(data);
+  if (data is! List) {
+    throw ApiException('Data monitoring stok tidak valid.');
   }
+
+  final items = data
+      .map((item) => InventoryStockItem.fromJson(item))
+      .toList();
+
+  return InventoryMonitoringPayload(
+    items: items,
+    movements: const [],
+  );
+}
 
   Future<List<AddOnCatalogItem>> fetchAddOns({
     int? packageId,
@@ -1198,10 +1206,6 @@ class ApiClient {
     Map<String, dynamic>? body,
   }) async {
     final uri = Uri.parse('$baseUrl$path').replace(queryParameters: query);
-
-    print('BASE URL: $baseUrl');
-    print('PATH: $path');
-    print('FULL URL: ${'$baseUrl$path'}');
     final response = switch (method.toUpperCase()) {
       'GET' => await http.get(
         uri,
@@ -1240,13 +1244,16 @@ class ApiClient {
   }
 
   Map<String, String> _headers({bool authenticated = false}) {
-    return <String, String>{
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      if (authenticated && token != null && token!.isNotEmpty)
-        'Authorization': 'Bearer $token',
-    };
-  }
+  final headers = <String, String>{
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    if (authenticated && token != null && token!.isNotEmpty)
+      'Authorization': 'Bearer $token',
+  };
+
+  return headers;
+}
+
 
   Map<String, dynamic> _decode(String body) {
     if (body.isEmpty) {
