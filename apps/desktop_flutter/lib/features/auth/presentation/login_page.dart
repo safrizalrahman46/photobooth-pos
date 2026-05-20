@@ -101,24 +101,43 @@ class _LoginPageState extends State<LoginPage>
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 980),
-                    child: isCompact
-                        ? Column(
-                            children: [
-                              _buildHeroCard(),
-                              const SizedBox(height: 24),
-                              _buildLoginCard(),
-                            ],
-                          )
-                        : IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(flex: 5, child: _buildHeroCard()),
-                                const SizedBox(width: 20),
-                                Expanded(flex: 5, child: _buildLoginCard()),
-                              ],
-                            ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
                           ),
+                        ],
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: isCompact
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildHeroCard(isCompact: true),
+                                _buildLoginCard(isCompact: true),
+                              ],
+                            )
+                          : IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    flex: 5,
+                                    child: _buildHeroCard(isCompact: false),
+                                  ),
+                                  Expanded(
+                                    flex: 5,
+                                    child: _buildLoginCard(isCompact: false),
+                                  ),
+                                ],
+                              ),
+                            ),
+                    ),
                   ),
                 ),
               );
@@ -131,12 +150,27 @@ class _LoginPageState extends State<LoginPage>
 
   // ─── HERO CARD ──────────────────────────────────────────────────────────────
 
-  Widget _buildHeroCard() {
+  Widget _buildHeroCard({required bool isCompact}) {
     return Container(
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1710),
-        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF0F172A), // Deep Slate Navy
+            AppColors.primary,       // Sky Blue POS
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: isCompact
+            ? const BorderRadius.only(
+                topLeft: Radius.circular(23),
+                topRight: Radius.circular(23),
+              )
+            : const BorderRadius.only(
+                topLeft: Radius.circular(23),
+                bottomLeft: Radius.circular(23),
+              ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,14 +180,14 @@ class _LoginPageState extends State<LoginPage>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
+              color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.primary.withOpacity(0.35)),
+              border: Border.all(color: Colors.white.withOpacity(0.25)),
             ),
-            child: Text(
+            child: const Text(
               'READY TO PICT',
               style: TextStyle(
-                color: AppColors.primary,
+                color: Colors.white,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 2.5,
@@ -164,7 +198,7 @@ class _LoginPageState extends State<LoginPage>
 
           // Headline
           const Text(
-            'Login Admin\nReady To Pict.',
+            'Login Admin\nReady To Pict',
             style: TextStyle(
               color: Colors.white,
               fontSize: 36,
@@ -178,7 +212,7 @@ class _LoginPageState extends State<LoginPage>
           const Text(
             'Masuk untuk membuka POS desktop dan monitoring operasional Ready To Pict.',
             style: TextStyle(
-              color: Color(0xFFB8AFA4),
+              color: Colors.white70,
               fontSize: 14,
               height: 1.65,
             ),
@@ -200,7 +234,7 @@ class _LoginPageState extends State<LoginPage>
           const SizedBox(height: 48),
 
           // Footer divider
-          Container(height: 1, color: Colors.white.withOpacity(0.07)),
+          Container(height: 1, color: Colors.white.withOpacity(0.15)),
           const SizedBox(height: 20),
 
           Row(
@@ -209,12 +243,12 @@ class _LoginPageState extends State<LoginPage>
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
+                  color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.desktop_windows_rounded,
-                  color: AppColors.primary,
+                  color: Colors.white,
                   size: 18,
                 ),
               ),
@@ -232,7 +266,7 @@ class _LoginPageState extends State<LoginPage>
                   ),
                   Text(
                     'Built for Ready to pict',
-                    style: TextStyle(color: Color(0xFF7A7168), fontSize: 12),
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                 ],
               ),
@@ -245,13 +279,20 @@ class _LoginPageState extends State<LoginPage>
 
   // ─── LOGIN CARD ─────────────────────────────────────────────────────────────
 
-  Widget _buildLoginCard() {
+  Widget _buildLoginCard({required bool isCompact}) {
     return Container(
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: isCompact
+            ? const BorderRadius.only(
+                bottomLeft: Radius.circular(23),
+                bottomRight: Radius.circular(23),
+              )
+            : const BorderRadius.only(
+                topRight: Radius.circular(23),
+                bottomRight: Radius.circular(23),
+              ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -526,14 +567,14 @@ class _FeatureChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withOpacity(0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
       child: Text(
         label,
         style: const TextStyle(
-          color: Color(0xFFD9D0C3),
+          color: Colors.white,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
