@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import '../domain/entities/booking.dart';
 
 class BookingController extends ChangeNotifier {
+  bool _disposed = false;
+
   BookingController() {
-    loadInitialData();
+    Future.microtask(() => loadInitialData());
   }
 
   bool isLoading = false;
@@ -77,11 +79,11 @@ class BookingController extends ChangeNotifier {
 
     isLoading = true;
     errorMessage = null;
-    notifyListeners();
+    safeNotify();
 
     try {
       final branches = await client.fetchBranches();
-
+      if (_disposed) return;
       if (branches.isNotEmpty) {
         final branch = branches.first;
         selectedBranchId = branch.id;
@@ -91,6 +93,7 @@ class BookingController extends ChangeNotifier {
       final packageRows = await client.fetchPackages(
         branchId: selectedBranchId,
       );
+      if (_disposed) return;
 
       packages = packageRows.map((row) {
         return Package(
@@ -107,12 +110,14 @@ class BookingController extends ChangeNotifier {
           : selectedPackageIndex.clamp(0, packages.length - 1).toInt();
 
       await _loadAddOnsForSelectedPackage();
+      if (_disposed) return;
 
       final bookingRows = await client.fetchBookings(
         branchId: selectedBranchId,
         status: 'pending',
         perPage: 100,
       );
+      if (_disposed) return;
 
       final actionableBookings = bookingRows
           .where(_isActionableBooking)
@@ -146,14 +151,14 @@ class BookingController extends ChangeNotifier {
       errorMessage = error.toString();
     } finally {
       isLoading = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
   // Methods
   void selectQueue(int index) {
     selectedQueueIndex = index;
-    notifyListeners();
+    safeNotify();
   }
 
   void selectPackage(int index) {
@@ -162,7 +167,7 @@ class BookingController extends ChangeNotifier {
       addon.quantity = 0;
     }
     _clearReferralPreview();
-    notifyListeners();
+    safeNotify();
     _loadAddOnsForSelectedPackage();
   }
 
@@ -191,35 +196,35 @@ class BookingController extends ChangeNotifier {
 
     addons[index].quantity++;
     _clearReferralPreview();
-    notifyListeners();
+    safeNotify();
   }
 
   void decrementAddon(int index) {
     if (addons[index].quantity > 0) {
       addons[index].quantity--;
       _clearReferralPreview();
-      notifyListeners();
+      safeNotify();
     }
   }
 
   void setPayment(String method) {
     selectedPayment = method;
-    notifyListeners();
+    safeNotify();
   }
 
   void updateCustomerName(String val) {
     customerName = val;
-    notifyListeners();
+    safeNotify();
   }
 
   void updateWhatsapp(String val) {
     whatsapp = val.replaceAll(RegExp(r'\D'), '');
-    notifyListeners();
+    safeNotify();
   }
 
   void updateEmail(String val) {
     email = val;
-    notifyListeners();
+    safeNotify();
   }
 
   void updateJumlahOrang(String val) {
@@ -230,18 +235,18 @@ class BookingController extends ChangeNotifier {
     }
 
     jumlahOrang = parsed;
-    notifyListeners();
+    safeNotify();
   }
 
   void updateNote(String val) {
     note = val;
-    notifyListeners();
+    safeNotify();
   }
 
   void updateReferralCode(String val) {
     referralCode = val.toUpperCase();
     _clearReferralPreview(keepMessage: false);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> applyReferral() async {
@@ -255,7 +260,7 @@ class BookingController extends ChangeNotifier {
 
     if (code.isEmpty) {
       referralPreview = null;
-      notifyListeners();
+      safeNotify();
       return;
     }
 
@@ -264,12 +269,12 @@ class BookingController extends ChangeNotifier {
         packageId == null ||
         packageId <= 0) {
       referralError = 'Data cabang/paket belum siap.';
-      notifyListeners();
+      safeNotify();
       return;
     }
 
     isApplyingReferral = true;
-    notifyListeners();
+    safeNotify();
 
     try {
       final preview = await client.validateReferralCode(
@@ -278,6 +283,7 @@ class BookingController extends ChangeNotifier {
         packageId: packageId,
         subtotalAmount: subtotalTotal,
       );
+      if (_disposed) return;
 
       referralPreview = preview;
       referralCode = preview.referralCode;
@@ -287,7 +293,7 @@ class BookingController extends ChangeNotifier {
       referralError = error.toString();
     } finally {
       isApplyingReferral = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -320,6 +326,7 @@ class BookingController extends ChangeNotifier {
           amount: paymentAmount,
           notes: 'Verified from desktop app.',
         );
+        if (_disposed) return;
       } else if (booking.canConfirmBooking) {
         await client.confirmBooking(
           bookingId: booking.recordId!,
@@ -330,11 +337,11 @@ class BookingController extends ChangeNotifier {
       await loadInitialData();
     } catch (error) {
       errorMessage = error.toString();
-      notifyListeners();
+      safeNotify();
     }
 
     if (selectedQueueIndex >= 0 && selectedQueueIndex < queues.length) {
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -358,10 +365,11 @@ class BookingController extends ChangeNotifier {
         bookingId: booking.recordId!,
         reason: 'Declined from desktop app.',
       );
+      if (_disposed) return;
       await loadInitialData();
     } catch (error) {
       errorMessage = error.toString();
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -371,7 +379,7 @@ class BookingController extends ChangeNotifier {
       if (selectedQueueIndex >= queues.length) {
         selectedQueueIndex = queues.length - 1;
       }
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -381,19 +389,19 @@ class BookingController extends ChangeNotifier {
 
     if (client == null || branchId == null || packages.isEmpty) {
       errorMessage = 'Data cabang/paket belum siap.';
-      notifyListeners();
+      safeNotify();
       return null;
     }
 
     if (customerName.trim().isEmpty || whatsapp.trim().isEmpty) {
       errorMessage = 'Nama pelanggan dan nomor telepon wajib diisi.';
-      notifyListeners();
+      safeNotify();
       return null;
     }
 
     isSubmitting = true;
     errorMessage = null;
-    notifyListeners();
+    safeNotify();
 
     try {
       final result = await client.checkoutWalkIn(
@@ -420,11 +428,11 @@ class BookingController extends ChangeNotifier {
       return result;
     } catch (error) {
       errorMessage = error.toString();
-      notifyListeners();
+      safeNotify();
       return null;
     } finally {
       isSubmitting = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -434,12 +442,13 @@ class BookingController extends ChangeNotifier {
 
     if (client == null || packageId == null || packageId <= 0) {
       addons = [];
-      notifyListeners();
+      safeNotify();
       return;
     }
 
     try {
       final addOnRows = await client.fetchAddOns(packageId: packageId);
+      if (_disposed) return;
 
       addons = addOnRows.map((item) {
         final stock = item.effectiveAvailableStock;
@@ -460,7 +469,7 @@ class BookingController extends ChangeNotifier {
       addons = [];
     }
 
-    notifyListeners();
+    safeNotify();
   }
 
   void _clearReferralPreview({bool keepMessage = true}) {
@@ -488,5 +497,17 @@ class BookingController extends ChangeNotifier {
 
     final local = parsed.toLocal();
     return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void safeNotify() {
+    if (!_disposed) {
+      notifyListeners();
+    }
   }
 }
