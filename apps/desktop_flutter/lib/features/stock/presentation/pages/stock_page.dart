@@ -27,73 +27,73 @@ class _StockPageState extends State<StockPage> {
   }
 
   Future<void> _loadStock() async {
-  final client = ApiSession.client;
+    final client = ApiSession.client;
 
-  if (client == null) {
+    if (client == null) {
+      setState(() {
+        _loading = false;
+        _error = 'Sesi login tidak ditemukan.';
+      });
+      return;
+    }
+
+    // ================= DEBUG TOKEN =================
+    // print('=========== STOCK PAGE DEBUG ===========');
+    // print('CLIENT: $client');
+    // print('TOKEN: ${client.token}');
+    // print('=======================================');
+    // ==============================================
+
     setState(() {
-      _loading = false;
-      _error = 'Sesi login tidak ditemukan.';
+      _loading = true;
+      _error = null;
     });
-    return;
-  }
 
-  // ================= DEBUG TOKEN =================
-  print('=========== STOCK PAGE DEBUG ===========');
-  print('CLIENT: $client');
-  print('TOKEN: ${client.token}');
-  print('=======================================');
-  // ==============================================
+    try {
+      // ============== DEBUG SEBELUM REQUEST ==============
+      // print('Memulai request inventory monitoring...');
+      // ===================================================
 
-  setState(() {
-    _loading = true;
-    _error = null;
-  });
+      final payload = await client.fetchInventoryMonitoring();
 
-  try {
-    // ============== DEBUG SEBELUM REQUEST ==============
-    print('Memulai request inventory monitoring...');
-    // ===================================================
+      // ============== DEBUG SETELAH REQUEST ==============
+      // print('Request berhasil!');
+      // print('Jumlah items: ${payload.items.length}');
+      // print('Jumlah movements: ${payload.movements.length}');
+      // ==================================================
 
-    final payload = await client.fetchInventoryMonitoring();
+      if (!mounted) {
+        return;
+      }
 
-    // ============== DEBUG SETELAH REQUEST ==============
-    print('Request berhasil!');
-    print('Jumlah items: ${payload.items.length}');
-    print('Jumlah movements: ${payload.movements.length}');
-    // ==================================================
+      setState(() => _payload = payload);
+    } on ApiException catch (error) {
+      // ============== DEBUG ERROR API ====================
+      // print('ApiException: ${error.message}');
+      // ==================================================
 
-    if (!mounted) {
-      return;
-    }
+      if (!mounted) {
+        return;
+      }
 
-    setState(() => _payload = payload);
-  } on ApiException catch (error) {
-    // ============== DEBUG ERROR API ====================
-    print('ApiException: ${error.message}');
-    // ==================================================
+      setState(() => _error = error.message);
+    } catch (e, stackTrace) {
+      // ============== DEBUG ERROR UMUM ===================
+      // print('ERROR UMUM: $e');
+      // print('STACK TRACE: $stackTrace');
+      // ==================================================
 
-    if (!mounted) {
-      return;
-    }
+      if (!mounted) {
+        return;
+      }
 
-    setState(() => _error = error.message);
-  } catch (e, stackTrace) {
-    // ============== DEBUG ERROR UMUM ===================
-    print('ERROR UMUM: $e');
-    print('STACK TRACE: $stackTrace');
-    // ==================================================
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() => _error = 'Tidak dapat memuat data monitoring stok.');
-  } finally {
-    if (mounted) {
-      setState(() => _loading = false);
+      setState(() => _error = 'Tidak dapat memuat data monitoring stok.');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
