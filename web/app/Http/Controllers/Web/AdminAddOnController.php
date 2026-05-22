@@ -30,7 +30,7 @@ class AdminAddOnController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Add-on created successfully.',
+            'message' => 'Add-on berhasil dibuat.',
             'data' => [
                 'add_ons' => $addOnService->managementRows(),
             ],
@@ -47,7 +47,7 @@ class AdminAddOnController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Add-on updated successfully.',
+            'message' => 'Add-on berhasil diperbarui.',
             'data' => [
                 'add_ons' => $addOnService->managementRows(),
             ],
@@ -60,7 +60,7 @@ class AdminAddOnController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Add-on deleted successfully.',
+            'message' => 'Add-on berhasil dihapus.',
             'data' => [
                 'add_ons' => $addOnService->managementRows(),
             ],

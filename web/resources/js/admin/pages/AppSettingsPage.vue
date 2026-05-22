@@ -85,7 +85,7 @@ watch(
                 <h3 class="text-sm font-semibold text-[#1F2937]">General</h3>
                 <textarea v-model="editor.general" rows="12" class="mt-2 w-full rounded-lg border px-3 py-2 text-xs font-mono" style="border-color: #CBD5E1;"></textarea>
                 <button type="button" class="mt-2 rounded-xl bg-[#334155] px-3 py-1.5 text-xs text-white" :disabled="saving" @click="submitGroup('general')">
-                    {{ saving ? 'Saving...' : 'Save General' }}
+                    {{ saving ? 'Menyimpan...' : 'Simpan General' }}
                 </button>
             </div>
 
@@ -93,7 +93,7 @@ watch(
                 <h3 class="text-sm font-semibold text-[#1F2937]">Booking</h3>
                 <textarea v-model="editor.booking" rows="12" class="mt-2 w-full rounded-lg border px-3 py-2 text-xs font-mono" style="border-color: #CBD5E1;"></textarea>
                 <button type="button" class="mt-2 rounded-xl bg-[#334155] px-3 py-1.5 text-xs text-white" :disabled="saving" @click="submitGroup('booking')">
-                    {{ saving ? 'Saving...' : 'Save Booking' }}
+                    {{ saving ? 'Menyimpan...' : 'Simpan Booking' }}
                 </button>
             </div>
 
@@ -101,7 +101,7 @@ watch(
                 <h3 class="text-sm font-semibold text-[#1F2937]">Payment</h3>
                 <textarea v-model="editor.payment" rows="12" class="mt-2 w-full rounded-lg border px-3 py-2 text-xs font-mono" style="border-color: #CBD5E1;"></textarea>
                 <button type="button" class="mt-2 rounded-xl bg-[#334155] px-3 py-1.5 text-xs text-white" :disabled="saving" @click="submitGroup('payment')">
-                    {{ saving ? 'Saving...' : 'Save Payment' }}
+                    {{ saving ? 'Menyimpan...' : 'Simpan Payment' }}
                 </button>
             </div>
 
@@ -109,7 +109,7 @@ watch(
                 <h3 class="text-sm font-semibold text-[#1F2937]">UI</h3>
                 <textarea v-model="editor.ui" rows="12" class="mt-2 w-full rounded-lg border px-3 py-2 text-xs font-mono" style="border-color: #CBD5E1;"></textarea>
                 <button type="button" class="mt-2 rounded-xl bg-[#334155] px-3 py-1.5 text-xs text-white" :disabled="saving" @click="submitGroup('ui')">
-                    {{ saving ? 'Saving...' : 'Save UI' }}
+                    {{ saving ? 'Menyimpan...' : 'Simpan UI' }}
                 </button>
             </div>
         </section>

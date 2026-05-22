@@ -267,7 +267,7 @@ watch(
                                 :disabled="saving || loading"
                                 @click="saveDefaultBranch"
                             >
-                                {{ saving ? 'Saving...' : 'Simpan Default' }}
+                                {{ saving ? 'Menyimpan...' : 'Simpan Default' }}
                             </button>
                         </div>
                     </div>
@@ -378,7 +378,7 @@ watch(
                                 :disabled="saving || loading"
                                 @click="addNewBranch"
                             >
-                                {{ saving ? 'Saving...' : 'Tambah Cabang' }}
+                                {{ saving ? 'Menyimpan...' : 'Tambah Cabang' }}
                             </button>
                         </div>
                     </div>
@@ -420,7 +420,7 @@ watch(
                             class="rounded-xl bg-[#0F766E] px-5 py-2 text-sm text-white"
                             :disabled="saving || loading"
                         >
-                            {{ saving ? 'Saving...' : 'Save Security Settings' }}
+                            {{ saving ? 'Menyimpan...' : 'Simpan Pengaturan Keamanan' }}
                         </button>
                     </div>
                 </div>

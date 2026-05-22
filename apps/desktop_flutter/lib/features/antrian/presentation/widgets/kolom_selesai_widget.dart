@@ -83,7 +83,7 @@ class AntrianSelesaiCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(
           0xFFF1F5F9,
-        ).withOpacity(0.5), // Subtle gray background like mockup
+        ).withValues(alpha: 0.5), // Subtle gray background like mockup
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(

@@ -27,10 +27,16 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
 
   Future<void> _restoreSession() async {
     final storedSession = await _sessionStore.load();
+    final configuredBaseUrl = AppConfig.apiBaseUrl;
 
     DesktopSession? session = storedSession;
 
-    if (storedSession != null) {
+    if (storedSession != null &&
+        !AppConfig.matchesConfiguredApiBaseUrl(storedSession.baseUrl)) {
+      await _sessionStore.clear();
+      ApiSession.clear();
+      session = null;
+    } else if (storedSession != null) {
       try {
         final profile = await ApiClient(
           baseUrl: AppConfig.defaultApiBaseUrl,
@@ -46,6 +52,10 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
         await _sessionStore.save(session);
         ApiSession.set(session);
       } on ApiException {
+        await _sessionStore.clear();
+        ApiSession.clear();
+        session = null;
+      } catch (_) {
         await _sessionStore.clear();
         ApiSession.clear();
         session = null;

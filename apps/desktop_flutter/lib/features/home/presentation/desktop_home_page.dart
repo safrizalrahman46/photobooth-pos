@@ -234,12 +234,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           Expanded(
             child: Column(
               children: [
-                AppHeader(
-                  userName: widget.session.user.name,
-                  userRoleLabel: roleLabel,
-                  onLogout: widget.onLogout == null ? null : _confirmLogout,
-                  logoutInProgress: _loggingOut,
-                ),
+                const AppHeader(),
 
                 Expanded(child: activeDestination.builder()),
               ],

@@ -42,7 +42,7 @@ class BookingPaymentService
     public function handleNotification(array $payload): ?Booking
     {
         if (! $this->midtransService->verifyNotificationSignature($payload)) {
-            throw new RuntimeException('Signature Midtrans tidak valid.');
+            throw new RuntimeException('Validasi pembayaran Midtrans tidak valid.');
         }
 
         $orderId = (string) ($payload['order_id'] ?? '');

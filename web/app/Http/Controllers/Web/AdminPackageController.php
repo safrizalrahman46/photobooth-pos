@@ -30,7 +30,7 @@ class AdminPackageController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Package created successfully.',
+            'message' => 'Paket berhasil dibuat.',
             'data' => [
                 'packages' => $packageService->managementRows(),
             ],
@@ -47,7 +47,7 @@ class AdminPackageController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Package updated successfully.',
+            'message' => 'Paket berhasil diperbarui.',
             'data' => [
                 'packages' => $packageService->managementRows(),
             ],
@@ -60,7 +60,7 @@ class AdminPackageController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Package deleted successfully.',
+            'message' => 'Paket berhasil dihapus.',
             'data' => [
                 'packages' => $packageService->managementRows(),
             ],

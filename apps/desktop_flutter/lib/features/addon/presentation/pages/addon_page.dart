@@ -70,7 +70,7 @@ class _StockSummaryTable extends ConsumerWidget {
         border: Border.all(color: AppColors.cardBorder, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadowColor.withOpacity(0.08),
+            color: AppColors.shadowColor.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),

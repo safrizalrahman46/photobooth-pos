@@ -37,7 +37,7 @@ class AdminPaymentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Payment added successfully.',
+            'message' => 'Pembayaran berhasil ditambahkan.',
             'data' => [
                 'payments' => $service->rows(),
                 'transaction_options' => $service->transactionOptions(),
@@ -45,4 +45,3 @@ class AdminPaymentController extends Controller
         ], 201);
     }
 }
-

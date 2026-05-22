@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { resolveRequestErrorMessage } from '../requestErrors';
 
 export const useTimeSlotsModule = ({
     props,
@@ -46,7 +47,7 @@ export const useTimeSlotsModule = ({
             applyTimeSlotsPayload(payload);
         } catch (error) {
             if (!silent) {
-                timeSlotError.value = error instanceof Error ? error.message : 'Failed to load time slots.';
+                timeSlotError.value = resolveRequestErrorMessage(error, 'Gagal memuat slot waktu.');
             }
         } finally {
             if (!silent) {
@@ -82,7 +83,7 @@ export const useTimeSlotsModule = ({
             const payload = await response.json();
             applyTimeSlotsPayload(payload);
         } catch (error) {
-            timeSlotError.value = error instanceof Error ? error.message : 'Failed to create time slot.';
+            timeSlotError.value = resolveRequestErrorMessage(error, 'Gagal membuat slot waktu.');
             throw error;
         } finally {
             timeSlotSaving.value = false;
@@ -118,7 +119,7 @@ export const useTimeSlotsModule = ({
             const result = await response.json();
             applyTimeSlotsPayload(result);
         } catch (error) {
-            timeSlotError.value = error instanceof Error ? error.message : 'Failed to update time slot.';
+            timeSlotError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui slot waktu.');
             throw error;
         } finally {
             timeSlotSaving.value = false;
@@ -152,7 +153,7 @@ export const useTimeSlotsModule = ({
             const result = await response.json();
             applyTimeSlotsPayload(result);
         } catch (error) {
-            timeSlotError.value = error instanceof Error ? error.message : 'Failed to delete time slot.';
+            timeSlotError.value = resolveRequestErrorMessage(error, 'Gagal menghapus slot waktu.');
             throw error;
         } finally {
             deletingTimeSlotId.value = null;
@@ -186,7 +187,7 @@ export const useTimeSlotsModule = ({
             const result = await response.json();
             applyTimeSlotsPayload(result);
         } catch (error) {
-            timeSlotError.value = error instanceof Error ? error.message : 'Failed to generate time slots.';
+            timeSlotError.value = resolveRequestErrorMessage(error, 'Gagal membuat slot waktu otomatis.');
             throw error;
         } finally {
             timeSlotSaving.value = false;
@@ -220,7 +221,7 @@ export const useTimeSlotsModule = ({
             const result = await response.json();
             applyTimeSlotsPayload(result);
         } catch (error) {
-            timeSlotError.value = error instanceof Error ? error.message : 'Failed to update selected time slots.';
+            timeSlotError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui slot waktu yang dipilih.');
             throw error;
         } finally {
             timeSlotSaving.value = false;

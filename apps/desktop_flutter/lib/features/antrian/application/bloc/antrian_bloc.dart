@@ -2,9 +2,9 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../usecase/antrian_usecase.dart';
 import '../../domain/entities/antrian_entity.dart';
 import '../../domain/entities/booth_entity.dart';
-import '../usecase/antrian_usecase.dart';
 
 // ─── EVENTS ───────────────────────────────────────────────────────────────────
 abstract class AntrianEvent {}
@@ -20,16 +20,6 @@ class PindahKeSelesaiEvent extends AntrianEvent {
 class SetBoothReadyEvent extends AntrianEvent {
   final String boothId;
   SetBoothReadyEvent(this.boothId);
-}
-
-class _AntrianMenungguUpdated extends AntrianEvent {
-  final List<AntrianEntity> antrian;
-  _AntrianMenungguUpdated(this.antrian);
-}
-
-class _BoothUpdated extends AntrianEvent {
-  final List<BoothEntity> booths;
-  _BoothUpdated(this.booths);
 }
 
 // ─── STATE ────────────────────────────────────────────────────────────────────

@@ -61,7 +61,7 @@ const submitCreate = () => {
     const branchId = Number(createForm.branch_id || 0);
 
     if (!branchId || !String(createForm.device_name || '').trim()) {
-        localError.value = 'Branch and device name are required.';
+        localError.value = 'Cabang dan nama perangkat wajib diisi.';
         return;
     }
 
@@ -102,7 +102,7 @@ const submitUpdate = (id) => {
 const submitDelete = (id) => {
     const settingId = Number(id || 0);
     if (!settingId) return;
-    if (!window.confirm('Delete this printer setting?')) return;
+    if (!window.confirm('Hapus pengaturan printer ini?')) return;
 
     emit('delete-printer-setting', settingId);
 };
@@ -160,7 +160,7 @@ const submitDelete = (id) => {
                 </label>
             </div>
             <button type="button" class="mt-3 w-full rounded-xl bg-[#111827] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
-                {{ saving ? 'Saving...' : 'Add Printer' }}
+                {{ saving ? 'Menyimpan...' : 'Tambah Printer' }}
             </button>
         </section>
 

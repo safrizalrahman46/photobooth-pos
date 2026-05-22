@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../application/bloc/antrian_bloc.dart';
-import '../theme/app_theme.dart';
 import '../widgets/antrian_berikutnya_banner.dart';
 import '../widgets/kolom_menunggu_widget.dart';
 import '../widgets/kolom_sedang_foto_widget.dart';

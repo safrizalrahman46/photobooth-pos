@@ -87,7 +87,7 @@ class BookingService
                 'booking_id' => $booking->id,
                 'from_status' => null,
                 'to_status' => BookingStatus::Pending->value,
-                'reason' => 'Booking created',
+                'reason' => 'Booking dibuat',
             ]);
 
             SendBookingNotificationJob::dispatch($booking->id, 'created');
@@ -154,7 +154,7 @@ class BookingService
             ->keyBy('id');
 
         if ($addOns->count() !== count($ids)) {
-            throw new RuntimeException('One or more selected add-ons are not available.');
+            throw new RuntimeException('Satu atau beberapa add-on yang dipilih tidak tersedia.');
         }
 
         return $requested
@@ -163,11 +163,11 @@ class BookingService
                 $addOn = $addOns->get((int) $item['add_on_id']);
 
                 if (! $addOn) {
-                    throw new RuntimeException('One or more selected add-ons are not available.');
+                    throw new RuntimeException('Satu atau beberapa add-on yang dipilih tidak tersedia.');
                 }
 
                 if ($addOn->package_id !== null && (int) $addOn->package_id !== $packageId) {
-                    throw new RuntimeException('Selected add-on is not valid for selected package.');
+                    throw new RuntimeException('Add-on yang dipilih tidak sesuai dengan paket.');
                 }
 
                 $qty = (int) $item['qty'];
@@ -221,7 +221,7 @@ class BookingService
             $booking->save();
 
             if ($toStatus === BookingStatus::Cancelled) {
-                $this->referralService->voidForBooking($booking, 'Booking cancelled.', $actorId);
+                $this->referralService->voidForBooking($booking, 'Booking dibatalkan.', $actorId);
             } elseif ($toStatus === BookingStatus::Paid) {
                 $this->referralService->markBookingStatus($booking, 'paid');
             } elseif ($toStatus === BookingStatus::Done) {

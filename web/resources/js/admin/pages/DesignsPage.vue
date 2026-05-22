@@ -82,7 +82,7 @@ const closeModal = () => {
 
 const validateForm = () => {
     if (!String(form.name || '').trim()) {
-        localError.value = 'Design name is required.';
+        localError.value = 'Nama desain wajib diisi.';
         return false;
     }
 
@@ -94,7 +94,7 @@ const validateForm = () => {
                 throw new Error('Invalid protocol');
             }
         } catch {
-            localError.value = 'Preview URL must be a valid http/https URL.';
+            localError.value = 'URL preview harus berupa alamat http/https yang valid.';
             return false;
         }
     }
@@ -135,7 +135,7 @@ const submitForm = async () => {
 
 const requestDelete = async (design) => {
     const designName = String(design.name || 'this design');
-    const confirmed = window.confirm(`Delete ${designName}? This action cannot be undone.`);
+    const confirmed = window.confirm(`Hapus ${designName}? Tindakan ini tidak dapat dibatalkan.`);
 
     if (!confirmed) {
         return;
@@ -269,7 +269,7 @@ const requestDelete = async (design) => {
             </article>
 
             <p v-if="!designCards.length" class="col-span-full rounded-xl border border-dashed p-8 text-center text-sm text-[#94A3B8]" style="border-color: #93C5FD;">
-                No design data available.
+                Belum ada data desain.
             </p>
         </div>
 
@@ -295,7 +295,7 @@ const requestDelete = async (design) => {
                     </label>
 
                     <label class="text-sm text-[#475569] md:col-span-2">
-                        Preview URL (optional)
+                        URL Preview (opsional)
                         <input v-model="form.preview_url" type="url" placeholder="https://..." class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
                     </label>
 
@@ -329,7 +329,7 @@ const requestDelete = async (design) => {
                         :disabled="saving"
                         @click="submitForm"
                     >
-                        {{ saving ? 'Saving...' : (modalMode === 'create' ? 'Create Design' : 'Save Changes') }}
+                        {{ saving ? 'Menyimpan...' : (modalMode === 'create' ? 'Buat Desain' : 'Simpan Perubahan') }}
                     </button>
                 </div>
         </AdminModal>

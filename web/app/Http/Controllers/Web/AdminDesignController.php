@@ -30,7 +30,7 @@ class AdminDesignController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Design created successfully.',
+            'message' => 'Desain berhasil dibuat.',
             'data' => [
                 'designs' => $designService->managementRows(),
             ],
@@ -47,7 +47,7 @@ class AdminDesignController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Design updated successfully.',
+            'message' => 'Desain berhasil diperbarui.',
             'data' => [
                 'designs' => $designService->managementRows(),
             ],
@@ -60,7 +60,7 @@ class AdminDesignController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Design deleted successfully.',
+            'message' => 'Desain berhasil dihapus.',
             'data' => [
                 'designs' => $designService->managementRows(),
             ],

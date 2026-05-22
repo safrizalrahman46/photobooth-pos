@@ -37,6 +37,7 @@ import { useBranchesModule } from './composables/useBranchesModule';
 import { usePaymentsModule } from './composables/usePaymentsModule';
 import { usePrinterSettingsModule } from './composables/usePrinterSettingsModule';
 import { useTimeSlotsModule } from './composables/useTimeSlotsModule';
+import { parseResponseError, resolveRequestErrorMessage } from './requestErrors';
 
 const DashboardPage = defineAsyncComponent(() => import('./pages/DashboardPage.vue'));
 const TransactionsPage = defineAsyncComponent(() => import('./pages/TransactionsPage.vue'));
@@ -1657,15 +1658,15 @@ const fetchReportSummary = async () => {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(await parseRequestError(response, 'Gagal memuat data laporan.'));
         }
 
         const payload = await response.json();
         reportData.value = payload?.data?.report || null;
     } catch (error) {
-        reportError.value = 'Failed to load report data.';
+        reportError.value = resolveRequestErrorMessage(error, 'Gagal memuat data laporan.');
         if (error?.name !== 'AbortError') {
-            console.error('Failed to fetch dashboard report:', error);
+            console.error('Gagal memuat laporan dashboard:', error);
         }
     } finally {
         reportLoading.value = false;
@@ -1903,7 +1904,7 @@ const exportReport = async () => {
         XLSX.writeFile(workbook, `report-${suffix}.xlsx`);
     } catch (error) {
         reportError.value = 'Export Excel gagal diproses.';
-        console.error('Failed to export report:', error);
+        console.error('Gagal export laporan:', error);
     }
 };
 
@@ -1923,16 +1924,7 @@ const getCsrfToken = () => {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 };
 
-const parseRequestError = async (response) => {
-    try {
-        const json = await response.json();
-        const firstValidationMessage = Object.values(json?.errors || {})?.[0]?.[0];
-
-        return String(firstValidationMessage || json?.message || `HTTP ${response.status}`);
-    } catch {
-        return `HTTP ${response.status}`;
-    }
-};
+const parseRequestError = (response, fallback) => parseResponseError(response, fallback);
 
 const submitLogout = () => {
     if (typeof document === 'undefined' || !props.logoutUrl) {
@@ -2070,7 +2062,7 @@ const fetchSettingsData = async ({ silent = false } = {}) => {
         applySettingsPayload(payload);
     } catch (error) {
         if (!silent) {
-            settingsError.value = error instanceof Error ? error.message : 'Failed to load settings.';
+            settingsError.value = resolveRequestErrorMessage(error, 'Gagal memuat pengaturan.');
         }
     } finally {
         if (!silent) {
@@ -2083,7 +2075,7 @@ const saveDefaultBranch = async (branchId) => {
     const id = Number(branchId || 0);
 
     if (!props.settingsDefaultBranchUrl || id <= 0) {
-        settingsError.value = 'Please select a valid default branch.';
+        settingsError.value = 'Pilih cabang default yang valid.';
         return;
     }
 
@@ -2109,9 +2101,9 @@ const saveDefaultBranch = async (branchId) => {
 
         const payload = await response.json();
         applySettingsPayload(payload);
-        settingsSuccess.value = 'Default branch updated.';
+        settingsSuccess.value = 'Cabang default berhasil diperbarui.';
     } catch (error) {
-        settingsError.value = error instanceof Error ? error.message : 'Failed to save settings.';
+        settingsError.value = resolveRequestErrorMessage(error, 'Gagal menyimpan pengaturan.');
         throw error;
     } finally {
         settingsSaving.value = false;
@@ -2145,9 +2137,9 @@ const createBranchSetting = async (payload) => {
 
         const result = await response.json();
         applySettingsPayload(result);
-        settingsSuccess.value = 'Branch created.';
+        settingsSuccess.value = 'Cabang berhasil dibuat.';
     } catch (error) {
-        settingsError.value = error instanceof Error ? error.message : 'Failed to create branch.';
+        settingsError.value = resolveRequestErrorMessage(error, 'Gagal membuat cabang.');
         throw error;
     } finally {
         settingsSaving.value = false;
@@ -2183,9 +2175,9 @@ const updateBranchSetting = async ({ id, payload }) => {
 
         const result = await response.json();
         applySettingsPayload(result);
-        settingsSuccess.value = 'Branch updated.';
+        settingsSuccess.value = 'Cabang berhasil diperbarui.';
     } catch (error) {
-        settingsError.value = error instanceof Error ? error.message : 'Failed to update branch.';
+        settingsError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui cabang.');
         throw error;
     } finally {
         settingsSaving.value = false;
@@ -2219,9 +2211,9 @@ const removeBranchSetting = async (id) => {
 
         const result = await response.json();
         applySettingsPayload(result);
-        settingsSuccess.value = 'Branch removed from available list.';
+        settingsSuccess.value = 'Cabang berhasil dihapus dari daftar aktif.';
     } catch (error) {
-        settingsError.value = error instanceof Error ? error.message : 'Failed to remove branch.';
+        settingsError.value = resolveRequestErrorMessage(error, 'Gagal menghapus cabang dari daftar aktif.');
         throw error;
     } finally {
         settingsSaving.value = false;
@@ -2274,7 +2266,7 @@ const fetchQueueData = async ({ silent = false, branch_id = undefined } = {}) =>
         applyQueuePayload(payload);
     } catch (error) {
         if (!silent) {
-            queueError.value = error instanceof Error ? error.message : 'Failed to load queue data.';
+            queueError.value = resolveRequestErrorMessage(error, 'Gagal memuat data antrean.');
         }
     } finally {
         if (!silent) {
@@ -2359,7 +2351,7 @@ const fetchPackagesData = async () => {
         const payload = await response.json();
         applyPackagesPayload(payload);
     } catch (error) {
-        packageError.value = error instanceof Error ? error.message : 'Failed to load packages.';
+        packageError.value = resolveRequestErrorMessage(error, 'Gagal memuat data paket.');
     } finally {
         packageLoading.value = false;
     }
@@ -2398,7 +2390,7 @@ const createPackage = async (formPayload) => {
         const payload = await response.json();
         applyPackagesPayload(payload);
     } catch (error) {
-        packageError.value = error instanceof Error ? error.message : 'Failed to create package.';
+        packageError.value = resolveRequestErrorMessage(error, 'Gagal membuat paket.');
         throw error;
     } finally {
         packageSaving.value = false;
@@ -2440,7 +2432,7 @@ const updatePackage = async ({ id, payload }) => {
         const result = await response.json();
         applyPackagesPayload(result);
     } catch (error) {
-        packageError.value = error instanceof Error ? error.message : 'Failed to update package.';
+        packageError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui paket.');
         throw error;
     } finally {
         packageSaving.value = false;
@@ -2472,7 +2464,7 @@ const deletePackage = async (id) => {
         const payload = await response.json();
         applyPackagesPayload(payload);
     } catch (error) {
-        packageError.value = error instanceof Error ? error.message : 'Failed to delete package.';
+        packageError.value = resolveRequestErrorMessage(error, 'Gagal menghapus paket.');
         throw error;
     } finally {
         deletingPackageId.value = null;
@@ -2503,7 +2495,7 @@ const fetchAddOnsData = async () => {
         const payload = await response.json();
         applyAddOnsPayload(payload);
     } catch (error) {
-        addOnError.value = error instanceof Error ? error.message : 'Failed to load add-ons.';
+        addOnError.value = resolveRequestErrorMessage(error, 'Gagal memuat data add-on.');
     } finally {
         addOnLoading.value = false;
     }
@@ -2536,7 +2528,7 @@ const createAddOn = async (formPayload) => {
         const payload = await response.json();
         applyAddOnsPayload(payload);
     } catch (error) {
-        addOnError.value = error instanceof Error ? error.message : 'Failed to create add-on.';
+        addOnError.value = resolveRequestErrorMessage(error, 'Gagal membuat add-on.');
         throw error;
     } finally {
         addOnSaving.value = false;
@@ -2570,7 +2562,7 @@ const updateAddOn = async ({ id, payload }) => {
         const result = await response.json();
         applyAddOnsPayload(result);
     } catch (error) {
-        addOnError.value = error instanceof Error ? error.message : 'Failed to update add-on.';
+        addOnError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui add-on.');
         throw error;
     } finally {
         addOnSaving.value = false;
@@ -2601,7 +2593,7 @@ const fetchStockData = async () => {
         const payload = await response.json();
         applyInventoryPayload(payload);
     } catch (error) {
-        stockError.value = error instanceof Error ? error.message : 'Failed to load stock data.';
+        stockError.value = resolveRequestErrorMessage(error, 'Gagal memuat data stok.');
     } finally {
         stockLoading.value = false;
     }
@@ -2634,7 +2626,7 @@ const createInventoryItem = async (formPayload) => {
         const payload = await response.json();
         applyInventoryPayload(payload);
     } catch (error) {
-        stockError.value = error instanceof Error ? error.message : 'Failed to create inventory item.';
+        stockError.value = resolveRequestErrorMessage(error, 'Gagal membuat item inventory.');
         throw error;
     } finally {
         stockSaving.value = false;
@@ -2668,7 +2660,7 @@ const updateInventoryItem = async ({ id, payload }) => {
         const result = await response.json();
         applyInventoryPayload(result);
     } catch (error) {
-        stockError.value = error instanceof Error ? error.message : 'Failed to update inventory item.';
+        stockError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui item inventory.');
         throw error;
     } finally {
         stockSaving.value = false;
@@ -2700,7 +2692,7 @@ const deleteInventoryItem = async (id) => {
         const payload = await response.json();
         applyInventoryPayload(payload);
     } catch (error) {
-        stockError.value = error instanceof Error ? error.message : 'Failed to delete inventory item.';
+        stockError.value = resolveRequestErrorMessage(error, 'Gagal menghapus item inventory.');
         throw error;
     } finally {
         deletingInventoryItemId.value = null;
@@ -2734,7 +2726,7 @@ const moveInventoryStock = async ({ id, payload }) => {
         const result = await response.json();
         applyInventoryPayload(result);
     } catch (error) {
-        stockError.value = error instanceof Error ? error.message : 'Failed to update stock.';
+        stockError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui stok.');
         throw error;
     } finally {
         stockSaving.value = false;
@@ -2766,7 +2758,7 @@ const deleteAddOn = async (id) => {
         const payload = await response.json();
         applyAddOnsPayload(payload);
     } catch (error) {
-        addOnError.value = error instanceof Error ? error.message : 'Failed to delete add-on.';
+        addOnError.value = resolveRequestErrorMessage(error, 'Gagal menghapus add-on.');
         throw error;
     } finally {
         deletingAddOnId.value = null;
@@ -2833,7 +2825,7 @@ const fetchDesignsData = async () => {
         const payload = await response.json();
         applyDesignsPayload(payload);
     } catch (error) {
-        designError.value = error instanceof Error ? error.message : 'Failed to load designs.';
+        designError.value = resolveRequestErrorMessage(error, 'Gagal memuat data desain.');
     } finally {
         designLoading.value = false;
     }
@@ -2866,7 +2858,7 @@ const createDesign = async (formPayload) => {
         const payload = await response.json();
         applyDesignsPayload(payload);
     } catch (error) {
-        designError.value = error instanceof Error ? error.message : 'Failed to create design.';
+        designError.value = resolveRequestErrorMessage(error, 'Gagal membuat desain.');
         throw error;
     } finally {
         designSaving.value = false;
@@ -2900,7 +2892,7 @@ const updateDesign = async ({ id, payload }) => {
         const result = await response.json();
         applyDesignsPayload(result);
     } catch (error) {
-        designError.value = error instanceof Error ? error.message : 'Failed to update design.';
+        designError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui desain.');
         throw error;
     } finally {
         designSaving.value = false;
@@ -2932,7 +2924,7 @@ const deleteDesign = async (id) => {
         const payload = await response.json();
         applyDesignsPayload(payload);
     } catch (error) {
-        designError.value = error instanceof Error ? error.message : 'Failed to delete design.';
+        designError.value = resolveRequestErrorMessage(error, 'Gagal menghapus desain.');
         throw error;
     } finally {
         deletingDesignId.value = null;
@@ -2963,7 +2955,7 @@ const fetchUsersData = async () => {
         const payload = await response.json();
         applyUsersPayload(payload);
     } catch (error) {
-        userError.value = error instanceof Error ? error.message : 'Failed to load users.';
+        userError.value = resolveRequestErrorMessage(error, 'Gagal memuat data pengguna.');
     } finally {
         userLoading.value = false;
     }
@@ -2996,7 +2988,7 @@ const createUser = async (formPayload) => {
         const payload = await response.json();
         applyUsersPayload(payload);
     } catch (error) {
-        userError.value = error instanceof Error ? error.message : 'Failed to create user.';
+        userError.value = resolveRequestErrorMessage(error, 'Gagal membuat pengguna.');
         throw error;
     } finally {
         userSaving.value = false;
@@ -3030,7 +3022,7 @@ const updateUser = async ({ id, payload }) => {
         const result = await response.json();
         applyUsersPayload(result);
     } catch (error) {
-        userError.value = error instanceof Error ? error.message : 'Failed to update user.';
+        userError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui pengguna.');
         throw error;
     } finally {
         userSaving.value = false;
@@ -3062,7 +3054,7 @@ const deleteUser = async (id) => {
         const result = await response.json();
         applyUsersPayload(result);
     } catch (error) {
-        userError.value = error instanceof Error ? error.message : 'Failed to delete user.';
+        userError.value = resolveRequestErrorMessage(error, 'Gagal menghapus pengguna.');
         throw error;
     } finally {
         deletingUserId.value = null;
@@ -3107,7 +3099,7 @@ const fetchReferralData = async (filters = {}) => {
         const result = await response.json();
         applyReferralPayload(result);
     } catch (error) {
-        referralError.value = error instanceof Error ? error.message : 'Failed to load referral data.';
+        referralError.value = resolveRequestErrorMessage(error, 'Gagal memuat data referal.');
     } finally {
         referralLoading.value = false;
     }
@@ -3154,7 +3146,7 @@ const saveReferral = async ({ id = null, payload = {}, onSuccess = null, onError
             onSuccess();
         }
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to save referral code.';
+        const message = resolveRequestErrorMessage(error, 'Gagal menyimpan kode referal.');
         referralError.value = message;
 
         if (typeof onError === 'function') {
@@ -3191,7 +3183,7 @@ const deleteReferral = async (id) => {
         const result = await response.json();
         applyReferralPayload(result);
     } catch (error) {
-        referralError.value = error instanceof Error ? error.message : 'Failed to delete referral code.';
+        referralError.value = resolveRequestErrorMessage(error, 'Gagal menghapus kode referal.');
     }
 };
 
@@ -3388,7 +3380,7 @@ const createBooking = async (formPayload) => {
 
         await refreshBookings(1);
     } catch (error) {
-        bookingError.value = error instanceof Error ? error.message : 'Failed to create booking.';
+        bookingError.value = resolveRequestErrorMessage(error, 'Gagal membuat booking.');
         throw error;
     } finally {
         bookingSaving.value = false;
@@ -3421,7 +3413,7 @@ const updateBooking = async ({ id, payload }) => {
 
         await refreshBookings(Number(pagination.value.current_page || 1));
     } catch (error) {
-        bookingError.value = error instanceof Error ? error.message : 'Failed to update booking.';
+        bookingError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui booking.');
         throw error;
     } finally {
         bookingSaving.value = false;
@@ -3452,7 +3444,7 @@ const deleteBooking = async (id) => {
 
         await refreshBookings(Number(pagination.value.current_page || 1));
     } catch (error) {
-        bookingError.value = error instanceof Error ? error.message : 'Failed to delete booking.';
+        bookingError.value = resolveRequestErrorMessage(error, 'Gagal menghapus booking.');
         throw error;
     } finally {
         deletingBookingId.value = null;
@@ -3486,7 +3478,7 @@ const confirmBooking = async ({ id, reason = '' }) => {
         await refreshBookings(Number(pagination.value.current_page || 1));
         await fetchQueueData({ silent: true });
     } catch (error) {
-        bookingError.value = error instanceof Error ? error.message : 'Failed to confirm booking.';
+        bookingError.value = resolveRequestErrorMessage(error, 'Gagal mengonfirmasi booking.');
         throw error;
     } finally {
         processingBookingId.value = null;
@@ -3520,7 +3512,7 @@ const confirmBookingPayment = async ({ id, payload }) => {
         await refreshBookings(Number(pagination.value.current_page || 1));
         await fetchQueueData({ silent: true });
     } catch (error) {
-        bookingError.value = error instanceof Error ? error.message : 'Failed to confirm payment.';
+        bookingError.value = resolveRequestErrorMessage(error, 'Gagal mengonfirmasi pembayaran.');
         throw error;
     } finally {
         processingBookingId.value = null;
@@ -3554,7 +3546,7 @@ const declineBooking = async ({ id, reason = '' }) => {
         await refreshBookings(Number(pagination.value.current_page || 1));
         await fetchQueueData({ silent: true });
     } catch (error) {
-        bookingError.value = error instanceof Error ? error.message : 'Failed to decline booking.';
+        bookingError.value = resolveRequestErrorMessage(error, 'Gagal menolak booking.');
         throw error;
     } finally {
         processingBookingId.value = null;
@@ -3594,7 +3586,7 @@ const callNextQueue = async ({ branch_id, queue_date } = {}) => {
         await response.json();
         await fetchQueueData({ silent: true });
     } catch (error) {
-        queueError.value = error instanceof Error ? error.message : 'Failed to call next queue.';
+        queueError.value = resolveRequestErrorMessage(error, 'Gagal memanggil antrean berikutnya.');
         throw error;
     } finally {
         queueActionLoading.value = false;
@@ -3633,7 +3625,7 @@ const transitionQueueTicket = async ({ ticketId, status }) => {
         await response.json();
         await fetchQueueData({ silent: true });
     } catch (error) {
-        queueError.value = error instanceof Error ? error.message : 'Failed to update queue status.';
+        queueError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui status antrean.');
         throw error;
     } finally {
         queueActionLoading.value = false;
@@ -3671,7 +3663,7 @@ const addQueueBooking = async (formPayload) => {
         await response.json();
         await fetchQueueData({ silent: true });
     } catch (error) {
-        queueError.value = error instanceof Error ? error.message : 'Failed to add booking into queue.';
+        queueError.value = resolveRequestErrorMessage(error, 'Gagal memasukkan booking ke antrean.');
         throw error;
     } finally {
         queueActionLoading.value = false;
@@ -3707,7 +3699,7 @@ const addQueueWalkIn = async (formPayload) => {
         await response.json();
         await fetchQueueData({ silent: true });
     } catch (error) {
-        queueError.value = error instanceof Error ? error.message : 'Failed to add queue ticket.';
+        queueError.value = resolveRequestErrorMessage(error, 'Gagal menambahkan tiket antrean.');
         throw error;
     } finally {
         queueActionLoading.value = false;
@@ -3804,7 +3796,7 @@ const fetchRows = async (page = 1, { silent = false } = {}) => {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(await parseRequestError(response, 'Gagal memuat data booking.'));
         }
 
         const payload = await response.json();
@@ -3822,7 +3814,7 @@ const fetchRows = async (page = 1, { silent = false } = {}) => {
         pendingBookingsCount.value = Math.max(0, Number(data.pending_bookings_count || 0));
     } catch (error) {
         if (error?.name !== 'AbortError') {
-            console.error('Failed to fetch dashboard rows:', error);
+            console.error('Gagal memuat daftar booking dashboard:', error);
         }
     } finally {
         if (activeRequestController === controller) {

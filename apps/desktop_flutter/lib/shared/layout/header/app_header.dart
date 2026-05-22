@@ -3,18 +3,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 
 class AppHeader extends StatelessWidget {
-  const AppHeader({
-    super.key,
-    this.userName = '',
-    this.userRoleLabel = '',
-    this.onLogout,
-    this.logoutInProgress = false,
-  });
-
-  final String userName;
-  final String userRoleLabel;
-  final Future<void> Function()? onLogout;
-  final bool logoutInProgress;
+  const AppHeader({super.key});
 
   @override
   Widget build(BuildContext context) {

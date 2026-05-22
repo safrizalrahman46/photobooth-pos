@@ -37,7 +37,7 @@ class PaketCardWidget extends StatelessWidget {
         boxShadow: hi
             ? [
                 BoxShadow(
-                  color: AppColors.primaryBlue.withOpacity(0.25),
+                  color: AppColors.primaryBlue.withValues(alpha: 0.25),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
@@ -85,7 +85,7 @@ class PaketCardWidget extends StatelessWidget {
               fontSize: 12.5,
               fontWeight: FontWeight.w400,
               color: hi
-                  ? AppColors.highlightCardText.withOpacity(0.75)
+                  ? AppColors.highlightCardText.withValues(alpha: 0.75)
                   : AppColors.textSecondary,
               height: 1.5,
             ),
@@ -101,7 +101,7 @@ class PaketCardWidget extends StatelessWidget {
               fontWeight: FontWeight.w600,
               letterSpacing: 1.2,
               color: hi
-                  ? AppColors.highlightCardText.withOpacity(0.65)
+                  ? AppColors.highlightCardText.withValues(alpha: 0.65)
                   : AppColors.textMuted,
             ),
           ),
@@ -161,7 +161,9 @@ class _IconBadge extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: isHighlighted ? Colors.white.withOpacity(0.2) : AppColors.iconBg,
+        color: isHighlighted
+            ? Colors.white.withValues(alpha: 0.2)
+            : AppColors.iconBg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(
@@ -184,7 +186,7 @@ class _LockedBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: isHighlighted
-            ? Colors.white.withOpacity(0.2)
+            ? Colors.white.withValues(alpha: 0.2)
             : AppColors.lockedBadgeBg,
         borderRadius: BorderRadius.circular(20),
       ),
@@ -195,7 +197,7 @@ class _LockedBadge extends StatelessWidget {
             Icons.lock_outline,
             size: 11,
             color: isHighlighted
-                ? Colors.white.withOpacity(0.85)
+                ? Colors.white.withValues(alpha: 0.85)
                 : AppColors.lockedBadgeText,
           ),
           const SizedBox(width: 4),
@@ -206,7 +208,7 @@ class _LockedBadge extends StatelessWidget {
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
               color: isHighlighted
-                  ? Colors.white.withOpacity(0.85)
+                  ? Colors.white.withValues(alpha: 0.85)
                   : AppColors.lockedBadgeText,
             ),
           ),
@@ -230,7 +232,7 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isHighlighted
-        ? Colors.white.withOpacity(0.85)
+        ? Colors.white.withValues(alpha: 0.85)
         : AppColors.textSecondary;
 
     return Row(

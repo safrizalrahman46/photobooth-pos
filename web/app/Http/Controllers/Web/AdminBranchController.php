@@ -31,7 +31,7 @@ class AdminBranchController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Branch created successfully.',
+            'message' => 'Cabang berhasil dibuat.',
             'data' => [
                 'branches' => $service->rows(),
             ],
@@ -44,7 +44,7 @@ class AdminBranchController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Branch updated successfully.',
+            'message' => 'Cabang berhasil diperbarui.',
             'data' => [
                 'branches' => $service->rows(),
             ],
@@ -55,8 +55,8 @@ class AdminBranchController extends Controller
     {
         $action = $service->destroy($branch);
         $message = $action === 'deactivated'
-            ? 'Branch has related data and was deactivated.'
-            : 'Branch deleted successfully.';
+            ? 'Cabang memiliki data terkait dan berhasil dinonaktifkan.'
+            : 'Cabang berhasil dihapus.';
 
         return response()->json([
             'success' => true,
@@ -67,4 +67,3 @@ class AdminBranchController extends Controller
         ]);
     }
 }
-

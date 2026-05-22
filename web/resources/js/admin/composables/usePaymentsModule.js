@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { resolveRequestErrorMessage } from '../requestErrors';
 
 export const usePaymentsModule = ({
     props,
@@ -54,7 +55,7 @@ export const usePaymentsModule = ({
             applyPaymentsPayload(payload);
         } catch (error) {
             if (!silent) {
-                paymentError.value = error instanceof Error ? error.message : 'Failed to load payments.';
+                paymentError.value = resolveRequestErrorMessage(error, 'Gagal memuat data pembayaran.');
             }
         } finally {
             if (!silent) {
@@ -93,7 +94,7 @@ export const usePaymentsModule = ({
             const result = await response.json();
             applyPaymentsPayload(result);
         } catch (error) {
-            paymentError.value = error instanceof Error ? error.message : 'Failed to add payment.';
+            paymentError.value = resolveRequestErrorMessage(error, 'Gagal menambahkan pembayaran.');
             throw error;
         } finally {
             paymentSaving.value = false;

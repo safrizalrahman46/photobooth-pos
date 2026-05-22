@@ -54,7 +54,7 @@ const submitCreate = () => {
     const branchId = Number(createForm.branch_id || 0);
 
     if (!branchId || !createForm.blackout_date) {
-        localError.value = 'Branch and date are required.';
+        localError.value = 'Cabang dan tanggal wajib diisi.';
         return;
     }
 
@@ -93,7 +93,7 @@ const submitUpdate = (id) => {
 const submitDelete = (id) => {
     const blackoutId = Number(id || 0);
     if (!blackoutId) return;
-    if (!window.confirm('Delete this blackout date?')) return;
+    if (!window.confirm('Hapus tanggal blackout ini?')) return;
 
     emit('delete-blackout-date', blackoutId);
 };
@@ -118,7 +118,7 @@ const submitDelete = (id) => {
         </p>
 
         <section class="rounded-2xl border p-4" style="border-color: #E2E8F0; background: #FFFFFF;">
-            <h3 class="text-sm font-semibold text-[#7C2D12]">Create Blackout Date</h3>
+            <h3 class="text-sm font-semibold text-[#7C2D12]">Buat Tanggal Blackout</h3>
             <div class="rtp-admin-form-grid mt-3 xl:grid-cols-4">
                 <label class="text-xs text-[#64748B]">Branch
                     <select v-model="createForm.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;">
@@ -140,7 +140,7 @@ const submitDelete = (id) => {
                 </label>
             </div>
             <button type="button" class="mt-3 w-full rounded-xl bg-[#C2410C] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
-                {{ saving ? 'Saving...' : 'Create Blackout Date' }}
+                {{ saving ? 'Menyimpan...' : 'Buat Tanggal Blackout' }}
             </button>
         </section>
 

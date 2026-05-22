@@ -55,7 +55,7 @@ const draftFor = (row) => {
 
 const submitCreate = () => {
     if (!String(createForm.name || '').trim()) {
-        localError.value = 'Branch name is required.';
+        localError.value = 'Nama cabang wajib diisi.';
         return;
     }
 
@@ -88,7 +88,7 @@ const submitUpdate = (id) => {
     }
 
     if (!String(draft.name || '').trim()) {
-        localError.value = 'Branch name is required.';
+        localError.value = 'Nama cabang wajib diisi.';
         return;
     }
 
@@ -114,7 +114,7 @@ const submitDelete = (id) => {
         return;
     }
 
-    if (!window.confirm('Delete this branch? If linked to data, it may be deactivated instead.')) {
+    if (!window.confirm('Hapus cabang ini? Jika sudah terhubung dengan data, cabang akan dinonaktifkan.')) {
         return;
     }
 
@@ -141,7 +141,7 @@ const submitDelete = (id) => {
         </p>
 
         <section class="rounded-2xl border p-4" style="border-color: #E2E8F0; background: #FFFFFF;">
-            <h3 class="text-sm font-semibold text-[#1F2937]">Create Branch</h3>
+            <h3 class="text-sm font-semibold text-[#1F2937]">Buat Cabang</h3>
             <div class="rtp-admin-form-grid mt-3 xl:grid-cols-3">
                 <label class="text-xs text-[#64748B]">Code
                     <input v-model="createForm.code" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;" placeholder="Auto when empty" >
@@ -167,7 +167,7 @@ const submitDelete = (id) => {
                 </label>
             </div>
             <button type="button" class="mt-3 w-full rounded-xl bg-[#0F172A] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
-                {{ saving ? 'Saving...' : 'Create Branch' }}
+                {{ saving ? 'Menyimpan...' : 'Buat Cabang' }}
             </button>
         </section>
 
@@ -218,7 +218,7 @@ const submitDelete = (id) => {
                         </td>
                     </tr>
                     <tr v-if="!branchRows.length">
-                        <td colspan="4" class="px-4 py-10 text-center text-sm text-[#94A3B8]">No branch data available.</td>
+                        <td colspan="4" class="px-4 py-10 text-center text-sm text-[#94A3B8]">Belum ada data cabang.</td>
                     </tr>
                 </tbody>
             </table>

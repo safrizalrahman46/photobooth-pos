@@ -280,7 +280,7 @@ class AdminPackageService
 
                 if (! $current) {
                     throw ValidationException::withMessages([
-                        'add_ons' => 'One or more selected add-ons are invalid for this package.',
+                        'add_ons' => 'Satu atau beberapa add-on tidak sesuai dengan paket ini.',
                     ]);
                 }
 

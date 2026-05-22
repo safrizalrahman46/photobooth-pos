@@ -22,7 +22,7 @@ class AdminBookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Booking created successfully.',
+            'message' => 'Booking berhasil dibuat.',
             'data' => [
                 'booking_id' => (int) $booking->id,
             ],
@@ -35,7 +35,7 @@ class AdminBookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Booking updated successfully.',
+            'message' => 'Booking berhasil diperbarui.',
         ]);
     }
 
@@ -45,7 +45,7 @@ class AdminBookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Booking deleted successfully.',
+            'message' => 'Booking berhasil dihapus.',
         ]);
     }
 
@@ -65,7 +65,7 @@ class AdminBookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Booking confirmed successfully.',
+            'message' => 'Booking berhasil dikonfirmasi.',
         ]);
     }
 
@@ -80,7 +80,7 @@ class AdminBookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Payment confirmed successfully.',
+            'message' => 'Pembayaran berhasil dikonfirmasi.',
             'data' => [
                 'transaction_id' => (int) $updatedTransaction->id,
                 'transaction_status' => (string) $updatedTransaction->status->value,
@@ -105,7 +105,7 @@ class AdminBookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Booking declined and cancelled successfully.',
+            'message' => 'Booking berhasil ditolak dan dibatalkan.',
         ]);
     }
 

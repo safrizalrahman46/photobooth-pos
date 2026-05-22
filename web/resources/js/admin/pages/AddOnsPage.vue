@@ -70,7 +70,7 @@ const addOnSections = computed(() => ([
     {
         key: 'non-physical',
         title: 'Non-physical Add-ons',
-        description: 'Service/benefit add-ons; optional inventory consumption can still be mapped.',
+        description: 'Add-on layanan/benefit; konsumsi inventory opsional tetap bisa diatur.',
         rows: nonPhysicalAddOnRows.value,
     },
 ]));
@@ -175,7 +175,7 @@ const closeModal = () => {
 
 const validateForm = () => {
     if (!String(form.name || '').trim()) {
-        localError.value = 'Add-on name is required.';
+        localError.value = 'Nama add-on wajib diisi.';
         return false;
     }
 
@@ -185,7 +185,7 @@ const validateForm = () => {
     }
 
     if (Number(form.max_qty || 0) < 1) {
-        localError.value = 'Max qty must be at least 1.';
+        localError.value = 'Maksimum qty minimal 1.';
         return false;
     }
 
@@ -250,7 +250,7 @@ const submitForm = async () => {
 
 const requestDelete = async (addOn) => {
     const addOnName = String(addOn.name || 'this add-on');
-    const confirmed = window.confirm(`Delete ${addOnName}? This action cannot be undone.`);
+    const confirmed = window.confirm(`Hapus ${addOnName}? Tindakan ini tidak dapat dibatalkan.`);
 
     if (!confirmed) {
         return;
@@ -428,7 +428,7 @@ const requestDelete = async (addOn) => {
                             </tr>
                             <tr v-if="!section.rows.length">
                                 <td colspan="10" class="px-4 py-8 text-center text-sm text-[#94A3B8]">
-                                    No {{ section.title.toLowerCase() }} data available.
+                                    Belum ada data {{ section.title.toLowerCase() }}.
                                 </td>
                             </tr>
                         </tbody>
@@ -468,7 +468,7 @@ const requestDelete = async (addOn) => {
                                 </td>
                             </tr>
                             <tr class="border-t" style="border-color: #E2E8F0;">
-                                <td class="px-3 py-2 text-[#334155]">Code (optional)</td>
+                                <td class="px-3 py-2 text-[#334155]">Kode (opsional)</td>
                                 <td class="px-3 py-2">
                                     <input v-model="form.code" type="text" placeholder="Auto-generated when empty" class="w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
                                 </td>
@@ -562,7 +562,7 @@ const requestDelete = async (addOn) => {
                         :disabled="saving"
                         @click="submitForm"
                     >
-                        {{ saving ? 'Saving...' : (modalMode === 'create' ? 'Create Add-on' : 'Save Changes') }}
+                        {{ saving ? 'Menyimpan...' : (modalMode === 'create' ? 'Buat Add-on' : 'Simpan Perubahan') }}
                     </button>
                 </div>
         </AdminModal>

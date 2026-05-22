@@ -33,7 +33,7 @@ class AdminBlackoutDateController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Blackout date created successfully.',
+            'message' => 'Tanggal blackout berhasil dibuat.',
             'data' => [
                 'blackout_dates' => $service->rows(),
             ],
@@ -49,7 +49,7 @@ class AdminBlackoutDateController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Blackout date updated successfully.',
+            'message' => 'Tanggal blackout berhasil diperbarui.',
             'data' => [
                 'blackout_dates' => $service->rows(),
             ],
@@ -62,11 +62,10 @@ class AdminBlackoutDateController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Blackout date deleted successfully.',
+            'message' => 'Tanggal blackout berhasil dihapus.',
             'data' => [
                 'blackout_dates' => $service->rows(),
             ],
         ]);
     }
 }
-

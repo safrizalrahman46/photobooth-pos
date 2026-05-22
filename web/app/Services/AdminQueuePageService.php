@@ -372,7 +372,7 @@ class AdminQueuePageService
                 try {
                     $this->queueService->checkInBooking($booking);
                 } catch (\RuntimeException) {
-                    // Keep queue panel available even when one booking cannot be auto-enqueued.
+                    // Panel antrean tetap tersedia meski satu booking gagal masuk antrean otomatis.
                 }
             });
     }
