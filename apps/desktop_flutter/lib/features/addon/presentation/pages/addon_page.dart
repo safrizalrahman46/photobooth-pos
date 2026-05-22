@@ -36,7 +36,7 @@ class _PageHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Inventory Add-ons',
+          'Stok Add-on',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 28,
             fontWeight: FontWeight.w800,
@@ -148,7 +148,7 @@ class _StockSummaryTable extends ConsumerWidget {
                             child: Text(
                               item.statusType == AddOnStatusType.stockLevel
                                   ? '${item.sisaStok}'
-                                  : 'Ready',
+                                  : 'Tersedia',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
@@ -170,7 +170,7 @@ class _StockSummaryTable extends ConsumerWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-              error: (_, __) => const Text('Error loading stock'),
+              error: (_, __) => const Text('Stok belum dapat dimuat.'),
             ),
           ),
         ],

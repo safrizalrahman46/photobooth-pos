@@ -52,7 +52,9 @@ class PaketPage extends ConsumerWidget {
                   ),
                 ),
               ),
-              error: (e, _) => Center(child: Text('Gagal memuat data: $e')),
+              error: (e, _) => const Center(
+                child: Text('Paket belum dapat dimuat. Coba lagi.'),
+              ),
               data: (list) {
                 if (list.isEmpty) {
                   return const Center(
@@ -132,7 +134,7 @@ class _ReadOnlyBadge extends StatelessWidget {
           const Icon(Icons.info_outline, size: 14, color: AppColors.textMuted),
           const SizedBox(width: 8),
           Text(
-            'MODE PENINJAUAN (READ-ONLY)',
+            'MODE LIHAT SAJA',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontWeight: FontWeight.w700,

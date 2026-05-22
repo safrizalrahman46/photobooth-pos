@@ -10,6 +10,7 @@ use App\Http\Requests\QueueWalkInRequest;
 use App\Http\Resources\QueueTicketResource;
 use App\Models\Booking;
 use App\Models\QueueTicket;
+use App\Services\AdminQueuePageService;
 use App\Services\QueueService;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
@@ -49,6 +50,24 @@ class QueueController extends Controller
         $tickets = $query->paginate($perPage)->withQueryString();
 
         return $this->responder->paginated($tickets, QueueTicketResource::collection($tickets), 'Daftar antrean berhasil dimuat.');
+    }
+
+    public function live(Request $request, AdminQueuePageService $service): JsonResponse
+    {
+        abort_unless($request->user()?->can('queue.view'), 403);
+
+        $payload = $request->validate([
+            'queue_date' => ['nullable', 'date_format:Y-m-d'],
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+        ]);
+
+        $queueDate = isset($payload['queue_date']) ? (string) $payload['queue_date'] : null;
+        $branchId = isset($payload['branch_id']) ? (int) $payload['branch_id'] : null;
+
+        return $this->responder->success(
+            $service->live($queueDate, $branchId),
+            'Data antrean berhasil dimuat.'
+        );
     }
 
     public function checkIn(QueueCheckInRequest $request): JsonResponse
@@ -110,7 +129,7 @@ class QueueController extends Controller
             'queue_date' => ['nullable', 'date_format:Y-m-d'],
         ]);
 
-        $date = $payload['queue_date'] ?? now()->toDateString();
+        $date = $payload['queue_date'] ?? now(config('app.queue_timezone', 'Asia/Jakarta'))->toDateString();
 
         try {
             $ticket = $this->queueService->callNext((int) $payload['branch_id'], $date);

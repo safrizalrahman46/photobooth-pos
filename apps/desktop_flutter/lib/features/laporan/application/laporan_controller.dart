@@ -1,3 +1,4 @@
+import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:get/get.dart';
 import '../domain/entities/laporan_summary.dart';
 import '../domain/entities/cashflow.dart';
@@ -37,7 +38,10 @@ class LaporanController extends GetxController {
 
       _updateLastUpdated();
     } catch (e) {
-      errorMessage.value = e.toString();
+      errorMessage.value = resolveRequestErrorMessage(
+        e,
+        fallback: 'Laporan belum dapat dimuat. Coba lagi.',
+      );
     } finally {
       isLoading.value = false;
     }

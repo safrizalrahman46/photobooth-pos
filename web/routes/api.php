@@ -79,6 +79,7 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/pos/walk-in/checkout', [PosController::class, 'walkInCheckout']);
 
+        Route::get('/queue-live', [QueueController::class, 'live']);
         Route::get('/queue-tickets', [QueueController::class, 'index']);
         Route::post('/queue-tickets/check-in', [QueueController::class, 'checkIn']);
         Route::post('/queue-tickets/walk-in', [QueueController::class, 'walkIn']);

@@ -1,6 +1,7 @@
 // application/bloc/antrian_bloc.dart
 
 import 'dart:async';
+import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:flutter/foundation.dart';
 import '../usecase/antrian_usecase.dart';
 import '../../domain/entities/antrian_entity.dart';
@@ -115,7 +116,15 @@ class AntrianBloc extends ChangeNotifier {
         _emit(_state.copyWith(booths: list));
       });
     } catch (e) {
-      _emit(_state.copyWith(isLoading: false, errorMessage: e.toString()));
+      _emit(
+        _state.copyWith(
+          isLoading: false,
+          errorMessage: resolveRequestErrorMessage(
+            e,
+            fallback: 'Antrean belum dapat dimuat.',
+          ),
+        ),
+      );
     }
   }
 
@@ -128,7 +137,14 @@ class AntrianBloc extends ChangeNotifier {
         _state.copyWith(antrianSelesai: selesai, antrianBerikutnya: berikutnya),
       );
     } catch (e) {
-      _emit(_state.copyWith(errorMessage: e.toString()));
+      _emit(
+        _state.copyWith(
+          errorMessage: resolveRequestErrorMessage(
+            e,
+            fallback: 'Status antrean belum dapat diperbarui.',
+          ),
+        ),
+      );
     }
   }
 
@@ -136,7 +152,14 @@ class AntrianBloc extends ChangeNotifier {
     try {
       await _setBoothReady(boothId);
     } catch (e) {
-      _emit(_state.copyWith(errorMessage: e.toString()));
+      _emit(
+        _state.copyWith(
+          errorMessage: resolveRequestErrorMessage(
+            e,
+            fallback: 'Status booth belum dapat diperbarui.',
+          ),
+        ),
+      );
     }
   }
 

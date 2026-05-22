@@ -164,7 +164,7 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'SESSION ACTIVE',
+                            'SESI BERJALAN',
                             style: TextStyle(
                               fontFamily: AppTheme.fontFamily,
                               fontSize: 12,
@@ -303,7 +303,7 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text(
-                      'KIRIM KE SELESAI',
+                      'SELESAIKAN SESI',
                       style: TextStyle(
                         fontFamily: AppTheme.fontFamily,
                         fontSize: 13,
@@ -394,7 +394,7 @@ class BoothTersediaCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
               child: const Text(
-                'SET READY',
+                'BOOTH SIAP',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
               ),
             ),

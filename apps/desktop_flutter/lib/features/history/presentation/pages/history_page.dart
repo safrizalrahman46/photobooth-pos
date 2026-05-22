@@ -43,7 +43,7 @@ class _HistoryPageState extends State<HistoryPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Title Premium
-            Text('History Transaksi', style: AppTextStyles.h1),
+            Text('Riwayat Transaksi', style: AppTextStyles.h1),
             const SizedBox(height: 8),
             Text(
               'Kelola dan tinjau seluruh riwayat transaksi photobooth.',

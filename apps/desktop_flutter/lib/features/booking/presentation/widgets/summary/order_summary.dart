@@ -33,7 +33,7 @@ class OrderSummaryPanel extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Text(
-              'ORDER SUMMARY',
+              'RINGKASAN PESANAN',
               style: AppTextStyles.captionMedium.copyWith(
                 color: AppColors.textPrimary,
                 letterSpacing: 1.2,
@@ -53,8 +53,8 @@ class OrderSummaryPanel extends StatelessWidget {
                 children: [
                   // Package item
                   _OrderSummaryRow(
-                    title: '${controller.selectedPackage.name} Package',
-                    subtitle: '${controller.selectedPackage.duration} Session',
+                    title: 'Paket ${controller.selectedPackage.name}',
+                    subtitle: 'Durasi ${controller.selectedPackage.duration}',
                     price: _formatPrice(controller.packagePrice),
                   ),
 
@@ -172,7 +172,7 @@ class OrderSummaryPanel extends StatelessWidget {
                                 child: Text(
                                   controller.isApplyingReferral
                                       ? '...'
-                                      : 'APPLY',
+                                      : 'TERAPKAN',
                                   style: AppTextStyles.captionMedium.copyWith(
                                     color: AppColors.primary,
                                     fontSize: 10,
@@ -221,7 +221,7 @@ class OrderSummaryPanel extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'Grand Total',
+                      'Total Bayar',
                       style: AppTextStyles.captionMedium.copyWith(
                         fontSize: 11,
                         color: AppColors.textPrimary,
