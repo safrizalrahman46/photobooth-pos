@@ -1,3 +1,4 @@
+import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/features/kasir/services/receipt_printer.dart';
 import 'package:flutter/material.dart';
@@ -71,7 +72,7 @@ class _WalkinPageState extends State<WalkinPage> {
                   const SizedBox(height: 32),
 
                   // Add-ons
-                  Text('Experience Add-ons', style: AppTextStyles.h3),
+                  Text('Add-on Tambahan', style: AppTextStyles.h3),
                   const SizedBox(height: 16),
                   _AddonSection(controller: _controller),
                 ],
@@ -183,7 +184,13 @@ class _WalkinPageState extends State<WalkinPage> {
         Navigator.pop(context); // Ensure loading is closed
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
+            content: Text(
+              resolveRequestErrorMessage(
+                e,
+                fallback:
+                    'Checkout belum berhasil. Periksa koneksi atau coba lagi.',
+              ),
+            ),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -223,7 +230,7 @@ class _CustomerInfoRow extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: _InfoField(
-                label: 'GMAIL',
+                label: 'EMAIL',
                 value: controller.email,
                 keyboardType: TextInputType.emailAddress,
                 onChanged: controller.updateEmail,

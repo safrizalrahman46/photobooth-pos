@@ -7,7 +7,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: LoginPage(onLoggedIn: (_) {})));
 
     expect(find.text('Masuk'), findsWidgets);
-    expect(find.text('Login Admin'), findsOneWidget);
+    expect(find.text('Masuk Admin'), findsOneWidget);
     expect(find.text('Ready To Pict'), findsWidgets);
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);

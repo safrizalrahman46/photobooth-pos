@@ -46,7 +46,7 @@ class AddOnRepositoryImpl implements AddOnRepository {
       revenueChangePercent: 0,
       lowStockNama: lowStock.isNotEmpty ? lowStock.first.nama : '-',
       lowStockSisa: lowStock.isNotEmpty ? lowStock.first.sisaStok ?? 0 : 0,
-      storageWarehouseLabel: 'Inventory',
+      storageWarehouseLabel: 'Inventori',
       storageCapacityPercent: 0,
     );
   }

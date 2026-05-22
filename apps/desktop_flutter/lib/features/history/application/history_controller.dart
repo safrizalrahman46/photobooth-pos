@@ -1,6 +1,7 @@
 // features/history/application/history_controller.dart
 
 import 'package:flutter/foundation.dart';
+import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
 import '../domain/entities/transaction.dart';
 
@@ -103,7 +104,10 @@ class HistoryController extends ChangeNotifier {
         );
       }).toList();
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = resolveRequestErrorMessage(
+        error,
+        fallback: 'Riwayat transaksi belum dapat dimuat.',
+      );
     } finally {
       isLoading = false;
       notifyListeners();

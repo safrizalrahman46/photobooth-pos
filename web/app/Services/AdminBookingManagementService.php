@@ -339,7 +339,7 @@ class AdminBookingManagementService
 
         if ($booking->approved_at !== null) {
             throw ValidationException::withMessages([
-                'booking' => 'Booking yang sudah diverifikasi tidak dapat decline.',
+                'booking' => 'Booking yang sudah diverifikasi tidak dapat ditolak.',
             ]);
         }
 
@@ -440,7 +440,7 @@ class AdminBookingManagementService
 
         if (! $package) {
             throw ValidationException::withMessages([
-                'booking' => 'Booking package not found.',
+                'booking' => 'Paket booking tidak ditemukan.',
             ]);
         }
 
@@ -470,7 +470,7 @@ class AdminBookingManagementService
             'referral_code' => $booking->referral_code ?: null,
             'referral_discount_amount' => (float) $booking->referral_discount_amount,
             'tax_amount' => 0,
-            'notes' => 'Auto-generated from booking payment confirmation.',
+            'notes' => 'Dibuat otomatis dari konfirmasi pembayaran booking.',
             'items' => $items,
         ], $cashierId);
 

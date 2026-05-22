@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:desktop_flutter/core/config/app_config.dart';
+import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/shared/models/app_settings_payload.dart';
 import 'package:desktop_flutter/shared/models/add_on_catalog_item.dart';
 import 'package:desktop_flutter/shared/models/booking_item.dart';
@@ -13,6 +14,7 @@ import 'package:desktop_flutter/shared/models/package_management_item.dart';
 import 'package:desktop_flutter/shared/models/payment_record.dart';
 import 'package:desktop_flutter/shared/models/pos_walk_in_checkout_result.dart';
 import 'package:desktop_flutter/shared/models/printer_setting_item.dart';
+import 'package:desktop_flutter/shared/models/queue_live_payload.dart';
 import 'package:desktop_flutter/shared/models/queue_ticket_item.dart';
 import 'package:desktop_flutter/shared/models/referral_preview.dart';
 import 'package:desktop_flutter/shared/models/report_summary.dart';
@@ -48,7 +50,12 @@ class ApiClient {
     final payload = _decode(response.body);
 
     if (response.statusCode >= 400 || payload['success'] != true) {
-      throw ApiException(payload['message']?.toString() ?? 'Login gagal.');
+      throw ApiException(
+        sanitizeRequestMessage(
+          payload['message']?.toString(),
+          fallback: 'Login gagal. Periksa kembali email dan password.',
+        ),
+      );
     }
 
     final data =
@@ -299,23 +306,17 @@ class ApiClient {
   Future<InventoryMonitoringPayload> fetchInventoryMonitoring() async {
     final payload = await _send(
       method: 'GET',
-      path: '/manage/inventory-items',
+      path: '/manage/inventory-monitoring',
       authenticated: true,
     );
 
-    // print('PAYLOAD: $payload');
-
     final data = payload['data'];
 
-    if (data is! List) {
+    if (data is! Map<String, dynamic>) {
       throw ApiException('Data monitoring stok tidak valid.');
     }
 
-    final items = data
-        .map((item) => InventoryStockItem.fromJson(item))
-        .toList();
-
-    return InventoryMonitoringPayload(items: items, movements: const []);
+    return InventoryMonitoringPayload.fromJson(data);
   }
 
   Future<List<AddOnCatalogItem>> fetchAddOns({
@@ -708,6 +709,29 @@ class ApiClient {
         .whereType<Map<String, dynamic>>()
         .map(QueueTicketItem.fromJson)
         .toList();
+  }
+
+  Future<QueueLivePayload> fetchQueueLive({
+    int? branchId,
+    String? queueDate,
+  }) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/queue-live',
+      authenticated: true,
+      query: {
+        if (branchId != null) 'branch_id': '$branchId',
+        if (queueDate != null && queueDate.isNotEmpty) 'queue_date': queueDate,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Data antrean tidak valid.');
+    }
+
+    return QueueLivePayload.fromJson(data);
   }
 
   Future<List<BookingItem>> fetchBookings({
@@ -1240,7 +1264,12 @@ class ApiClient {
     final payload = _decode(response.body);
 
     if (response.statusCode >= 400 || payload['success'] != true) {
-      throw ApiException(payload['message']?.toString() ?? 'Permintaan gagal.');
+      throw ApiException(
+        sanitizeRequestMessage(
+          payload['message']?.toString(),
+          fallback: 'Permintaan gagal diproses.',
+        ),
+      );
     }
 
     return payload;
@@ -1253,6 +1282,10 @@ class ApiClient {
       return await request().timeout(AppConfig.apiRequestTimeout);
     } on TimeoutException {
       throw ApiException(AppConfig.connectionTimeoutMessage);
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      throw ApiException(AppConfig.connectionErrorMessage);
     }
   }
 

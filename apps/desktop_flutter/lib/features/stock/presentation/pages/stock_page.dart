@@ -1,6 +1,7 @@
 import 'package:desktop_flutter/app/theme/app_colors.dart';
 import 'package:desktop_flutter/app/theme/app_text_styles.dart';
 import 'package:desktop_flutter/core/network/api_client.dart';
+import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/shared/models/inventory_monitoring_payload.dart';
 import 'package:flutter/material.dart';
@@ -37,30 +38,13 @@ class _StockPageState extends State<StockPage> {
       return;
     }
 
-    // ================= DEBUG TOKEN =================
-    // print('=========== STOCK PAGE DEBUG ===========');
-    // print('CLIENT: $client');
-    // print('TOKEN: ${client.token}');
-    // print('=======================================');
-    // ==============================================
-
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      // ============== DEBUG SEBELUM REQUEST ==============
-      // print('Memulai request inventory monitoring...');
-      // ===================================================
-
       final payload = await client.fetchInventoryMonitoring();
-
-      // ============== DEBUG SETELAH REQUEST ==============
-      // print('Request berhasil!');
-      // print('Jumlah items: ${payload.items.length}');
-      // print('Jumlah movements: ${payload.movements.length}');
-      // ==================================================
 
       if (!mounted) {
         return;
@@ -68,21 +52,17 @@ class _StockPageState extends State<StockPage> {
 
       setState(() => _payload = payload);
     } on ApiException catch (error) {
-      // ============== DEBUG ERROR API ====================
-      // print('ApiException: ${error.message}');
-      // ==================================================
-
       if (!mounted) {
         return;
       }
 
-      setState(() => _error = error.message);
-    } catch (e, stackTrace) {
-      // ============== DEBUG ERROR UMUM ===================
-      // print('ERROR UMUM: $e');
-      // print('STACK TRACE: $stackTrace');
-      // ==================================================
-
+      setState(() {
+        _error = resolveRequestErrorMessage(
+          error,
+          fallback: 'Tidak dapat memuat data monitoring stok.',
+        );
+      });
+    } catch (_) {
       if (!mounted) {
         return;
       }
@@ -241,7 +221,7 @@ class _ConsoleHeader extends StatelessWidget {
                     ),
                   ),
                   child: const Text(
-                    'READ-ONLY STOCK MONITOR',
+                    'MONITOR STOK',
                     style: TextStyle(
                       color: Color(0xFFB7F7D0),
                       fontSize: 11,
@@ -252,7 +232,7 @@ class _ConsoleHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 const Text(
-                  'Inventory Control Console',
+                  'Monitor Stok Operasional',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -262,7 +242,7 @@ class _ConsoleHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Pantau stok fisik dan movement terbaru tanpa akses manage barang dari aplikasi desktop.',
+                  'Pantau stok fisik dan pergerakan terbaru tanpa akses ubah barang dari aplikasi desktop.',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.72),
                     fontSize: 13,
@@ -276,15 +256,15 @@ class _ConsoleHeader extends StatelessWidget {
                   children: [
                     _HeaderMetric(
                       icon: Icons.inventory_2_rounded,
-                      label: '$totalItems item stock',
+                      label: '$totalItems barang stok',
                     ),
                     _HeaderMetric(
                       icon: Icons.sync_alt_rounded,
-                      label: '$movementCount movement',
+                      label: '$movementCount pergerakan',
                     ),
                     const _HeaderMetric(
                       icon: Icons.lock_outline_rounded,
-                      label: 'Monitoring only',
+                      label: 'Hanya memantau',
                     ),
                   ],
                 ),
@@ -360,7 +340,7 @@ class _RefreshControl extends StatelessWidget {
               ),
             )
           : const Icon(Icons.refresh_rounded, size: 18),
-      label: Text(isLoading ? 'Loading' : 'Refresh'),
+      label: Text(isLoading ? 'Memuat' : 'Muat Ulang'),
     );
   }
 }
@@ -384,7 +364,7 @@ class _ConsoleLoading extends StatelessWidget {
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
           Text(
-            'Memuat snapshot inventory...',
+            'Memuat data stok...',
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textSecondary,
             ),
@@ -413,7 +393,7 @@ class _InventoryHealthPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ConsolePanel(
-      title: 'Inventory Health',
+      title: 'Kondisi Stok',
       subtitle: 'Ringkasan kondisi stok saat ini.',
       icon: Icons.monitor_heart_rounded,
       child: Column(
@@ -427,7 +407,7 @@ class _InventoryHealthPanel extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           _MetricTile(
-            label: 'Ready',
+            label: 'Aman',
             value: readyStock.toString(),
             icon: Icons.check_circle_rounded,
             color: const Color(0xFF047857),
@@ -435,7 +415,7 @@ class _InventoryHealthPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _MetricTile(
-            label: 'Low stock',
+            label: 'Stok Menipis',
             value: lowStock.toString(),
             icon: Icons.warning_amber_rounded,
             color: const Color(0xFFD97706),
@@ -443,7 +423,7 @@ class _InventoryHealthPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _MetricTile(
-            label: 'Out of stock',
+            label: 'Stok Habis',
             value: outOfStock.toString(),
             icon: Icons.error_rounded,
             color: const Color(0xFFDC2626),
@@ -451,7 +431,7 @@ class _InventoryHealthPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _MetricTile(
-            label: 'Active items',
+            label: 'Barang Aktif',
             value: '$activeItems/$totalItems',
             icon: Icons.toggle_on_rounded,
             color: AppColors.primaryDark,
@@ -475,7 +455,7 @@ class _InventoryHealthPanel extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Cashier desktop hanya bisa memonitor stok. Penyesuaian stok tetap dilakukan dari dashboard admin/owner.',
+                    'Aplikasi desktop hanya bisa memantau stok. Penyesuaian stok tetap dilakukan dari dashboard admin/owner.',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: Colors.white.withValues(alpha: 0.72),
                       height: 1.5,
@@ -541,9 +521,9 @@ class _HealthBar extends StatelessWidget {
           spacing: 12,
           runSpacing: 8,
           children: [
-            _HealthLegend(color: Color(0xFF10B981), label: 'Ready'),
-            _HealthLegend(color: Color(0xFFF59E0B), label: 'Low'),
-            _HealthLegend(color: Color(0xFFEF4444), label: 'Out'),
+            _HealthLegend(color: Color(0xFF10B981), label: 'Aman'),
+            _HealthLegend(color: Color(0xFFF59E0B), label: 'Menipis'),
+            _HealthLegend(color: Color(0xFFEF4444), label: 'Habis'),
           ],
         ),
       ],
@@ -629,10 +609,10 @@ class _StockBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ConsolePanel(
-      title: 'Stock Board',
-      subtitle: 'Daftar barang fisik dalam mode monitor.',
+      title: 'Daftar Stok',
+      subtitle: 'Daftar barang fisik dalam mode pemantauan.',
       icon: Icons.view_agenda_rounded,
-      trailing: _CountBadge(label: '${items.length} items'),
+      trailing: _CountBadge(label: '${items.length} barang'),
       child: items.isEmpty
           ? const _EmptyState(message: 'Belum ada barang stok.')
           : Column(
@@ -678,7 +658,7 @@ class _StockItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final code = item.code.isEmpty ? 'NO CODE' : item.code;
+    final code = item.code.isEmpty ? 'TANPA KODE' : item.code;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -715,7 +695,7 @@ class _StockItemRow extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     _SmallPill(
-                      label: item.isActive ? 'Active' : 'Inactive',
+                      label: item.isActive ? 'Aktif' : 'Nonaktif',
                       color: item.isActive
                           ? const Color(0xFF047857)
                           : AppColors.textMuted,
@@ -737,7 +717,7 @@ class _StockItemRow extends StatelessWidget {
                     ),
                     _SmallPill(
                       label:
-                          'Low threshold ${item.lowStockThreshold} ${item.unit}',
+                          'Batas minimum ${item.lowStockThreshold} ${item.unit}',
                       color: AppColors.textSecondary,
                       background: const Color(0xFFF8FAFC),
                     ),
@@ -804,12 +784,12 @@ class _MovementTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ConsolePanel(
-      title: 'Movement Timeline',
+      title: 'Riwayat Pergerakan Stok',
       subtitle: 'Aktivitas stok terbaru dari dashboard web.',
       icon: Icons.timeline_rounded,
-      trailing: _CountBadge(label: '${movements.length} logs'),
+      trailing: _CountBadge(label: '${movements.length} aktivitas'),
       child: movements.isEmpty
-          ? const _EmptyState(message: 'Belum ada riwayat movement.')
+          ? const _EmptyState(message: 'Belum ada riwayat pergerakan.')
           : Column(
               children: [
                 for (var index = 0; index < movements.length; index++) ...[

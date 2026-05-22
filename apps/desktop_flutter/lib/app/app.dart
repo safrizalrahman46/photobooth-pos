@@ -27,7 +27,6 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
 
   Future<void> _restoreSession() async {
     final storedSession = await _sessionStore.load();
-    final configuredBaseUrl = AppConfig.apiBaseUrl;
 
     DesktopSession? session = storedSession;
 

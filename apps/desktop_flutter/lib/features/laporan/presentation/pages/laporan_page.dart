@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -173,7 +174,10 @@ class LaporanPage extends StatelessWidget {
 
                         if (snapshot.hasError) {
                           return Text(
-                            snapshot.error.toString(),
+                            resolveRequestErrorMessage(
+                              snapshot.error,
+                              fallback: 'Rincian transaksi belum dapat dimuat.',
+                            ),
                             style: const TextStyle(color: Colors.redAccent),
                           );
                         }

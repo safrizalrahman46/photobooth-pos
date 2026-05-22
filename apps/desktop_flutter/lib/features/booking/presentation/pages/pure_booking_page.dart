@@ -262,7 +262,7 @@ class _BookingRow extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  booking.status.toUpperCase(),
+                  _bookingStatusLabel(booking.status),
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w800,
@@ -282,7 +282,7 @@ class _BookingRow extends StatelessWidget {
                   icon: Icons.check_circle_rounded,
                   color: const Color(0xFF10B981),
                   onTap: onAcc,
-                  label: 'Acc',
+                  label: 'Verifikasi',
                 ),
                 const SizedBox(width: 16),
                 _MiniActionBtn(
@@ -310,6 +310,20 @@ class _BookingRow extends StatelessWidget {
 String _formatPrice(double price) {
   final int p = price.toInt();
   return 'Rp ${p.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
+}
+
+String _bookingStatusLabel(String status) {
+  return switch (status.toLowerCase()) {
+    'pending' => 'MENUNGGU',
+    'confirmed' => 'TERKONFIRMASI',
+    'paid' => 'LUNAS',
+    'checked_in' => 'HADIR',
+    'in_queue' => 'DALAM ANTREAN',
+    'in_session' => 'SESI BERJALAN',
+    'done' => 'SELESAI',
+    'cancelled' => 'BATAL',
+    _ => status.toUpperCase(),
+  };
 }
 
 class _MiniActionBtn extends StatelessWidget {

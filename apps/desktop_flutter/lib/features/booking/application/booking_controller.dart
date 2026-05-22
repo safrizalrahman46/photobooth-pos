@@ -1,4 +1,5 @@
 import 'package:desktop_flutter/core/session/api_session.dart';
+import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/shared/models/pos_walk_in_checkout_result.dart';
 import 'package:desktop_flutter/shared/models/referral_preview.dart';
 import 'package:flutter/material.dart';
@@ -100,7 +101,7 @@ class BookingController extends ChangeNotifier {
           id: row.id.toString(),
           name: row.name,
           duration: '${row.durationMinutes} Menit',
-          prints: 'Package',
+          prints: 'Paket',
           price: row.basePrice,
         );
       }).toList();
@@ -148,7 +149,10 @@ class BookingController extends ChangeNotifier {
           ? 0
           : selectedQueueIndex.clamp(0, queues.length - 1).toInt();
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = resolveRequestErrorMessage(
+        error,
+        fallback: 'Data booking belum dapat dimuat.',
+      );
     } finally {
       isLoading = false;
       safeNotify();
@@ -290,7 +294,11 @@ class BookingController extends ChangeNotifier {
       referralMessage = 'Diskon referal diterapkan.';
     } catch (error) {
       referralPreview = null;
-      referralError = error.toString();
+      referralError = resolveRequestErrorMessage(
+        error,
+        fallback:
+            'Kode referal tidak dapat digunakan. Periksa kembali kodenya.',
+      );
     } finally {
       isApplyingReferral = false;
       safeNotify();
@@ -324,19 +332,22 @@ class BookingController extends ChangeNotifier {
           bookingId: booking.recordId!,
           method: 'transfer',
           amount: paymentAmount,
-          notes: 'Verified from desktop app.',
+          notes: 'Diverifikasi dari aplikasi desktop.',
         );
         if (_disposed) return;
       } else if (booking.canConfirmBooking) {
         await client.confirmBooking(
           bookingId: booking.recordId!,
-          reason: 'Verified from desktop app.',
+          reason: 'Diverifikasi dari aplikasi desktop.',
         );
       }
 
       await loadInitialData();
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = resolveRequestErrorMessage(
+        error,
+        fallback: 'Booking belum dapat diverifikasi. Coba lagi.',
+      );
       safeNotify();
     }
 
@@ -363,12 +374,15 @@ class BookingController extends ChangeNotifier {
     try {
       await client.declineBooking(
         bookingId: booking.recordId!,
-        reason: 'Declined from desktop app.',
+        reason: 'Ditolak dari aplikasi desktop.',
       );
       if (_disposed) return;
       await loadInitialData();
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = resolveRequestErrorMessage(
+        error,
+        fallback: 'Booking belum dapat ditolak. Coba lagi.',
+      );
       safeNotify();
     }
   }
@@ -427,7 +441,10 @@ class BookingController extends ChangeNotifier {
       await loadInitialData();
       return result;
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = resolveRequestErrorMessage(
+        error,
+        fallback: 'Checkout walk-in belum berhasil. Coba lagi.',
+      );
       safeNotify();
       return null;
     } finally {
@@ -465,7 +482,10 @@ class BookingController extends ChangeNotifier {
         );
       }).toList();
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = resolveRequestErrorMessage(
+        error,
+        fallback: 'Add-on belum dapat dimuat.',
+      );
       addons = [];
     }
 
@@ -480,7 +500,7 @@ class BookingController extends ChangeNotifier {
       referralMessage = null;
     } else if (referralCode.trim().isNotEmpty) {
       referralMessage =
-          'Apply ulang kode referal setelah paket/add-on berubah.';
+          'Terapkan ulang kode referal setelah paket/add-on berubah.';
     }
   }
 

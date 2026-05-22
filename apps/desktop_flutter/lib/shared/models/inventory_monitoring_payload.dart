@@ -53,14 +53,14 @@ class InventoryStockItem {
 
   String get stockStatusLabel {
     if (isOut) {
-      return 'Out of stock';
+      return 'Stok Habis';
     }
 
     if (isLow) {
-      return 'Low stock';
+      return 'Stok Menipis';
     }
 
-    return 'Ready';
+    return 'Aman';
   }
 
   factory InventoryStockItem.fromJson(Map<String, dynamic> json) {
@@ -120,7 +120,7 @@ class InventoryMovementItem {
       return sourceType.replaceAll('_', ' ');
     }
 
-    return 'manual';
+    return 'Manual';
   }
 
   factory InventoryMovementItem.fromJson(Map<String, dynamic> json) {
@@ -136,7 +136,7 @@ class InventoryMovementItem {
       sourceType: json['source_type']?.toString() ?? '',
       sourceRef: json['source_ref']?.toString() ?? '',
       notes: json['notes']?.toString() ?? '',
-      actorName: json['actor_name']?.toString() ?? 'System',
+      actorName: json['actor_name']?.toString() ?? 'Sistem',
       createdAtText: json['created_at_text']?.toString() ?? '-',
     );
   }

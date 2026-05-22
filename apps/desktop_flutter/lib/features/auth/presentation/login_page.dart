@@ -112,7 +112,7 @@ class _LoginPageState extends State<LoginPage>
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 24,
                             offset: const Offset(0, 8),
                           ),
@@ -162,7 +162,7 @@ class _LoginPageState extends State<LoginPage>
         gradient: LinearGradient(
           colors: [
             const Color(0xFF0F172A), // Deep Slate Navy
-            AppColors.primary,       // Sky Blue POS
+            AppColors.primary, // Sky Blue POS
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -185,9 +185,11 @@ class _LoginPageState extends State<LoginPage>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.primary.withOpacity(0.35)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.35),
+              ),
             ),
             child: const Text(
               'READY TO PICT',
@@ -203,7 +205,7 @@ class _LoginPageState extends State<LoginPage>
 
           // Headline
           const Text(
-            'Login Admin\nReady To Pict',
+            'Masuk Admin\nReady To Pict',
             style: TextStyle(
               color: Colors.white,
               fontSize: 36,
@@ -216,11 +218,7 @@ class _LoginPageState extends State<LoginPage>
           // Body
           const Text(
             'Masuk untuk membuka POS desktop dan monitoring operasional Ready To Pict.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              height: 1.65,
-            ),
+            style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.65),
           ),
           const SizedBox(height: 40),
 
@@ -230,7 +228,7 @@ class _LoginPageState extends State<LoginPage>
             runSpacing: 10,
             children: const [
               _FeatureChip(label: 'POS Kasir'),
-              _FeatureChip(label: 'Queue System'),
+              _FeatureChip(label: 'Sistem Antrean'),
               _FeatureChip(label: 'Laporan'),
               _FeatureChip(label: 'Multi Cabang'),
             ],
@@ -239,7 +237,7 @@ class _LoginPageState extends State<LoginPage>
           const SizedBox(height: 48),
 
           // Footer divider
-          Container(height: 1, color: Colors.white.withOpacity(0.07)),
+          Container(height: 1, color: Colors.white.withValues(alpha: 0.07)),
           const SizedBox(height: 20),
 
           Row(
@@ -248,7 +246,7 @@ class _LoginPageState extends State<LoginPage>
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -262,7 +260,7 @@ class _LoginPageState extends State<LoginPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
                   Text(
-                    'Windows Desktop App',
+                    'Aplikasi Desktop Windows',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 13,
@@ -270,7 +268,7 @@ class _LoginPageState extends State<LoginPage>
                     ),
                   ),
                   Text(
-                    'Built for Ready to pict',
+                    'Dibuat untuk Ready To Pict',
                     style: TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                 ],
@@ -323,7 +321,7 @@ class _LoginPageState extends State<LoginPage>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Login Admin', style: AppTextStyles.h2),
+                  Text('Masuk Admin', style: AppTextStyles.h2),
                   Text(
                     'Ready To Pict',
                     style: AppTextStyles.bodySmall.copyWith(
@@ -572,9 +570,9 @@ class _FeatureChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
+        color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Text(
         label,

@@ -114,8 +114,8 @@ class AdminBookingController extends Controller
         $rawPath = trim((string) ($booking->transfer_proof_path ?? ''));
         $normalizedPath = $this->normalizePublicDiskPath($rawPath);
 
-        abort_if($normalizedPath === '', 404, 'Transfer proof not found.');
-        abort_unless(Storage::disk('public')->exists($normalizedPath), 404, 'Transfer proof file is missing.');
+        abort_if($normalizedPath === '', 404, 'Bukti transfer tidak ditemukan.');
+        abort_unless(Storage::disk('public')->exists($normalizedPath), 404, 'File bukti transfer tidak tersedia.');
 
         $fileName = basename($normalizedPath);
 

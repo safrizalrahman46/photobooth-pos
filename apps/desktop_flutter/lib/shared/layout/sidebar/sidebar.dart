@@ -294,7 +294,7 @@ class _SidebarFooter extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Tooltip(
-            message: 'Logout',
+            message: 'Keluar',
             child: InkWell(
               onTap: onLogout == null ? null : () => onLogout!(),
               borderRadius: BorderRadius.circular(12),
@@ -320,7 +320,7 @@ class _SidebarFooter extends StatelessWidget {
                     if (isExpanded) ...[
                       const SizedBox(width: 8),
                       Text(
-                        'Logout',
+                        'Keluar',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.redAccent,
                           fontWeight: FontWeight.w700,
