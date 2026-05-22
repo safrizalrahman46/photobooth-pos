@@ -46,7 +46,7 @@ class AppSettingService
 
         if (!$branch) {
             throw ValidationException::withMessages([
-                'branch_id' => 'Selected branch is not active.',
+                'branch_id' => 'Cabang yang dipilih tidak aktif.',
             ]);
         }
 
@@ -96,7 +96,7 @@ class AppSettingService
             Branch::class,
             (int) $branch->id,
             [
-                'message' => sprintf('Branch %s dibuat dari Settings.', (string) $branch->name),
+                'message' => sprintf('Cabang %s dibuat dari Settings.', (string) $branch->name),
                 'label' => (string) $branch->code,
                 'branch_name' => (string) $branch->name,
                 'timezone' => (string) $branch->timezone,
@@ -124,7 +124,7 @@ class AppSettingService
             Branch::class,
             (int) $branch->id,
             [
-                'message' => sprintf('Branch %s diperbarui dari Settings.', (string) $branch->name),
+                'message' => sprintf('Cabang %s diperbarui dari Settings.', (string) $branch->name),
                 'label' => (string) $branch->code,
                 'branch_name' => (string) $branch->name,
                 'updated_fields' => array_keys($payload),
@@ -140,7 +140,7 @@ class AppSettingService
 
         if ($branch->is_active && $activeCount <= 1) {
             throw ValidationException::withMessages([
-                'branch' => 'At least one active branch is required.',
+                'branch' => 'Minimal harus ada satu cabang aktif.',
             ]);
         }
 
@@ -168,7 +168,7 @@ class AppSettingService
             Branch::class,
             (int) $branch->id,
             [
-                'message' => sprintf('Branch %s dinonaktifkan dari Settings.', (string) $branch->name),
+                'message' => sprintf('Cabang %s dinonaktifkan dari Settings.', (string) $branch->name),
                 'label' => (string) $branch->code,
                 'branch_name' => (string) $branch->name,
             ],

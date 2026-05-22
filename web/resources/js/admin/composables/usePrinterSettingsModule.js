@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { resolveRequestErrorMessage } from '../requestErrors';
 
 export const usePrinterSettingsModule = ({
     props,
@@ -46,7 +47,7 @@ export const usePrinterSettingsModule = ({
             applyPrinterSettingsPayload(payload);
         } catch (error) {
             if (!silent) {
-                printerSettingError.value = error instanceof Error ? error.message : 'Failed to load printer settings.';
+                printerSettingError.value = resolveRequestErrorMessage(error, 'Gagal memuat pengaturan printer.');
             }
         } finally {
             if (!silent) {
@@ -82,7 +83,7 @@ export const usePrinterSettingsModule = ({
             const result = await response.json();
             applyPrinterSettingsPayload(result);
         } catch (error) {
-            printerSettingError.value = error instanceof Error ? error.message : 'Failed to create printer setting.';
+            printerSettingError.value = resolveRequestErrorMessage(error, 'Gagal membuat pengaturan printer.');
             throw error;
         } finally {
             printerSettingSaving.value = false;
@@ -118,7 +119,7 @@ export const usePrinterSettingsModule = ({
             const result = await response.json();
             applyPrinterSettingsPayload(result);
         } catch (error) {
-            printerSettingError.value = error instanceof Error ? error.message : 'Failed to update printer setting.';
+            printerSettingError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui pengaturan printer.');
             throw error;
         } finally {
             printerSettingSaving.value = false;
@@ -152,7 +153,7 @@ export const usePrinterSettingsModule = ({
             const result = await response.json();
             applyPrinterSettingsPayload(result);
         } catch (error) {
-            printerSettingError.value = error instanceof Error ? error.message : 'Failed to delete printer setting.';
+            printerSettingError.value = resolveRequestErrorMessage(error, 'Gagal menghapus pengaturan printer.');
             throw error;
         } finally {
             deletingPrinterSettingId.value = null;
@@ -186,7 +187,7 @@ export const usePrinterSettingsModule = ({
             const result = await response.json();
             applyPrinterSettingsPayload(result);
         } catch (error) {
-            printerSettingError.value = error instanceof Error ? error.message : 'Failed to set default printer.';
+            printerSettingError.value = resolveRequestErrorMessage(error, 'Gagal mengatur printer default.');
             throw error;
         } finally {
             printerSettingSaving.value = false;

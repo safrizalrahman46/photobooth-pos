@@ -189,7 +189,7 @@ const submitMovement = async () => {
 };
 
 const requestDelete = async (item) => {
-    const confirmed = window.confirm(`Delete ${String(item.name || 'this item')}? This action cannot be undone.`);
+    const confirmed = window.confirm(`Hapus ${String(item.name || 'item ini')}? Tindakan ini tidak dapat dibatalkan.`);
 
     if (!confirmed) return;
 
@@ -358,7 +358,7 @@ const requestDelete = async (item) => {
                 </div>
                 <p v-if="localError" class="mb-3 rounded-lg border px-3 py-2 text-sm" style="border-color: #FECACA; background: #FEF2F2; color: #B91C1C;">{{ localError }}</p>
                 <div class="rtp-admin-form-grid">
-                    <label class="text-sm text-[#475569]">Kode (optional)<input v-model="itemForm.code" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
+                    <label class="text-sm text-[#475569]">Kode (opsional)<input v-model="itemForm.code" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
                     <label class="text-sm text-[#475569]">Nama Barang<input v-model="itemForm.name" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
                     <label class="text-sm text-[#475569]">Unit<input v-model="itemForm.unit" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
                     <label class="text-sm text-[#475569]">Stok Awal<input v-model.number="itemForm.available_stock" type="number" min="0" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;"></label>
@@ -369,7 +369,7 @@ const requestDelete = async (item) => {
                 <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeItemModal">Cancel</button>
                     <button type="button" class="rounded-xl px-4 py-2 text-sm font-semibold text-white" style="background: #0F766E;" :disabled="saving" @click="submitItemForm">
-                        {{ saving ? 'Saving...' : 'Save' }}
+                        {{ saving ? 'Menyimpan...' : 'Simpan' }}
                     </button>
                 </div>
         </AdminModal>
@@ -395,7 +395,7 @@ const requestDelete = async (item) => {
                 <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeStockModal">Cancel</button>
                     <button type="button" class="rounded-xl px-4 py-2 text-sm font-semibold text-white" style="background: #0F766E;" :disabled="saving" @click="submitMovement">
-                        {{ saving ? 'Saving...' : 'Save Stock Movement' }}
+                        {{ saving ? 'Menyimpan...' : 'Simpan Perubahan Stok' }}
                     </button>
                 </div>
         </AdminModal>

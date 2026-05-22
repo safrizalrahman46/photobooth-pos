@@ -98,13 +98,13 @@ class AdminUserService
     {
         if ($actor && (int) $actor->id === (int) $user->id) {
             throw ValidationException::withMessages([
-                'user' => 'You cannot delete your own account.',
+                'user' => 'Anda tidak dapat menghapus akun sendiri.',
             ]);
         }
 
         if ($user->hasRole('owner') && User::role('owner')->count() <= 1) {
             throw ValidationException::withMessages([
-                'role' => 'At least one owner account must remain.',
+                'role' => 'Minimal harus ada satu akun owner.',
             ]);
         }
 
@@ -191,7 +191,7 @@ class AdminUserService
 
         if ($ownerWillBeRemoved && $ownersCount <= 1) {
             throw ValidationException::withMessages([
-                'role' => 'At least one active owner account must remain.',
+                'role' => 'Minimal harus ada satu akun owner aktif.',
             ]);
         }
     }
@@ -204,7 +204,7 @@ class AdminUserService
 
         if ((int) $actor->id === (int) $user->id && ! $nextIsActive) {
             throw ValidationException::withMessages([
-                'is_active' => 'You cannot deactivate your own account.',
+                'is_active' => 'Anda tidak dapat menonaktifkan akun sendiri.',
             ]);
         }
     }

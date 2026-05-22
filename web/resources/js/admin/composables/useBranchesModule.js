@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { resolveRequestErrorMessage } from '../requestErrors';
 
 export const useBranchesModule = ({
     props,
@@ -59,7 +60,7 @@ export const useBranchesModule = ({
             applyBranchesPayload(payload);
         } catch (error) {
             if (!silent) {
-                branchError.value = error instanceof Error ? error.message : 'Failed to load branches.';
+                branchError.value = resolveRequestErrorMessage(error, 'Gagal memuat data cabang.');
             }
         } finally {
             if (!silent) {
@@ -95,7 +96,7 @@ export const useBranchesModule = ({
             const payload = await response.json();
             applyBranchesPayload(payload);
         } catch (error) {
-            branchError.value = error instanceof Error ? error.message : 'Failed to create branch.';
+            branchError.value = resolveRequestErrorMessage(error, 'Gagal membuat cabang.');
             throw error;
         } finally {
             branchSaving.value = false;
@@ -131,7 +132,7 @@ export const useBranchesModule = ({
             const result = await response.json();
             applyBranchesPayload(result);
         } catch (error) {
-            branchError.value = error instanceof Error ? error.message : 'Failed to update branch.';
+            branchError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui cabang.');
             throw error;
         } finally {
             branchSaving.value = false;
@@ -165,7 +166,7 @@ export const useBranchesModule = ({
             const result = await response.json();
             applyBranchesPayload(result);
         } catch (error) {
-            branchError.value = error instanceof Error ? error.message : 'Failed to delete branch.';
+            branchError.value = resolveRequestErrorMessage(error, 'Gagal menghapus cabang.');
             throw error;
         } finally {
             deletingBranchId.value = null;

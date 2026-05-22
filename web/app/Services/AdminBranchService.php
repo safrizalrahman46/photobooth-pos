@@ -193,7 +193,7 @@ class AdminBranchService
         }
 
         throw ValidationException::withMessages([
-            'branch' => 'At least one active branch is required.',
+            'branch' => 'Minimal harus ada satu cabang aktif.',
         ]);
     }
 

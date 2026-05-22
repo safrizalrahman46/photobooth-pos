@@ -56,7 +56,7 @@ class AdminInventoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Inventory item created successfully.',
+            'message' => 'Item inventory berhasil dibuat.',
             'data' => $service->managementPayload(),
         ], 201);
     }
@@ -102,7 +102,7 @@ class AdminInventoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Inventory item updated successfully.',
+            'message' => 'Item inventory berhasil diperbarui.',
             'data' => $service->managementPayload(),
         ]);
     }
@@ -130,7 +130,7 @@ class AdminInventoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Inventory item deleted successfully.',
+            'message' => 'Item inventory berhasil dihapus.',
             'data' => $service->managementPayload(),
         ]);
     }
@@ -150,7 +150,7 @@ class AdminInventoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Inventory movement saved successfully.',
+            'message' => 'Perubahan stok berhasil disimpan.',
             'data' => $inventoryService->managementPayload(),
         ]);
     }

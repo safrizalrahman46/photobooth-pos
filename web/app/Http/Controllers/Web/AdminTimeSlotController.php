@@ -34,7 +34,7 @@ class AdminTimeSlotController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Time slot created successfully.',
+            'message' => 'Slot waktu berhasil dibuat.',
             'data' => [
                 'time_slots' => $service->rows(),
             ],
@@ -47,7 +47,7 @@ class AdminTimeSlotController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Time slot updated successfully.',
+            'message' => 'Slot waktu berhasil diperbarui.',
             'data' => [
                 'time_slots' => $service->rows(),
             ],
@@ -60,7 +60,7 @@ class AdminTimeSlotController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Time slot deleted successfully.',
+            'message' => 'Slot waktu berhasil dihapus.',
             'data' => [
                 'time_slots' => $service->rows(),
             ],
@@ -74,7 +74,7 @@ class AdminTimeSlotController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Time slot availability updated.',
+            'message' => 'Ketersediaan slot waktu berhasil diperbarui.',
             'data' => [
                 'updated_count' => $updatedCount,
                 'time_slots' => $service->rows(),
@@ -88,7 +88,7 @@ class AdminTimeSlotController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Time slots generated successfully.',
+            'message' => 'Slot waktu berhasil dibuat otomatis.',
             'data' => [
                 'summary' => $summary,
                 'time_slots' => $service->rows([
@@ -98,4 +98,3 @@ class AdminTimeSlotController extends Controller
         ], 201);
     }
 }
-

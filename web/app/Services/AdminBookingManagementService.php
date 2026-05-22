@@ -174,7 +174,7 @@ class AdminBookingManagementService
 
         if (in_array($status->value, [BookingStatus::Cancelled->value, BookingStatus::Done->value], true)) {
             throw ValidationException::withMessages([
-                'status' => 'Booking with current status cannot be confirmed.',
+                'status' => 'Booking dengan status saat ini tidak dapat dikonfirmasi.',
             ]);
         }
 
@@ -202,7 +202,7 @@ class AdminBookingManagementService
                     $booking,
                     BookingStatus::Confirmed,
                     $actorId,
-                    $reason ?: 'Confirmed from owner dashboard'
+                    $reason ?: 'Dikonfirmasi dari dashboard owner'
                 );
             }
         });
@@ -232,7 +232,7 @@ class AdminBookingManagementService
     {
         if ($cashierId <= 0) {
             throw ValidationException::withMessages([
-                'cashier' => 'Authenticated cashier is required to confirm payment.',
+                'cashier' => 'Kasir harus login untuk mengonfirmasi pembayaran.',
             ]);
         }
 
@@ -259,7 +259,7 @@ class AdminBookingManagementService
 
         if ($amount <= 0) {
             throw ValidationException::withMessages([
-                'amount' => 'Payment amount must be greater than zero.',
+                'amount' => 'Nominal pembayaran harus lebih dari nol.',
             ]);
         }
 
@@ -267,7 +267,7 @@ class AdminBookingManagementService
             'method' => $payload['method'],
             'amount' => $amount,
             'reference_no' => $payload['reference_no'] ?? null,
-            'notes' => $payload['notes'] ?? 'Payment confirmed from owner dashboard',
+            'notes' => $payload['notes'] ?? 'Pembayaran dikonfirmasi dari dashboard owner',
         ], $cashierId);
 
         if (
@@ -278,7 +278,7 @@ class AdminBookingManagementService
                 $booking,
                 BookingStatus::Paid,
                 $cashierId,
-                'Payment confirmed from owner dashboard'
+                'Pembayaran dikonfirmasi dari dashboard owner'
             );
         }
 
@@ -295,7 +295,7 @@ class AdminBookingManagementService
             $this->confirm(
                 $booking,
                 $cashierId,
-                'Auto verified after payment confirmation from owner dashboard'
+                'Diverifikasi otomatis setelah pembayaran dikonfirmasi dari dashboard owner'
             );
         }
 
@@ -333,7 +333,7 @@ class AdminBookingManagementService
 
         if (in_array($status->value, [BookingStatus::Cancelled->value, BookingStatus::Done->value], true)) {
             throw ValidationException::withMessages([
-                'status' => 'Booking with current status cannot be declined.',
+                'status' => 'Booking dengan status saat ini tidak dapat ditolak.',
             ]);
         }
 
@@ -355,7 +355,7 @@ class AdminBookingManagementService
             try {
                 $this->queueService->transition($booking->queueTicket, QueueStatus::Cancelled);
             } catch (\RuntimeException) {
-                // Keep decline flow successful even if queue transition is not possible.
+                // Penolakan booking tetap berhasil meski transisi antrean tidak bisa diproses.
             }
         }
 
@@ -363,7 +363,7 @@ class AdminBookingManagementService
             $booking,
             BookingStatus::Cancelled,
             $actorId,
-            $reason ?: 'Declined from booking detail due to missing payment proof'
+            $reason ?: 'Ditolak dari detail booking karena bukti pembayaran belum ada'
         );
 
         $this->activityLogger->log(
@@ -394,13 +394,13 @@ class AdminBookingManagementService
 
         if ($package->branch_id !== null && (int) $package->branch_id !== (int) $payload['branch_id']) {
             throw ValidationException::withMessages([
-                'package_id' => 'Package is not available for selected branch.',
+                'package_id' => 'Paket tidak tersedia untuk cabang yang dipilih.',
             ]);
         }
 
         if ($design && (int) $design->package_id !== (int) $package->id) {
             throw ValidationException::withMessages([
-                'design_catalog_id' => 'Design is not valid for selected package.',
+                'design_catalog_id' => 'Desain tidak sesuai dengan paket yang dipilih.',
             ]);
         }
 
@@ -415,7 +415,7 @@ class AdminBookingManagementService
 
         if (! $slot) {
             throw ValidationException::withMessages([
-                'booking_time' => 'Selected time slot is not available or package duration exceeds the slot range.',
+                'booking_time' => 'Slot waktu tidak tersedia atau durasi paket melebihi rentang slot.',
             ]);
         }
 
@@ -423,7 +423,7 @@ class AdminBookingManagementService
 
         if ($remainingCapacity <= 0) {
             throw ValidationException::withMessages([
-                'booking_time' => 'Selected time slot has reached its parallel booking limit. Please choose another time.',
+                'booking_time' => 'Kapasitas slot waktu sudah penuh. Silakan pilih jam lain.',
             ]);
         }
     }
@@ -533,7 +533,7 @@ class AdminBookingManagementService
 
         if ($addOns->count() !== count($ids)) {
             throw ValidationException::withMessages([
-                'add_ons' => 'One or more selected add-ons are not available.',
+                'add_ons' => 'Satu atau beberapa add-on yang dipilih tidak tersedia.',
             ]);
         }
 
@@ -544,13 +544,13 @@ class AdminBookingManagementService
 
             if (! $addOn) {
                 throw ValidationException::withMessages([
-                    'add_ons' => 'One or more selected add-ons are not available.',
+                    'add_ons' => 'Satu atau beberapa add-on yang dipilih tidak tersedia.',
                 ]);
             }
 
             if ($addOn->package_id !== null && (int) $addOn->package_id !== (int) $package->id) {
                 throw ValidationException::withMessages([
-                    'add_ons' => 'Selected add-on is not valid for selected package.',
+                    'add_ons' => 'Add-on yang dipilih tidak sesuai dengan paket.',
                 ]);
             }
 

@@ -50,7 +50,7 @@ class AdminQueueController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Queue updated successfully.',
+            'message' => 'Antrean berhasil diperbarui.',
             'data' => $service->payload($queueDate),
         ]);
     }
@@ -98,7 +98,7 @@ class AdminQueueController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Queue status updated successfully.',
+            'message' => 'Status antrean berhasil diperbarui.',
             'data' => $service->payload($ticket->queue_date?->toDateString()),
         ]);
     }
@@ -119,7 +119,7 @@ class AdminQueueController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Queue ticket created successfully.',
+            'message' => 'Tiket antrean berhasil dibuat.',
             'data' => $service->payload($queueDate),
         ], 201);
     }

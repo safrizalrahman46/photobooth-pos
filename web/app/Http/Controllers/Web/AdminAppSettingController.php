@@ -25,11 +25,10 @@ class AdminAppSettingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'App setting updated successfully.',
+            'message' => 'Pengaturan aplikasi berhasil diperbarui.',
             'data' => [
                 'app_settings' => $settings,
             ],
         ]);
     }
 }
-

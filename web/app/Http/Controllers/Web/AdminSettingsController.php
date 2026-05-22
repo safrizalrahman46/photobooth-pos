@@ -38,7 +38,7 @@ class AdminSettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Default branch updated successfully.',
+            'message' => 'Cabang default berhasil diperbarui.',
             'data' => [
                 'settings' => $updated,
             ],
@@ -56,7 +56,7 @@ class AdminSettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Branch created successfully.',
+            'message' => 'Cabang berhasil dibuat.',
             'data' => [
                 'settings' => $updated,
             ],
@@ -71,7 +71,7 @@ class AdminSettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Branch updated successfully.',
+            'message' => 'Cabang berhasil diperbarui.',
             'data' => [
                 'settings' => $updated,
             ],
@@ -87,7 +87,7 @@ class AdminSettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Branch removed from active list.',
+            'message' => 'Cabang berhasil dihapus dari daftar aktif.',
             'data' => [
                 'settings' => $updated,
             ],

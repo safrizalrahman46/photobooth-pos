@@ -23,7 +23,7 @@ class PosWalkInCheckoutService
     {
         if ($cashierId <= 0) {
             throw ValidationException::withMessages([
-                'cashier' => 'Authenticated cashier is required.',
+                'cashier' => 'Kasir harus login terlebih dahulu.',
             ]);
         }
 

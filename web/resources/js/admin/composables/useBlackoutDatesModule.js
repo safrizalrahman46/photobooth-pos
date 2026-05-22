@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { resolveRequestErrorMessage } from '../requestErrors';
 
 export const useBlackoutDatesModule = ({
     props,
@@ -46,7 +47,7 @@ export const useBlackoutDatesModule = ({
             applyBlackoutDatesPayload(payload);
         } catch (error) {
             if (!silent) {
-                blackoutDateError.value = error instanceof Error ? error.message : 'Failed to load blackout dates.';
+                blackoutDateError.value = resolveRequestErrorMessage(error, 'Gagal memuat tanggal blackout.');
             }
         } finally {
             if (!silent) {
@@ -82,7 +83,7 @@ export const useBlackoutDatesModule = ({
             const payload = await response.json();
             applyBlackoutDatesPayload(payload);
         } catch (error) {
-            blackoutDateError.value = error instanceof Error ? error.message : 'Failed to create blackout date.';
+            blackoutDateError.value = resolveRequestErrorMessage(error, 'Gagal membuat tanggal blackout.');
             throw error;
         } finally {
             blackoutDateSaving.value = false;
@@ -118,7 +119,7 @@ export const useBlackoutDatesModule = ({
             const result = await response.json();
             applyBlackoutDatesPayload(result);
         } catch (error) {
-            blackoutDateError.value = error instanceof Error ? error.message : 'Failed to update blackout date.';
+            blackoutDateError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui tanggal blackout.');
             throw error;
         } finally {
             blackoutDateSaving.value = false;
@@ -152,7 +153,7 @@ export const useBlackoutDatesModule = ({
             const result = await response.json();
             applyBlackoutDatesPayload(result);
         } catch (error) {
-            blackoutDateError.value = error instanceof Error ? error.message : 'Failed to delete blackout date.';
+            blackoutDateError.value = resolveRequestErrorMessage(error, 'Gagal menghapus tanggal blackout.');
             throw error;
         } finally {
             deletingBlackoutDateId.value = null;

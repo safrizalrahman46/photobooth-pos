@@ -232,12 +232,12 @@ const closeModal = () => {
 
 const validateForm = () => {
     if (!String(form.name || '').trim()) {
-        localError.value = 'Package name is required.';
+        localError.value = 'Nama paket wajib diisi.';
         return false;
     }
 
     if (Number(form.duration_minutes || 0) < 5) {
-        localError.value = 'Duration must be at least 5 minutes.';
+        localError.value = 'Durasi minimal 5 menit.';
         return false;
     }
 
@@ -323,7 +323,7 @@ onBeforeUnmount(() => {
 
 const requestDelete = async (pkg) => {
     const packageName = String(pkg.name || 'this package');
-    const confirmed = window.confirm(`Delete ${packageName}? This action cannot be undone.`);
+    const confirmed = window.confirm(`Hapus ${packageName}? Tindakan ini tidak dapat dibatalkan.`);
 
     if (!confirmed) {
         return;
@@ -469,7 +469,7 @@ const requestDelete = async (pkg) => {
             </article>
 
             <div v-if="!packageItems.length" class="col-span-full rounded-2xl border border-dashed p-8 text-center text-sm text-[#94A3B8]" style="border-color: #CBD5E1;">
-                No package data available.
+                Belum ada data paket.
             </div>
         </div>
 
@@ -487,7 +487,7 @@ const requestDelete = async (pkg) => {
                     <label class="text-sm text-[#475569]">
                         Branch
                         <select v-model="form.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
-                            <option value="">All Branches</option>
+                            <option value="">Semua Cabang</option>
                             <option v-for="branch in branchOptions" :key="`pkg-branch-${branch.id}`" :value="String(branch.id)">
                                 {{ branch.name }}
                             </option>
@@ -629,7 +629,7 @@ const requestDelete = async (pkg) => {
                         :disabled="saving"
                         @click="submitForm"
                     >
-                        {{ saving ? 'Saving...' : (modalMode === 'create' ? 'Create Package' : 'Save Changes') }}
+                        {{ saving ? 'Menyimpan...' : (modalMode === 'create' ? 'Buat Paket' : 'Simpan Perubahan') }}
                     </button>
                 </div>
         </AdminModal>

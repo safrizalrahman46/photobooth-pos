@@ -25,7 +25,7 @@ const submitCreate = () => {
     const amount = Number(form.amount || 0);
 
     if (!transactionId || amount <= 0) {
-        localError.value = 'Transaction and amount are required.';
+        localError.value = 'Transaksi dan nominal pembayaran wajib diisi.';
         return;
     }
 
@@ -94,7 +94,7 @@ const submitCreate = () => {
                 <input v-model="form.notes" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;" >
             </label>
             <button type="button" class="mt-3 w-full rounded-xl bg-[#7E22CE] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
-                {{ saving ? 'Saving...' : 'Add Payment' }}
+                {{ saving ? 'Menyimpan...' : 'Tambah Pembayaran' }}
             </button>
         </section>
 

@@ -316,12 +316,12 @@ const submitWalkIn = async () => {
     const branchId = Number(walkInForm.branch_id || activeBranchId.value || 0);
 
     if (!branchId) {
-        localError.value = 'Branch is required.';
+        localError.value = 'Cabang wajib dipilih.';
         return;
     }
 
     if (!customerName) {
-        localError.value = 'Customer name is required.';
+        localError.value = 'Nama customer wajib diisi.';
         return;
     }
 
@@ -344,7 +344,7 @@ const submitBooking = async () => {
     const bookingId = Number(bookingForm.booking_id || 0);
 
     if (!bookingId) {
-        localError.value = 'Please select a booking.';
+        localError.value = 'Pilih booking terlebih dahulu.';
         return;
     }
 
@@ -515,7 +515,7 @@ const submitQueue = async () => {
                             @click="openAddModal"
                         >
                             <Plus class="h-4 w-4" />
-                            Add to Queue
+                            Tambah ke Antrean
                         </button>
                     </div>
                 </header>
@@ -573,7 +573,7 @@ const submitQueue = async () => {
 
                     <div v-if="!waitingQueue.length" class="px-5 py-12 text-center">
                         <UserPlus class="mx-auto mb-2 h-7 w-7 text-[#94A3B8]" />
-                        <p class="text-sm text-[#94A3B8]">Queue waiting list is currently empty.</p>
+                        <p class="text-sm text-[#94A3B8]">Daftar antrean masih kosong.</p>
                         <button
                             type="button"
                             class="mt-3 rounded-xl px-3 py-2 text-sm font-semibold"
@@ -604,7 +604,7 @@ const submitQueue = async () => {
 
         <AdminModal :show="addModalOpen" panel-class="max-w-xl">
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-[#0F172A]">Add to Queue</h3>
+                    <h3 class="text-lg font-semibold text-[#0F172A]">Tambah ke Antrean</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeAddModal">Close</button>
                 </div>
 
@@ -614,7 +614,7 @@ const submitQueue = async () => {
 
                 <div class="space-y-3">
                     <label class="text-sm text-[#475569]">
-                        Queue Source
+                        Sumber Antrean
                         <select v-model="queueSourceType" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
                             <option value="booking">Booking</option>
                             <option value="walk_in">Walk In</option>
@@ -653,7 +653,7 @@ const submitQueue = async () => {
                         </label>
 
                         <label class="text-sm text-[#475569]">
-                            Queue Date
+                            Tanggal Antrean
                             <input v-model="walkInForm.queue_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
                         </label>
 
@@ -663,7 +663,7 @@ const submitQueue = async () => {
                         </label>
 
                         <label class="text-sm text-[#475569] md:col-span-2">
-                            Phone (optional)
+                            Nomor HP (opsional)
                             <input v-model="walkInForm.customer_phone" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
                         </label>
                     </div>
@@ -678,7 +678,7 @@ const submitQueue = async () => {
                         :disabled="queueActionLoading"
                         @click="submitQueue"
                     >
-                        {{ queueActionLoading ? 'Saving...' : 'Add Queue' }}
+                        {{ queueActionLoading ? 'Menyimpan...' : 'Tambah Antrean' }}
                     </button>
                 </div>
         </AdminModal>

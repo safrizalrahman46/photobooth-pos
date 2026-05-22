@@ -404,7 +404,7 @@ const applyTodayFilter = () => {
                 </div>
 
                 <button type="button" class="mt-3 w-full rounded-xl bg-[#15803D] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
-                    {{ saving ? 'Saving...' : 'Create Slot' }}
+                    {{ saving ? 'Menyimpan...' : 'Buat Slot' }}
                 </button>
             </div>
 

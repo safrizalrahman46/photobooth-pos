@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { CheckCircle2, Eye, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-vue-next';
 import AdminModal from '../components/AdminModal.vue';
+import { resolveRequestErrorMessage } from '../requestErrors';
 
 const props = defineProps({
     search: { type: String, default: '' },
@@ -330,7 +331,7 @@ const fetchAvailableSlots = async () => {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error('Gagal memuat ketersediaan slot.');
         }
 
         const payload = await response.json();
@@ -348,7 +349,7 @@ const fetchAvailableSlots = async () => {
     } catch (error) {
         availableSlots.value = [];
         bookingForm.booking_time = '';
-        slotLookupError.value = error instanceof Error ? error.message : 'Failed to load slot availability.';
+        slotLookupError.value = resolveRequestErrorMessage(error, 'Gagal memuat ketersediaan slot.');
     } finally {
         slotLoading.value = false;
     }
@@ -439,29 +440,29 @@ const validateBookingForm = () => {
     }
 
     if (!bookingForm.package_id) {
-        localError.value = 'Package is required.';
+        localError.value = 'Paket wajib dipilih.';
         return false;
     }
 
     if (!String(bookingForm.customer_name || '').trim()) {
-        localError.value = 'Customer name is required.';
+        localError.value = 'Nama customer wajib diisi.';
         return false;
     }
 
     if (!String(bookingForm.customer_phone || '').trim()) {
-        localError.value = 'Customer phone is required.';
+        localError.value = 'Nomor HP customer wajib diisi.';
         return false;
     }
 
     if (!bookingForm.booking_date || !bookingForm.booking_time) {
-        localError.value = 'Booking date and time are required.';
+        localError.value = 'Tanggal dan jam booking wajib dipilih.';
         return false;
     }
 
     const selectedSlot = normalizedSlotOptions.value.find((slot) => slot.start_time === toHourMinute(bookingForm.booking_time));
 
     if (!selectedSlot || !selectedSlot.is_available) {
-        localError.value = 'Please select an available slot based on opening hours and package duration.';
+        localError.value = 'Pilih slot yang tersedia sesuai jam operasional dan durasi paket.';
         return false;
     }
 
@@ -510,7 +511,7 @@ const submitBookingForm = async () => {
 };
 
 const requestDeleteBooking = async (row) => {
-    const confirmed = window.confirm(`Delete booking ${row.booking_code}? This action cannot be undone.`);
+    const confirmed = window.confirm(`Hapus booking ${row.booking_code}? Tindakan ini tidak dapat dibatalkan.`);
 
     if (!confirmed) {
         return;
@@ -601,12 +602,12 @@ const submitPaymentConfirmation = async () => {
     const amount = Number(paymentForm.amount || 0);
 
     if (!paymentForm.method) {
-        localError.value = 'Payment method is required.';
+        localError.value = 'Metode pembayaran wajib dipilih.';
         return;
     }
 
     if (amount <= 0) {
-        localError.value = 'Payment amount must be greater than zero.';
+        localError.value = 'Nominal pembayaran harus lebih dari nol.';
         return;
     }
 
@@ -929,7 +930,7 @@ watch(
 
         <AdminModal :show="bookingModalOpen" panel-class="max-w-2xl">
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-[#0F172A]">{{ bookingModalMode === 'create' ? 'Create Booking' : 'Edit Booking' }}</h3>
+                    <h3 class="text-lg font-semibold text-[#0F172A]">{{ bookingModalMode === 'create' ? 'Buat Booking' : 'Edit Booking' }}</h3>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeBookingModal">Close</button>
                 </div>
 
@@ -1064,7 +1065,7 @@ watch(
                         :disabled="saving"
                         @click="submitBookingForm"
                     >
-                        {{ saving ? 'Saving...' : (bookingModalMode === 'create' ? 'Create Booking' : 'Save Changes') }}
+                        {{ saving ? 'Menyimpan...' : (bookingModalMode === 'create' ? 'Buat Booking' : 'Simpan Perubahan') }}
                     </button>
                 </div>
         </AdminModal>
@@ -1124,7 +1125,7 @@ watch(
                         :disabled="saving"
                         @click="submitPaymentConfirmation"
                     >
-                        {{ saving ? 'Saving...' : 'Confirm Payment' }}
+                        {{ saving ? 'Menyimpan...' : 'Konfirmasi Pembayaran' }}
                     </button>
                 </div>
         </AdminModal>

@@ -19,7 +19,7 @@ class MidtransWebhookController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         if (! (bool) config('services.midtrans.enabled', false)) {
-            return $this->responder->error('Midtrans webhook is disabled.', 404);
+            return $this->responder->error('Webhook Midtrans tidak aktif.', 404);
         }
 
         try {

@@ -99,24 +99,24 @@ const closeModal = () => {
 
 const validateForm = () => {
     if (!String(form.name || '').trim()) {
-        localError.value = 'Name is required.';
+        localError.value = 'Nama wajib diisi.';
         return false;
     }
 
     if (!String(form.email || '').trim()) {
-        localError.value = 'Email is required.';
+        localError.value = 'Email wajib diisi.';
         return false;
     }
 
     const password = String(form.password || '').trim();
 
     if (modalMode.value === 'create' && password.length < 8) {
-        localError.value = 'Password must be at least 8 characters.';
+        localError.value = 'Password minimal 8 karakter.';
         return false;
     }
 
     if (modalMode.value === 'edit' && password.length > 0 && password.length < 8) {
-        localError.value = 'If filled, password must be at least 8 characters.';
+        localError.value = 'Jika diisi, password minimal 8 karakter.';
         return false;
     }
 
@@ -323,12 +323,12 @@ const requestDelete = async (user) => {
                     </label>
 
                     <label class="text-sm text-[#475569]">
-                        Phone (optional)
+                        Nomor HP (opsional)
                         <input v-model="form.phone" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
                     </label>
 
                     <label class="text-sm text-[#475569]">
-                        Password {{ modalMode === 'edit' ? '(optional)' : '' }}
+                        Password {{ modalMode === 'edit' ? '(opsional)' : '' }}
                         <input v-model="form.password" type="password" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
                     </label>
 
@@ -357,7 +357,7 @@ const requestDelete = async (user) => {
                         :disabled="saving"
                         @click="submitForm"
                     >
-                        {{ saving ? 'Saving...' : (modalMode === 'create' ? 'Create User' : 'Save Changes') }}
+                        {{ saving ? 'Menyimpan...' : (modalMode === 'create' ? 'Buat Pengguna' : 'Simpan Perubahan') }}
                     </button>
                 </div>
         </AdminModal>

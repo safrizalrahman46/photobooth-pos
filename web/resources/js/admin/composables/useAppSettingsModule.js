@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { resolveRequestErrorMessage } from '../requestErrors';
 
 export const useAppSettingsModule = ({
     props,
@@ -60,7 +61,7 @@ export const useAppSettingsModule = ({
             applyAppSettingsPayload(payload);
         } catch (error) {
             if (!silent) {
-                appSettingsError.value = error instanceof Error ? error.message : 'Failed to load app settings.';
+                appSettingsError.value = resolveRequestErrorMessage(error, 'Gagal memuat pengaturan aplikasi.');
             }
         } finally {
             if (!silent) {
@@ -98,9 +99,9 @@ export const useAppSettingsModule = ({
 
             const result = await response.json();
             applyAppSettingsPayload(result);
-            appSettingsSuccess.value = String(result?.message || 'App settings updated.');
+            appSettingsSuccess.value = String(result?.message || 'Pengaturan aplikasi berhasil diperbarui.');
         } catch (error) {
-            appSettingsError.value = error instanceof Error ? error.message : 'Failed to update app setting.';
+            appSettingsError.value = resolveRequestErrorMessage(error, 'Gagal memperbarui pengaturan aplikasi.');
             throw error;
         } finally {
             appSettingsSaving.value = false;

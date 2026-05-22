@@ -31,7 +31,7 @@ class AdminUserController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'User created successfully.',
+            'message' => 'Pengguna berhasil dibuat.',
             'data' => [
                 'users' => $userService->rows(),
                 'roles' => $userService->roleOptions(),
@@ -50,7 +50,7 @@ class AdminUserController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'User updated successfully.',
+            'message' => 'Pengguna berhasil diperbarui.',
             'data' => [
                 'users' => $userService->rows(),
                 'roles' => $userService->roleOptions(),
@@ -69,7 +69,7 @@ class AdminUserController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'User deleted successfully.',
+            'message' => 'Pengguna berhasil dihapus.',
             'data' => [
                 'users' => $userService->rows(),
                 'roles' => $userService->roleOptions(),

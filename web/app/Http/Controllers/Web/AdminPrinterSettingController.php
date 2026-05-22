@@ -32,7 +32,7 @@ class AdminPrinterSettingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Printer setting created successfully.',
+            'message' => 'Pengaturan printer berhasil dibuat.',
             'data' => [
                 'printer_settings' => $service->rows(['include_inactive' => true]),
             ],
@@ -48,7 +48,7 @@ class AdminPrinterSettingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Printer setting updated successfully.',
+            'message' => 'Pengaturan printer berhasil diperbarui.',
             'data' => [
                 'printer_settings' => $service->rows(['include_inactive' => true]),
             ],
@@ -61,7 +61,7 @@ class AdminPrinterSettingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Default printer updated.',
+            'message' => 'Printer default berhasil diperbarui.',
             'data' => [
                 'printer_settings' => $service->rows(['include_inactive' => true]),
             ],
@@ -74,11 +74,10 @@ class AdminPrinterSettingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Printer setting deleted successfully.',
+            'message' => 'Pengaturan printer berhasil dihapus.',
             'data' => [
                 'printer_settings' => $service->rows(['include_inactive' => true]),
             ],
         ]);
     }
 }
-
