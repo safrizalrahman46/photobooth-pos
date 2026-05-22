@@ -43,7 +43,7 @@ class OrderSummaryPanel extends StatelessWidget {
           ),
 
           // Divider
-          Container(height: 4, color: Colors.black.withOpacity(0.2)),
+          Container(height: 4, color: Colors.black.withValues(alpha: 0.2)),
 
           Expanded(
             child: SingleChildScrollView(
@@ -65,7 +65,7 @@ class OrderSummaryPanel extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Column(
@@ -91,7 +91,7 @@ class OrderSummaryPanel extends StatelessWidget {
                                     vertical: 4,
                                   ),
                                   child: Divider(
-                                    color: Colors.white.withOpacity(0.1),
+                                    color: Colors.white.withValues(alpha: 0.1),
                                     height: 1,
                                   ),
                                 ),
@@ -130,7 +130,9 @@ class OrderSummaryPanel extends StatelessWidget {
                                   isDense: true,
                                   hintText: 'CONTOH10',
                                   filled: true,
-                                  fillColor: Colors.black.withOpacity(0.05),
+                                  fillColor: Colors.black.withValues(
+                                    alpha: 0.05,
+                                  ),
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 10,
                                     vertical: 9,
@@ -306,7 +308,7 @@ class OrderSummaryPanel extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -345,7 +347,7 @@ class OrderSummaryPanel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -388,7 +390,7 @@ class _OrderSummaryRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.15),
+          color: Colors.black.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
         ),
         child: _OrderSummaryItem(
@@ -435,7 +437,7 @@ class _OrderSummaryItem extends StatelessWidget {
                 Text(
                   subtitle,
                   style: AppTextStyles.captionMedium.copyWith(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 10,
                   ),
                 ),

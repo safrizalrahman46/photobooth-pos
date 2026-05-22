@@ -55,12 +55,6 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
     });
   }
 
-  void _onClear() {
-    setState(() {
-      _paidAmountString = '0';
-    });
-  }
-
   void _onBackspace() {
     setState(() {
       if (_paidAmountString.length <= 1) {
@@ -140,7 +134,7 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -218,7 +212,7 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
                                         style: AppTextStyles.bodySmall.copyWith(
                                           fontSize: 12,
                                           color: AppColors.textPrimary
-                                              .withOpacity(0.8),
+                                              .withValues(alpha: 0.8),
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),

@@ -70,16 +70,21 @@ class _LoginPageState extends State<LoginPage>
 
     try {
       final session = await ApiClient(
-        baseUrl: AppConfig.defaultApiBaseUrl,
+        baseUrl: AppConfig.apiBaseUrl,
       ).login(email: email, password: password);
       widget.onLoggedIn(session);
     } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
       setState(() => _error = error.message);
     } catch (_) {
-      setState(
-        () => _error =
-            'Tidak dapat terhubung ke server. Pastikan Laravel sedang berjalan.',
-      );
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _error = AppConfig.connectionErrorMessage);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -146,9 +151,11 @@ class _LoginPageState extends State<LoginPage>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
+              color: AppColors.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.primary.withOpacity(0.35)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.35),
+              ),
             ),
             child: Text(
               'READY TO PICT',
@@ -200,7 +207,7 @@ class _LoginPageState extends State<LoginPage>
           const SizedBox(height: 48),
 
           // Footer divider
-          Container(height: 1, color: Colors.white.withOpacity(0.07)),
+          Container(height: 1, color: Colors.white.withValues(alpha: 0.07)),
           const SizedBox(height: 20),
 
           Row(
@@ -209,7 +216,7 @@ class _LoginPageState extends State<LoginPage>
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
+                  color: AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -465,14 +472,14 @@ class _LoginPageState extends State<LoginPage>
       height: 50,
       child: Material(
         color: _submitting
-            ? AppColors.primary.withOpacity(0.7)
+            ? AppColors.primary.withValues(alpha: 0.7)
             : AppColors.primary,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: _submitting ? null : _submit,
-          splashColor: Colors.white.withOpacity(0.1),
-          highlightColor: Colors.white.withOpacity(0.05),
+          splashColor: Colors.white.withValues(alpha: 0.1),
+          highlightColor: Colors.white.withValues(alpha: 0.05),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: _submitting
@@ -526,9 +533,9 @@ class _FeatureChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Text(
         label,

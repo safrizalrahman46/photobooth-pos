@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:desktop_flutter/shared/models/desktop_session.dart';
 import '../../../shared/layout/sidebar/sidebar.dart';
 import '../../../shared/layout/header/app_header.dart';
+import '../../../shared/widgets/app_confirm_dialog.dart';
 
 // Pages
 import '../../booking/presentation/pages/walkin_page.dart';
@@ -98,22 +99,12 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Yakin ingin keluar dari aplikasi desktop?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Batal'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Logout'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => const AppConfirmDialog(
+        title: 'Logout desktop?',
+        message:
+            'Sesi desktop akan ditutup. Pastikan transaksi yang sedang berjalan sudah selesai sebelum keluar.',
+        confirmLabel: 'Logout',
+      ),
     );
 
     if (confirmed != true || !mounted) {
@@ -172,12 +163,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           Expanded(
             child: Column(
               children: [
-                AppHeader(
-                  userName: widget.session.user.name,
-                  userRoleLabel: roleLabel,
-                  onLogout: widget.onLogout == null ? null : _confirmLogout,
-                  logoutInProgress: _loggingOut,
-                ),
+                const AppHeader(),
 
                 Expanded(child: activeDestination.builder()),
               ],

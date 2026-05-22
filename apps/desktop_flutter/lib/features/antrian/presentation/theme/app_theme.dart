@@ -26,9 +26,8 @@ class AppTheme {
       scaffoldBackgroundColor: background,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primary,
-        background: background,
         surface: surface,
-      ),
+      ).copyWith(surface: surface),
       appBarTheme: const AppBarTheme(
         backgroundColor: surface,
         elevation: 0,

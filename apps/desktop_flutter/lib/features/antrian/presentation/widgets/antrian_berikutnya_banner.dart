@@ -25,7 +25,7 @@ class AntrianBerikutnyaBanner extends StatelessWidget {
         ), // More rounded corners like mockup
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4AABF7).withOpacity(0.3),
+            color: const Color(0xFF4AABF7).withValues(alpha: 0.3),
             blurRadius: 30,
             offset: const Offset(0, 12),
           ),
@@ -51,7 +51,7 @@ class AntrianBerikutnyaBanner extends StatelessWidget {
                     fontFamily: AppTheme.fontFamily,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     letterSpacing: 2.0,
                   ),
                 ),
@@ -107,9 +107,12 @@ class _BadgeInfo extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.18),
+        color: Colors.white.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
       ),
       child: Text(
         label,

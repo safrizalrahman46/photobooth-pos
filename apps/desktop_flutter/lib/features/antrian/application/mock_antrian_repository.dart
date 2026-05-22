@@ -11,7 +11,7 @@ class MockAntrianRepository implements AntrianRepository {
       StreamController<List<AntrianEntity>>.broadcast();
   final _boothController = StreamController<List<BoothEntity>>.broadcast();
 
-  List<AntrianEntity> _menunggu = [
+  final List<AntrianEntity> _menunggu = [
     AntrianEntity(
       id: '1',
       nomorAntrian: '#A-042',
@@ -44,7 +44,7 @@ class MockAntrianRepository implements AntrianRepository {
     ),
   ];
 
-  List<AntrianEntity> _selesai = [
+  final List<AntrianEntity> _selesai = [
     AntrianEntity(
       id: '39',
       nomorAntrian: '#39',
@@ -91,7 +91,7 @@ class MockAntrianRepository implements AntrianRepository {
     ),
   ];
 
-  List<BoothEntity> _booths = [
+  final List<BoothEntity> _booths = [
     BoothEntity(
       id: 'booth01',
       namaBooth: 'Booth #01',

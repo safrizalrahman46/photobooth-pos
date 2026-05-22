@@ -1,3 +1,4 @@
+import 'package:desktop_flutter/core/config/app_config.dart';
 import 'package:desktop_flutter/core/network/api_client.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/core/session/session_store.dart';
@@ -26,18 +27,24 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
 
   Future<void> _restoreSession() async {
     final storedSession = await _sessionStore.load();
+    final configuredBaseUrl = AppConfig.apiBaseUrl;
 
     DesktopSession? session = storedSession;
 
-    if (storedSession != null) {
+    if (storedSession != null &&
+        !AppConfig.matchesConfiguredApiBaseUrl(storedSession.baseUrl)) {
+      await _sessionStore.clear();
+      ApiSession.clear();
+      session = null;
+    } else if (storedSession != null) {
       try {
         final profile = await ApiClient(
-          baseUrl: storedSession.baseUrl,
+          baseUrl: configuredBaseUrl,
           token: storedSession.token,
         ).fetchProfile();
 
         session = DesktopSession(
-          baseUrl: storedSession.baseUrl,
+          baseUrl: configuredBaseUrl,
           token: storedSession.token,
           user: profile,
         );
@@ -45,6 +52,10 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
         await _sessionStore.save(session);
         ApiSession.set(session);
       } on ApiException {
+        await _sessionStore.clear();
+        ApiSession.clear();
+        session = null;
+      } catch (_) {
         await _sessionStore.clear();
         ApiSession.clear();
         session = null;

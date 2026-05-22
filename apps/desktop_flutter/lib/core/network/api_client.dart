@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:desktop_flutter/core/config/app_config.dart';
@@ -22,7 +23,8 @@ import 'package:desktop_flutter/shared/models/time_slot_management_item.dart';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  ApiClient({required this.baseUrl, this.token});
+  ApiClient({required String baseUrl, this.token})
+    : baseUrl = AppConfig.normalizeApiBaseUrl(baseUrl);
 
   final String baseUrl;
   final String? token;
@@ -31,14 +33,16 @@ class ApiClient {
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: _headers(),
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-        'device_name': AppConfig.deviceName,
-      }),
+    final response = await _sendHttp(
+      () => http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: _headers(),
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+          'device_name': AppConfig.deviceName,
+        }),
+      ),
     );
 
     final payload = _decode(response.body);
@@ -63,9 +67,11 @@ class ApiClient {
       return;
     }
 
-    await http.post(
-      Uri.parse('$baseUrl/auth/logout'),
-      headers: _headers(authenticated: true),
+    await _sendHttp(
+      () => http.post(
+        Uri.parse('$baseUrl/auth/logout'),
+        headers: _headers(authenticated: true),
+      ),
     );
   }
 
@@ -1196,33 +1202,34 @@ class ApiClient {
   }) async {
     final uri = Uri.parse('$baseUrl$path').replace(queryParameters: query);
 
-    final response = switch (method.toUpperCase()) {
-      'GET' => await http.get(
-        uri,
-        headers: _headers(authenticated: authenticated),
-      ),
-      'POST' => await http.post(
-        uri,
-        headers: _headers(authenticated: authenticated),
-        body: body != null ? jsonEncode(body) : null,
-      ),
-      'PATCH' => await http.patch(
-        uri,
-        headers: _headers(authenticated: authenticated),
-        body: body != null ? jsonEncode(body) : null,
-      ),
-      'PUT' => await http.put(
-        uri,
-        headers: _headers(authenticated: authenticated),
-        body: body != null ? jsonEncode(body) : null,
-      ),
-      'DELETE' => await http.delete(
-        uri,
-        headers: _headers(authenticated: authenticated),
-        body: body != null ? jsonEncode(body) : null,
-      ),
-      _ => throw ApiException('Metode HTTP tidak didukung: $method'),
-    };
+    final response = await _sendHttp(() {
+      final headers = _headers(authenticated: authenticated);
+
+      return switch (method.toUpperCase()) {
+        'GET' => http.get(uri, headers: headers),
+        'POST' => http.post(
+          uri,
+          headers: headers,
+          body: body != null ? jsonEncode(body) : null,
+        ),
+        'PATCH' => http.patch(
+          uri,
+          headers: headers,
+          body: body != null ? jsonEncode(body) : null,
+        ),
+        'PUT' => http.put(
+          uri,
+          headers: headers,
+          body: body != null ? jsonEncode(body) : null,
+        ),
+        'DELETE' => http.delete(
+          uri,
+          headers: headers,
+          body: body != null ? jsonEncode(body) : null,
+        ),
+        _ => throw ApiException('Metode HTTP tidak didukung: $method'),
+      };
+    });
 
     final payload = _decode(response.body);
 
@@ -1231,6 +1238,16 @@ class ApiClient {
     }
 
     return payload;
+  }
+
+  Future<http.Response> _sendHttp(
+    Future<http.Response> Function() request,
+  ) async {
+    try {
+      return await request().timeout(AppConfig.apiRequestTimeout);
+    } on TimeoutException {
+      throw ApiException(AppConfig.connectionTimeoutMessage);
+    }
   }
 
   Map<String, String> _headers({bool authenticated = false}) {
@@ -1247,7 +1264,13 @@ class ApiClient {
       return <String, dynamic>{};
     }
 
-    final decoded = jsonDecode(body);
+    final Object? decoded;
+
+    try {
+      decoded = jsonDecode(body);
+    } on FormatException {
+      throw ApiException('Respons server Ready To Pict tidak valid.');
+    }
 
     if (decoded is Map<String, dynamic>) {
       return decoded;

@@ -38,10 +38,12 @@ class Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sidebarWidth = isExpanded ? 224.0 : 72.0;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOut,
-      width: isExpanded ? 240 : 88,
+      width: sidebarWidth,
       decoration: const BoxDecoration(
         color: AppColors.sidebarBg,
         border: Border(right: BorderSide(color: AppColors.divider, width: 1)),
@@ -49,8 +51,8 @@ class Sidebar extends StatelessWidget {
       child: ClipRect(
         child: OverflowBox(
           alignment: Alignment.topLeft,
-          maxWidth: isExpanded ? 240 : 88,
-          minWidth: isExpanded ? 240 : 88,
+          maxWidth: sidebarWidth,
+          minWidth: sidebarWidth,
           child: Column(
             crossAxisAlignment: isExpanded
                 ? CrossAxisAlignment.start
@@ -59,10 +61,10 @@ class Sidebar extends StatelessWidget {
               // Logo & Toggle Area
               Padding(
                 padding: EdgeInsets.fromLTRB(
-                  isExpanded ? 20 : 8,
+                  isExpanded ? 18 : 8,
+                  20,
+                  isExpanded ? 18 : 8,
                   24,
-                  isExpanded ? 20 : 8,
-                  32,
                 ),
                 child: Row(
                   mainAxisAlignment: isExpanded
@@ -70,7 +72,12 @@ class Sidebar extends StatelessWidget {
                       : MainAxisAlignment.center,
                   children: [
                     if (isExpanded)
-                      Text('Ready To Pict', style: AppTextStyles.h2),
+                      Text(
+                        'Ready To Pict',
+                        style: AppTextStyles.h3.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
 
                     IconButton(
                       onPressed: onToggle,
@@ -79,9 +86,9 @@ class Sidebar extends StatelessWidget {
                             ? Icons.menu_open_rounded
                             : Icons.menu_rounded,
                         color: AppColors.textPrimary,
-                        size: 24,
+                        size: 20,
                       ),
-                      splashRadius: 20,
+                      splashRadius: 18,
                       tooltip: isExpanded ? 'Tutup Sidebar' : 'Buka Sidebar',
                     ),
                   ],
@@ -148,7 +155,7 @@ class _SidebarItemState extends State<_SidebarItem>
     );
     _colorAnimation = ColorTween(
       begin: Colors.transparent,
-      end: AppColors.sidebarActive.withOpacity(0.15),
+      end: AppColors.sidebarActive.withValues(alpha: 0.15),
     ).animate(_blinkController);
   }
 
@@ -184,14 +191,14 @@ class _SidebarItemState extends State<_SidebarItem>
                         : Colors.transparent);
 
               return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                  horizontal: 12,
+                  vertical: 10,
                 ),
                 decoration: BoxDecoration(
                   color: bgColor,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: child,
               );
@@ -203,13 +210,13 @@ class _SidebarItemState extends State<_SidebarItem>
               children: [
                 Icon(
                   widget.icon,
-                  size: 20,
+                  size: 18,
                   color: widget.isActive
                       ? AppColors.textWhite
                       : AppColors.sidebarInactiveText,
                 ),
                 if (widget.isExpanded) ...[
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Text(
                     widget.label,
                     style: AppTextStyles.bodyMedium.copyWith(
@@ -248,8 +255,8 @@ class _SidebarFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(
-        vertical: 18,
-        horizontal: isExpanded ? 16 : 8,
+        vertical: 14,
+        horizontal: isExpanded ? 12 : 8,
       ),
       child: Column(
         children: [
@@ -259,16 +266,16 @@ class _SidebarFooter extends StatelessWidget {
                 : MainAxisAlignment.center,
             children: [
               CircleAvatar(
-                radius: 20,
+                radius: 17,
                 backgroundColor: AppColors.primaryLight,
                 child: const Icon(
                   Icons.person_rounded,
                   color: AppColors.primary,
-                  size: 20,
+                  size: 17,
                 ),
               ),
               if (isExpanded) ...[
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,21 +301,21 @@ class _SidebarFooter extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Tooltip(
             message: 'Logout',
             child: InkWell(
               onTap: onLogout == null ? null : () => onLogout!(),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 11,
+                  horizontal: 11,
+                  vertical: 9,
                 ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF1F1),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFFFFCDD2)),
                 ),
                 child: Row(
@@ -319,13 +326,13 @@ class _SidebarFooter extends StatelessWidget {
                     const Icon(
                       Icons.logout_rounded,
                       color: Colors.redAccent,
-                      size: 18,
+                      size: 16,
                     ),
                     if (isExpanded) ...[
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Text(
                         'Logout',
-                        style: AppTextStyles.bodyMedium.copyWith(
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.redAccent,
                           fontWeight: FontWeight.w700,
                         ),
