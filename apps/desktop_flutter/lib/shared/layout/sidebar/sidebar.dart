@@ -259,6 +259,9 @@ class _SidebarFooter extends StatelessWidget {
         horizontal: isExpanded ? 12 : 8,
       ),
       child: Column(
+        crossAxisAlignment: isExpanded
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           Row(
             mainAxisAlignment: isExpanded
@@ -277,25 +280,13 @@ class _SidebarFooter extends StatelessWidget {
               if (isExpanded) ...[
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        userName,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        userRoleLabel,
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  child: Text(
+                    userName.isEmpty ? 'User' : userName,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -308,20 +299,18 @@ class _SidebarFooter extends StatelessWidget {
               onTap: onLogout == null ? null : () => onLogout!(),
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 11,
-                  vertical: 9,
-                ),
+                width: isExpanded ? double.infinity : 44,
+                height: isExpanded ? null : 44,
+                padding: isExpanded
+                    ? const EdgeInsets.symmetric(horizontal: 14, vertical: 11)
+                    : EdgeInsets.zero,
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF1F1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFFFFCDD2)),
                 ),
                 child: Row(
-                  mainAxisAlignment: isExpanded
-                      ? MainAxisAlignment.start
-                      : MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(
                       Icons.logout_rounded,

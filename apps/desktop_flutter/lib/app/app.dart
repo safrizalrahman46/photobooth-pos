@@ -39,12 +39,12 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
     } else if (storedSession != null) {
       try {
         final profile = await ApiClient(
-          baseUrl: configuredBaseUrl,
+          baseUrl: AppConfig.defaultApiBaseUrl,
           token: storedSession.token,
         ).fetchProfile();
 
         session = DesktopSession(
-          baseUrl: configuredBaseUrl,
+          baseUrl: AppConfig.defaultApiBaseUrl,
           token: storedSession.token,
           user: profile,
         );

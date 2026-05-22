@@ -299,17 +299,23 @@ class ApiClient {
   Future<InventoryMonitoringPayload> fetchInventoryMonitoring() async {
     final payload = await _send(
       method: 'GET',
-      path: '/manage/inventory-monitoring',
+      path: '/manage/inventory-items',
       authenticated: true,
     );
 
+    // print('PAYLOAD: $payload');
+
     final data = payload['data'];
 
-    if (data is! Map<String, dynamic>) {
+    if (data is! List) {
       throw ApiException('Data monitoring stok tidak valid.');
     }
 
-    return InventoryMonitoringPayload.fromJson(data);
+    final items = data
+        .map((item) => InventoryStockItem.fromJson(item))
+        .toList();
+
+    return InventoryMonitoringPayload(items: items, movements: const []);
   }
 
   Future<List<AddOnCatalogItem>> fetchAddOns({
@@ -1251,12 +1257,14 @@ class ApiClient {
   }
 
   Map<String, String> _headers({bool authenticated = false}) {
-    return <String, String>{
+    final headers = <String, String>{
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       if (authenticated && token != null && token!.isNotEmpty)
         'Authorization': 'Bearer $token',
     };
+
+    return headers;
   }
 
   Map<String, dynamic> _decode(String body) {

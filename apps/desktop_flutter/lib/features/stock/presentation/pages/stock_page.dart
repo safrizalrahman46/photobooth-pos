@@ -37,13 +37,30 @@ class _StockPageState extends State<StockPage> {
       return;
     }
 
+    // ================= DEBUG TOKEN =================
+    // print('=========== STOCK PAGE DEBUG ===========');
+    // print('CLIENT: $client');
+    // print('TOKEN: ${client.token}');
+    // print('=======================================');
+    // ==============================================
+
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
+      // ============== DEBUG SEBELUM REQUEST ==============
+      // print('Memulai request inventory monitoring...');
+      // ===================================================
+
       final payload = await client.fetchInventoryMonitoring();
+
+      // ============== DEBUG SETELAH REQUEST ==============
+      // print('Request berhasil!');
+      // print('Jumlah items: ${payload.items.length}');
+      // print('Jumlah movements: ${payload.movements.length}');
+      // ==================================================
 
       if (!mounted) {
         return;
@@ -51,12 +68,21 @@ class _StockPageState extends State<StockPage> {
 
       setState(() => _payload = payload);
     } on ApiException catch (error) {
+      // ============== DEBUG ERROR API ====================
+      // print('ApiException: ${error.message}');
+      // ==================================================
+
       if (!mounted) {
         return;
       }
 
       setState(() => _error = error.message);
-    } catch (_) {
+    } catch (e, stackTrace) {
+      // ============== DEBUG ERROR UMUM ===================
+      // print('ERROR UMUM: $e');
+      // print('STACK TRACE: $stackTrace');
+      // ==================================================
+
       if (!mounted) {
         return;
       }
