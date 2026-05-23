@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Services\AppSettingService;
 use App\Services\AdminDashboardDataService;
 use App\Services\AdminQueuePageService;
+use App\Services\AppSettingService;
 use Illuminate\Contracts\View\View;
 
 class AdminDashboardController extends Controller
@@ -14,8 +14,7 @@ class AdminDashboardController extends Controller
         AdminDashboardDataService $service,
         AdminQueuePageService $queuePageService,
         AppSettingService $appSettingService,
-    ): View
-    {
+    ): View {
         $settingsPayload = $appSettingService->settingsPayload();
         $publicSettings = $appSettingService->publicSettings();
         $generalSettings = is_array($publicSettings['general'] ?? null) ? $publicSettings['general'] : [];
@@ -32,7 +31,6 @@ class AdminDashboardController extends Controller
             $service->bootstrapPayload('', 'all', 15),
             [
                 'queueLive' => $queuePageService->live(),
-                'queueBookingOptions' => $queuePageService->bookingOptions(),
                 'initialSettings' => $settingsPayload,
                 'initialAppSettingsGroups' => $publicSettings,
                 'defaultBranchId' => $settingsPayload['default_branch_id'] ?? null,
@@ -69,7 +67,6 @@ class AdminDashboardController extends Controller
                 'userBaseUrl' => url('/admin/users'),
                 'queueDataUrl' => route('admin.queue.data'),
                 'queueCallNextUrl' => route('admin.queue.call-next'),
-                'queueCheckInUrl' => route('admin.queue.check-in'),
                 'queueWalkInUrl' => route('admin.queue.walk-in'),
                 'queueBaseUrl' => url('/admin/queue'),
                 'settingsDataUrl' => route('admin.settings.data'),

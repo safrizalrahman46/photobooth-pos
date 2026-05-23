@@ -530,7 +530,7 @@ const requestConfirmBooking = async (row) => {
         return;
     }
 
-    const confirmed = window.confirm(`Verify booking ${row.booking_code}?`);
+    const confirmed = window.confirm(`Verifikasi booking ${row.booking_code}? Booking hari ini akan otomatis masuk antrean.`);
 
     if (!confirmed) {
         return;
@@ -539,7 +539,7 @@ const requestConfirmBooking = async (row) => {
     try {
         await emit('confirm-booking', {
             id: Number(row.record_id || 0),
-            reason: 'Confirmed from booking page',
+            reason: 'Diverifikasi dari halaman booking admin',
         });
         closeBookingDetailModal();
     } catch {
@@ -553,7 +553,7 @@ const openPaymentFromDetail = (row) => {
 };
 
 const requestDeclineBooking = async (row) => {
-    const confirmed = window.confirm(`Decline booking ${row.booking_code}? Status akan berubah menjadi Canceled.`);
+    const confirmed = window.confirm(`Tolak booking ${row.booking_code}? Status akan berubah menjadi batal.`);
 
     if (!confirmed) {
         return;
@@ -562,7 +562,7 @@ const requestDeclineBooking = async (row) => {
     try {
         await emit('decline-booking', {
             id: Number(row.record_id || 0),
-            reason: 'Declined from booking detail due to missing payment proof',
+            reason: 'Ditolak dari detail booking admin',
         });
         closeBookingDetailModal();
     } catch {
@@ -584,7 +584,7 @@ const openPaymentModal = (row) => {
     paymentForm.payment_type = 'full';
     syncPaymentAmountByType();
     paymentForm.reference_no = '';
-    paymentForm.notes = 'Payment confirmed from booking page';
+    paymentForm.notes = 'Pembayaran dikonfirmasi dari halaman booking admin';
     localError.value = '';
     paymentModalOpen.value = true;
 };
@@ -726,7 +726,7 @@ watch(
             <div class="relative flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="text-[1.35rem] font-bold text-white">Bookings</h2>
-                    <p class="text-sm" style="color: rgba(255,255,255,0.78);">Real-time reservation monitoring with payment-first flow before booking verification.</p>
+                    <p class="text-sm" style="color: rgba(255,255,255,0.78);">Verifikasi booking atau pembayaran di sini. Booking hari ini otomatis masuk antrean setelah terverifikasi.</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <button
@@ -861,6 +861,17 @@ watch(
                             </td>
                             <td class="px-5 py-3.5">
                                 <div class="flex flex-wrap items-center gap-1.5">
+                                    <button
+                                        v-if="row.can_confirm_booking || row.can_confirm_payment"
+                                        type="button"
+                                        class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                                        style="border-color: #A7F3D0; color: #059669;"
+                                        :disabled="Number(processingBookingId || 0) === Number(row.record_id)"
+                                        @click="requestConfirmBooking(row)"
+                                    >
+                                        <CheckCircle2 class="h-3 w-3" />
+                                        Verifikasi
+                                    </button>
                                     <button
                                         type="button"
                                         class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold"
@@ -1217,10 +1228,10 @@ watch(
 
                 <div class="mt-4 rounded-xl border px-4 py-3 text-xs" style="border-color: #E2E8F0; background: #F8FAFC; color: #64748B;">
                     <p v-if="bookingDetailCanConfirmPayment">
-                        Booking masih <span class="font-semibold text-[#B45309]">UNPAID / PARTIAL</span>. Klik <span class="font-semibold">Verify</span> untuk membuka konfirmasi pembayaran.
+                        Booking masih <span class="font-semibold text-[#B45309]">UNPAID / PARTIAL</span>. Klik <span class="font-semibold">Verifikasi</span> untuk membuka konfirmasi pembayaran.
                     </p>
                     <p v-else-if="bookingDetailCanConfirmBooking">
-                        Booking sudah memenuhi syarat verifikasi. Klik <span class="font-semibold text-[#059669]">Verify</span> untuk melanjutkan.
+                        Booking sudah memenuhi syarat. Setelah diverifikasi, booking hari ini otomatis masuk antrean.
                     </p>
                     <p v-else>
                         Aksi pembayaran / verifikasi tidak tersedia untuk status booking saat ini.
@@ -1247,7 +1258,7 @@ watch(
                         @click="requestConfirmBooking(bookingDetail)"
                     >
                         <CheckCircle2 class="h-3.5 w-3.5" />
-                        Verify
+                        Verifikasi
                     </button>
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeBookingDetailModal">Close</button>
                 </div>

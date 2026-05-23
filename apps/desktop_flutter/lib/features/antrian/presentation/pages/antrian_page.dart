@@ -4,6 +4,7 @@ import 'package:desktop_flutter/app/theme/app_colors.dart';
 import 'package:desktop_flutter/app/theme/app_text_styles.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
+import 'package:desktop_flutter/shared/models/branch_option.dart';
 import 'package:desktop_flutter/shared/models/queue_live_payload.dart';
 import 'package:flutter/material.dart';
 
@@ -29,8 +30,11 @@ class _AntrianPageState extends State<AntrianPage> {
 
   QueueLivePayload _payload = _emptyPayload;
   Timer? _refreshTimer;
+  List<BranchOption> _branches = const <BranchOption>[];
+  int? _selectedBranchId;
   bool _loading = false;
   bool _refreshing = false;
+  bool _branchesLoading = false;
   bool _actionLoading = false;
   int? _processingTicketId;
   String? _error;
@@ -39,7 +43,7 @@ class _AntrianPageState extends State<AntrianPage> {
   @override
   void initState() {
     super.initState();
-    _loadQueue();
+    _loadInitialQueueData();
     _refreshTimer = Timer.periodic(
       _refreshInterval,
       (_) => _loadQueue(silent: true),
@@ -50,6 +54,49 @@ class _AntrianPageState extends State<AntrianPage> {
   void dispose() {
     _refreshTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadInitialQueueData() async {
+    await _loadBranches();
+
+    if (!mounted) {
+      return;
+    }
+
+    await _loadQueue();
+  }
+
+  Future<void> _loadBranches() async {
+    final client = ApiSession.client;
+
+    if (client == null) {
+      return;
+    }
+
+    setState(() {
+      _branchesLoading = true;
+    });
+
+    try {
+      final branches = await client.fetchBranches();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _branches = branches;
+        _selectedBranchId ??= branches.isEmpty ? null : branches.first.id;
+      });
+    } catch (_) {
+      // Antrean tetap bisa dimuat tanpa filter cabang jika daftar cabang gagal dimuat.
+    } finally {
+      if (mounted) {
+        setState(() {
+          _branchesLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadQueue({bool silent = false}) async {
@@ -78,7 +125,10 @@ class _AntrianPageState extends State<AntrianPage> {
     });
 
     try {
-      final payload = await client.fetchQueueLive(queueDate: _todayIso());
+      final payload = await client.fetchQueueLive(
+        branchId: _selectedBranchId,
+        queueDate: _todayIso(),
+      );
 
       if (!mounted) {
         return;
@@ -111,12 +161,13 @@ class _AntrianPageState extends State<AntrianPage> {
 
   Future<void> _callNext() async {
     final ticket = _nextWaitingTicket;
+    final branchId = _selectedBranchId ?? ticket?.branchId;
 
     if (ticket == null) {
       return;
     }
 
-    if (ticket.branchId <= 0) {
+    if (branchId == null || branchId <= 0) {
       setState(() {
         _error = 'Cabang antrean tidak valid. Muat ulang data terlebih dahulu.';
       });
@@ -126,10 +177,24 @@ class _AntrianPageState extends State<AntrianPage> {
     await _runQueueAction(
       ticket: ticket,
       action: () => ApiSession.client!.callNext(
-        branchId: ticket.branchId,
+        branchId: branchId,
         queueDate: _todayIso(),
       ),
     );
+  }
+
+  Future<void> _changeBranch(int? branchId) async {
+    if (_selectedBranchId == branchId || _loading || _refreshing) {
+      return;
+    }
+
+    setState(() {
+      _selectedBranchId = branchId;
+      _payload = _emptyPayload;
+      _lastUpdated = '-';
+    });
+
+    await _loadQueue();
   }
 
   Future<void> _promoteTicket(QueueLiveTicket ticket) async {
@@ -236,6 +301,10 @@ class _AntrianPageState extends State<AntrianPage> {
                 _Header(
                   lastUpdated: _lastUpdated,
                   isRefreshing: _refreshing,
+                  branches: _branches,
+                  selectedBranchId: _selectedBranchId,
+                  branchesLoading: _branchesLoading,
+                  onBranchChanged: _actionLoading ? null : _changeBranch,
                   onRefresh: _actionLoading ? null : () => _loadQueue(),
                 ),
                 if (_error != null) ...[
@@ -315,11 +384,19 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.lastUpdated,
     required this.isRefreshing,
+    required this.branches,
+    required this.selectedBranchId,
+    required this.branchesLoading,
+    required this.onBranchChanged,
     required this.onRefresh,
   });
 
   final String lastUpdated;
   final bool isRefreshing;
+  final List<BranchOption> branches;
+  final int? selectedBranchId;
+  final bool branchesLoading;
+  final ValueChanged<int?>? onBranchChanged;
   final VoidCallback? onRefresh;
 
   @override
@@ -334,7 +411,7 @@ class _Header extends StatelessWidget {
               Text('Panel Antrean', style: AppTextStyles.h1),
               const SizedBox(height: 6),
               Text(
-                'Booking terverifikasi dan walk-in checkout akan masuk otomatis ke antrean hari ini.',
+                'Jalankan giliran pelanggan. Booking terverifikasi dan walk-in checkout masuk otomatis ke antrean dan tampil di queue board.',
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -348,6 +425,44 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
+        SizedBox(
+          width: 230,
+          child: DropdownButtonFormField<int>(
+            key: ValueKey<int?>(selectedBranchId),
+            initialValue: selectedBranchId,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: branchesLoading ? 'Memuat cabang...' : 'Cabang',
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFFBFDBFE)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFFBFDBFE)),
+              ),
+            ),
+            items: [
+              const DropdownMenuItem<int>(
+                value: null,
+                child: Text('Semua Cabang'),
+              ),
+              for (final branch in branches)
+                DropdownMenuItem<int>(
+                  value: branch.id,
+                  child: Text(branch.name, overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: branchesLoading ? null : onBranchChanged,
+          ),
+        ),
+        const SizedBox(width: 10),
         OutlinedButton.icon(
           onPressed: onRefresh,
           style: OutlinedButton.styleFrom(
@@ -573,7 +688,7 @@ class _CurrentQueuePanel extends StatelessWidget {
                 ],
                 const SizedBox(height: 12),
                 Text(
-                  'Alur: Panggil -> Tandai Hadir -> Mulai Sesi -> Selesaikan.',
+                  'Alur: Panggil Berikutnya -> Tandai Hadir -> Mulai Foto -> Selesaikan.',
                   style: AppTextStyles.bodySmall,
                 ),
               ],
@@ -727,6 +842,13 @@ class _QueueListPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final activeWaitingTickets = waitingTickets
+        .where((ticket) => ticket.status == QueueTicketStatus.waiting)
+        .toList();
+    final skippedTickets = waitingTickets
+        .where((ticket) => ticket.status == QueueTicketStatus.skipped)
+        .toList();
+
     return Container(
       decoration: _panelDecoration(),
       child: Column(
@@ -743,27 +865,59 @@ class _QueueListPanel extends StatelessWidget {
                       Text('Antrean Menunggu', style: AppTextStyles.h2),
                       const SizedBox(height: 4),
                       Text(
-                        '${waitingTickets.length} pelanggan menunggu giliran',
+                        '${activeWaitingTickets.length} pelanggan menunggu giliran',
                         style: AppTextStyles.bodySmall,
                       ),
                     ],
                   ),
                 ),
-                _CountBadge(label: '${waitingTickets.length} antrean'),
+                _CountBadge(label: '${activeWaitingTickets.length} antrean'),
               ],
             ),
           ),
           const Divider(height: 1, color: AppColors.divider),
-          if (waitingTickets.isEmpty)
+          if (activeWaitingTickets.isEmpty)
             const _EmptyQueueState()
           else
-            for (final ticket in waitingTickets)
+            for (final ticket in activeWaitingTickets)
               _QueueTicketRow(
                 ticket: ticket,
                 actionLoading: actionLoading,
                 processingTicketId: processingTicketId,
                 onPromote: onPromote,
+                showAction: false,
               ),
+          if (skippedTickets.isNotEmpty) ...[
+            const Divider(height: 1, color: AppColors.divider),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Dilewati',
+                    style: AppTextStyles.captionMedium.copyWith(
+                      color: const Color(0xFFD97706),
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Panggil ulang hanya jika customer sudah siap kembali.',
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            for (final ticket in skippedTickets)
+              _QueueTicketRow(
+                ticket: ticket,
+                actionLoading: actionLoading,
+                processingTicketId: processingTicketId,
+                onPromote: onPromote,
+                compact: true,
+              ),
+          ],
           if (processingTickets.isNotEmpty) ...[
             const Divider(height: 1, color: AppColors.divider),
             Padding(
@@ -798,6 +952,7 @@ class _QueueTicketRow extends StatelessWidget {
     required this.processingTicketId,
     required this.onPromote,
     this.compact = false,
+    this.showAction = true,
   });
 
   final QueueLiveTicket ticket;
@@ -805,6 +960,7 @@ class _QueueTicketRow extends StatelessWidget {
   final int? processingTicketId;
   final ValueChanged<QueueLiveTicket> onPromote;
   final bool compact;
+  final bool showAction;
 
   @override
   Widget build(BuildContext context) {
@@ -854,6 +1010,7 @@ class _QueueTicketRow extends StatelessWidget {
                       ),
                     ),
                     _StatusBadge(status: ticket.status),
+                    _SourceBadge(sourceLabel: ticket.sourceLabel),
                   ],
                 ),
                 const SizedBox(height: 5),
@@ -872,15 +1029,16 @@ class _QueueTicketRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          _PrimaryActionButton(
-            label: ticket.hasNextAction ? ticket.nextActionLabel : 'Selesai',
-            icon: Icons.arrow_forward_rounded,
-            isLoading: isProcessing,
-            compact: true,
-            onPressed: actionLoading || !ticket.hasNextAction
-                ? null
-                : () => onPromote(ticket),
-          ),
+          if (showAction)
+            _PrimaryActionButton(
+              label: ticket.hasNextAction ? ticket.nextActionLabel : 'Selesai',
+              icon: Icons.arrow_forward_rounded,
+              isLoading: isProcessing,
+              compact: true,
+              onPressed: actionLoading || !ticket.hasNextAction
+                  ? null
+                  : () => onPromote(ticket),
+            ),
         ],
       ),
     );
@@ -990,6 +1148,33 @@ class _StatusBadge extends StatelessWidget {
         status.label,
         style: AppTextStyles.captionMedium.copyWith(
           color: onDark ? Colors.white : color,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _SourceBadge extends StatelessWidget {
+  const _SourceBadge({required this.sourceLabel});
+
+  final String sourceLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWalkIn = sourceLabel.toLowerCase().contains('walk');
+    final color = isWalkIn ? const Color(0xFFD97706) : const Color(0xFF2563EB);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        sourceLabel,
+        style: AppTextStyles.captionMedium.copyWith(
+          color: color,
           fontWeight: FontWeight.w800,
         ),
       ),

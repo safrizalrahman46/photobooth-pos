@@ -51,7 +51,7 @@ class AdminQueueController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Antrean berhasil diperbarui.',
-            'data' => $service->payload($queueDate),
+            'data' => $service->payload($queueDate, (int) $payload['branch_id']),
         ]);
     }
 
@@ -81,7 +81,7 @@ class AdminQueueController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Booking berhasil ditambahkan ke antrean.',
-            'data' => $service->payload($ticket->queue_date?->toDateString()),
+            'data' => $service->payload($ticket->queue_date?->toDateString(), (int) $ticket->branch_id),
         ], 201);
     }
 
@@ -90,8 +90,7 @@ class AdminQueueController extends Controller
         QueueTicket $queueTicket,
         QueueService $queueService,
         AdminQueuePageService $service,
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $payload = $request->validated();
 
         $ticket = $queueService->transition($queueTicket, QueueStatus::from((string) $payload['status']));
@@ -99,7 +98,7 @@ class AdminQueueController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Status antrean berhasil diperbarui.',
-            'data' => $service->payload($ticket->queue_date?->toDateString()),
+            'data' => $service->payload($ticket->queue_date?->toDateString(), (int) $ticket->branch_id),
         ]);
     }
 
@@ -109,7 +108,7 @@ class AdminQueueController extends Controller
         $queueDate = (string) ($payload['queue_date'] ?? now(config('app.queue_timezone', 'Asia/Jakarta'))->toDateString());
 
         try {
-            $queueService->createWalkIn($payload);
+            $ticket = $queueService->createWalkIn($payload);
         } catch (RuntimeException $exception) {
             return response()->json([
                 'success' => false,
@@ -120,7 +119,7 @@ class AdminQueueController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Tiket antrean berhasil dibuat.',
-            'data' => $service->payload($queueDate),
+            'data' => $service->payload($queueDate, (int) $ticket->branch_id),
         ], 201);
     }
 }

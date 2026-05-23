@@ -48,7 +48,7 @@ class QueueService
                 'customer_name' => $booking->customer_name,
                 'customer_phone' => $booking->customer_phone,
                 'status' => QueueStatus::Waiting,
-                'priority' => 1,
+                'priority' => 0,
             ]);
 
             $booking->status = BookingStatus::InQueue;
@@ -63,11 +63,11 @@ class QueueService
                 [
                     'message' => sprintf(
                         'Booking %s masuk antrean %s.',
-                        (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                        (string) ($booking->booking_code ?? ('BK-'.$booking->id)),
                         (string) $ticket->queue_code,
                     ),
                     'label' => (string) $ticket->queue_code,
-                    'booking_code' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                    'booking_code' => (string) ($booking->booking_code ?? ('BK-'.$booking->id)),
                     'customer_name' => (string) $ticket->customer_name,
                     'branch_id' => (int) $ticket->branch_id,
                     'status' => QueueStatus::Waiting->value,
@@ -184,11 +184,24 @@ class QueueService
 
     public function callNext(int $branchId, string $date): ?QueueTicket
     {
+        $hasActiveTicket = QueueTicket::query()
+            ->where('branch_id', $branchId)
+            ->where('queue_date', $date)
+            ->whereIn('status', [
+                QueueStatus::Called->value,
+                QueueStatus::CheckedIn->value,
+                QueueStatus::InSession->value,
+            ])
+            ->exists();
+
+        if ($hasActiveTicket) {
+            throw new RuntimeException('Selesaikan atau lewati antrean aktif sebelum memanggil antrean berikutnya.');
+        }
+
         $ticket = QueueTicket::query()
             ->where('branch_id', $branchId)
             ->where('queue_date', $date)
             ->where('status', QueueStatus::Waiting)
-            ->orderByDesc('priority')
             ->orderBy('queue_number')
             ->first();
 
@@ -294,11 +307,11 @@ class QueueService
             [
                 'message' => sprintf(
                     'Status booking %s berubah dari %s ke %s melalui antrean.',
-                    (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                    (string) ($booking->booking_code ?? ('BK-'.$booking->id)),
                     $currentStatus->value,
                     $nextStatus->value,
                 ),
-                'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                'label' => (string) ($booking->booking_code ?? ('BK-'.$booking->id)),
                 'from_status' => $currentStatus->value,
                 'to_status' => $nextStatus->value,
                 'queue_code' => (string) $ticket->queue_code,
