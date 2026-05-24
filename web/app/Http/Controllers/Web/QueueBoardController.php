@@ -26,20 +26,19 @@ class QueueBoardController extends Controller
 
         $selectedBranch ??= $branches->first();
 
-        $today = now()->toDateString();
+        $today = now(config('app.queue_timezone', 'Asia/Jakarta'))->toDateString();
 
         $tickets = QueueTicket::query()
             ->when($selectedBranch, fn ($query) => $query->where('branch_id', $selectedBranch->id))
             ->whereDate('queue_date', $today)
-            ->orderByDesc('priority')
             ->orderBy('queue_number')
             ->get();
 
-        $activeTicket = $tickets->first(fn (QueueTicket $ticket) => in_array($ticket->status?->value ?? $ticket->status, [
-            QueueStatus::InSession->value,
-            QueueStatus::Called->value,
-            QueueStatus::CheckedIn->value,
-        ], true));
+        $activeTicket = $tickets->first(fn (QueueTicket $ticket) => ($ticket->status?->value ?? $ticket->status) === QueueStatus::InSession->value)
+            ?? $tickets->first(fn (QueueTicket $ticket) => in_array($ticket->status?->value ?? $ticket->status, [
+                QueueStatus::Called->value,
+                QueueStatus::CheckedIn->value,
+            ], true));
 
         $nextTicket = $tickets->first(fn (QueueTicket $ticket) => ($ticket->status?->value ?? $ticket->status) === QueueStatus::Waiting->value);
 

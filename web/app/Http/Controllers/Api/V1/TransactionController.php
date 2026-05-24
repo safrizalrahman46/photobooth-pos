@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AddExtraPrintRequest;
 use App\Http\Requests\StoreTransactionRequest;
 use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
@@ -101,6 +102,20 @@ class TransactionController extends Controller
         abort_unless($request->user()?->can('transaction.view'), 403);
 
         return $this->responder->success(new TransactionResource($transaction->load('branch', 'booking', 'queueTicket', 'items', 'payments')));
+    }
+
+    public function extraPrint(AddExtraPrintRequest $request, Transaction $transaction): JsonResponse
+    {
+        $updatedTransaction = $this->transactionService->addExtraPrint(
+            $transaction,
+            $request->validated(),
+            (int) $request->user()->id
+        );
+
+        return $this->responder->success(
+            new TransactionResource($updatedTransaction->load('branch', 'booking', 'queueTicket', 'items', 'payments')),
+            'Tambah cetak berhasil ditambahkan.'
+        );
     }
 
     private function packageIdFromPayloadItems(array $items): int

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref } from 'vue';
 import {
+    AlertTriangle,
     BellRing,
     CheckCircle2,
     Clock3,
@@ -8,7 +9,6 @@ import {
     RefreshCw,
     RotateCcw,
     SkipForward,
-    Trash2,
     UserPlus,
 } from 'lucide-vue-next';
 import AdminModal from '../components/AdminModal.vue';
@@ -26,20 +26,14 @@ const props = defineProps({
     queueProcessingTicketId: { type: Number, default: null },
     queueError: { type: String, default: '' },
     branchOptions: { type: Array, default: () => [] },
-    bookingOptions: { type: Array, default: () => [] },
     defaultBranchId: { type: Number, default: null },
     viewBranchId: { type: [Number, String], default: null },
 });
 
-const emit = defineEmits(['refresh-queue', 'set-view-branch', 'call-next', 'transition-ticket', 'add-booking', 'add-walk-in']);
+const emit = defineEmits(['refresh-queue', 'set-view-branch', 'call-next', 'transition-ticket', 'add-walk-in']);
 
 const addModalOpen = ref(false);
 const localError = ref('');
-const queueSourceType = ref('walk_in');
-
-const bookingForm = reactive({
-    booking_id: null,
-});
 
 const queueStatusMeta = {
     waiting: {
@@ -160,10 +154,6 @@ const refreshQueue = () => {
     });
 };
 
-const hasBookingOptions = computed(() => {
-    return Array.isArray(props.bookingOptions) && props.bookingOptions.length > 0;
-});
-
 const currentTicketId = computed(() => Number(props.currentQueue?.ticket_id || 0));
 
 const normalizedQueueItems = computed(() => {
@@ -185,7 +175,15 @@ const waitingTickets = computed(() => normalizedQueueItems.value.filter((ticket)
         return false;
     }
 
-    return ['waiting', 'skipped'].includes(ticket.status);
+    return ticket.status === 'waiting';
+}));
+
+const skippedTickets = computed(() => normalizedQueueItems.value.filter((ticket) => {
+    if (ticket.ticket_id && ticket.ticket_id === currentTicketId.value) {
+        return false;
+    }
+
+    return ticket.status === 'skipped';
 }));
 
 const processingTickets = computed(() => normalizedQueueItems.value.filter((ticket) => {
@@ -198,16 +196,6 @@ const processingTickets = computed(() => normalizedQueueItems.value.filter((tick
 
 const hasCallableTicket = computed(() => waitingTickets.value.some((ticket) => ticket.status === 'waiting'));
 
-const selectedBooking = computed(() => {
-    const bookingId = Number(bookingForm.booking_id || 0);
-
-    if (!bookingId || !hasBookingOptions.value) {
-        return null;
-    }
-
-    return props.bookingOptions.find((item) => Number(item?.id || 0) === bookingId) || null;
-});
-
 const resetWalkInForm = () => {
     walkInForm.branch_id = activeBranchId.value;
     walkInForm.queue_date = todayIso();
@@ -215,13 +203,7 @@ const resetWalkInForm = () => {
     walkInForm.customer_phone = '';
 };
 
-const resetBookingForm = () => {
-    bookingForm.booking_id = null;
-};
-
 const resetQueueForm = () => {
-    queueSourceType.value = hasBookingOptions.value ? 'booking' : 'walk_in';
-    resetBookingForm();
     resetWalkInForm();
     localError.value = '';
 };
@@ -233,15 +215,6 @@ const openAddModal = () => {
 
 const closeAddModal = () => {
     addModalOpen.value = false;
-    localError.value = '';
-};
-
-const setQueueSourceType = (type) => {
-    if (type === 'booking' && !hasBookingOptions.value) {
-        return;
-    }
-
-    queueSourceType.value = type;
     localError.value = '';
 };
 
@@ -305,6 +278,16 @@ const queuePackageLabel = (ticket) => {
     }
 
     return String(ticket?.source_type || '').toLowerCase() === 'walk_in' ? 'Walk-in' : '-';
+};
+
+const queueSourceLabel = (ticket) => {
+    return String(ticket?.source_type || '').toLowerCase() === 'walk_in' ? 'Walk-in' : 'Booking';
+};
+
+const queueSourceStyle = (ticket) => {
+    return String(ticket?.source_type || '').toLowerCase() === 'walk_in'
+        ? { background: '#FEF3C7', color: '#B45309' }
+        : { background: '#DBEAFE', color: '#1D4ED8' };
 };
 
 const nextStatusForTicket = (ticket) => {
@@ -422,17 +405,6 @@ const promoteTicket = async (ticket) => {
     });
 };
 
-const cancelTicket = async (ticket) => {
-    if (!ticket?.ticket_id) {
-        return;
-    }
-
-    await emit('transition-ticket', {
-        ticketId: ticket.ticket_id,
-        status: 'cancelled',
-    });
-};
-
 const submitWalkIn = async () => {
     const customerName = String(walkInForm.customer_name || '').trim();
     const branchId = Number(walkInForm.branch_id || activeBranchId.value || 0);
@@ -462,34 +434,6 @@ const submitWalkIn = async () => {
     }
 };
 
-const submitBooking = async () => {
-    const bookingId = Number(bookingForm.booking_id || 0);
-
-    if (!bookingId) {
-        localError.value = 'Pilih booking terlebih dahulu.';
-        return;
-    }
-
-    localError.value = '';
-
-    try {
-        await emit('add-booking', {
-            booking_id: bookingId,
-        });
-        closeAddModal();
-    } catch {
-        // Parent handles server error message.
-    }
-};
-
-const submitQueue = async () => {
-    if (queueSourceType.value === 'booking') {
-        await submitBooking();
-        return;
-    }
-
-    await submitWalkIn();
-};
 </script>
 
 <template>
@@ -497,7 +441,7 @@ const submitQueue = async () => {
         <section class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
                 <h2 class="text-[2rem] font-semibold text-[#0F172A]">Manajemen Antrean</h2>
-                <p class="text-base text-[#64748B]">Panggil, mulai sesi, dan selesaikan pelanggan dari satu halaman.</p>
+                <p class="text-base text-[#64748B]">Jalankan giliran pelanggan. Booking terverifikasi dan walk-in checkout masuk otomatis ke antrean.</p>
             </div>
             <div class="rounded-2xl border px-4 py-3 text-sm" style="border-color: #DBEAFE; background: #EFF6FF; color: #1E3A8A;">
                 Cabang aktif: <span class="font-semibold">{{ activeBranchName }}</span>
@@ -547,7 +491,7 @@ const submitQueue = async () => {
 
                     <template v-else>
                         <p class="mt-5 text-lg font-semibold text-white">Belum ada sesi aktif</p>
-                        <p class="mt-1 text-sm text-white/85">Klik Panggil Berikutnya untuk memulai pelanggan berikutnya.</p>
+                        <p class="mt-1 text-sm text-white/85">Gunakan Panggil Berikutnya agar urutan antrean tetap murni sesuai nomor masuk.</p>
                     </template>
                 </div>
 
@@ -649,12 +593,12 @@ const submitQueue = async () => {
                         <button
                             type="button"
                             class="inline-flex items-center justify-center gap-1 rounded-xl px-3.5 py-2 text-sm font-semibold"
-                            style="background: #2563EB; color: #FFFFFF;"
+                            style="border: 1px solid #FCD34D; background: #FFFBEB; color: #B45309;"
                             :disabled="queueActionLoading"
                             @click="openAddModal"
                         >
-                            <Plus class="h-4 w-4" />
-                            Tambah Antrean
+                            <AlertTriangle class="h-4 w-4" />
+                            Tambah Manual (Darurat)
                         </button>
                     </div>
                 </header>
@@ -676,33 +620,14 @@ const submitQueue = async () => {
                                         <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :style="queueStatusStyle(ticket.status)">
                                             {{ queueStatusLabel(ticket.status) }}
                                         </span>
+                                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :style="queueSourceStyle(ticket)">
+                                            {{ queueSourceLabel(ticket) }}
+                                        </span>
                                     </div>
                                     <p class="truncate text-[1.05rem] text-[#334155]">{{ ticket.customer_name }}</p>
                                     <p class="text-sm text-[#64748B]">{{ resolveBranchName(ticket.branch_id) }} | {{ queuePackageLabel(ticket) }}</p>
                                     <p class="text-sm text-[#94A3B8]">Masuk pukul {{ ticket.added_at || '-' }}</p>
                                 </div>
-                            </div>
-
-                            <div class="flex items-center gap-2 sm:justify-end">
-                                <button
-                                    type="button"
-                                    class="inline-flex min-h-[36px] min-w-[118px] items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-semibold"
-                                    style="border-color: #BFDBFE; background: #EFF6FF; color: #1D4ED8;"
-                                    :disabled="queueActionLoading || canProcessTicket(ticket.ticket_id) || !nextStatusForTicket(ticket)"
-                                    @click="promoteTicket(ticket)"
-                                >
-                                    {{ nextActionLabel(ticket) }}
-                                </button>
-                                <button
-                                    type="button"
-                                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg border"
-                                    style="border-color: #FECACA; color: #EF4444;"
-                                    :disabled="queueActionLoading || canProcessTicket(ticket.ticket_id)"
-                                    title="Batalkan tiket antrean"
-                                    @click="cancelTicket(ticket)"
-                                >
-                                    <Trash2 class="h-4 w-4" />
-                                </button>
                             </div>
                         </article>
 
@@ -710,6 +635,38 @@ const submitQueue = async () => {
                             <UserPlus class="mx-auto mb-2 h-7 w-7 text-[#94A3B8]" />
                             <p class="text-sm font-semibold text-[#64748B]">Belum ada pelanggan yang menunggu.</p>
                             <p class="mt-1 text-sm text-[#94A3B8]">Tambahkan walk-in atau pastikan booking hari ini sudah diverifikasi.</p>
+                        </div>
+                    </div>
+
+                    <div v-if="skippedTickets.length" class="border-t px-5 py-4" style="border-color: #E2E8F0; background: #FFF7ED;">
+                        <h4 class="text-sm font-semibold uppercase tracking-[0.08em] text-[#B45309]">Dilewati</h4>
+                        <p class="mt-1 text-sm text-[#92400E]">Panggil ulang hanya jika customer sudah siap kembali.</p>
+                        <div class="mt-3 space-y-2">
+                            <article
+                                v-for="ticket in skippedTickets"
+                                :key="`queue-skipped-${ticket.ticket_id || ticket.queue_code}`"
+                                class="flex flex-col gap-2 rounded-xl border bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                                style="border-color: #FED7AA;"
+                            >
+                                <div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="font-semibold text-[#0F172A]">{{ ticket.queue_code }} - {{ ticket.customer_name }}</p>
+                                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :style="queueSourceStyle(ticket)">
+                                            {{ queueSourceLabel(ticket) }}
+                                        </span>
+                                    </div>
+                                    <p class="text-sm text-[#64748B]">{{ resolveBranchName(ticket.branch_id) }} | {{ queuePackageLabel(ticket) }}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="rounded-lg border px-3 py-1.5 text-xs font-semibold"
+                                    style="border-color: #FDBA74; background: #FFEDD5; color: #C2410C;"
+                                    :disabled="queueActionLoading || canProcessTicket(ticket.ticket_id) || !nextStatusForTicket(ticket)"
+                                    @click="promoteTicket(ticket)"
+                                >
+                                    {{ nextActionLabel(ticket) }}
+                                </button>
+                            </article>
                         </div>
                     </div>
 
@@ -747,23 +704,12 @@ const submitQueue = async () => {
             </section>
         </div>
 
-        <div class="flex items-center gap-2">
-            <button
-                type="button"
-                class="inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-sm font-semibold"
-                style="border-color: #DBEAFE; background: #EFF6FF; color: #1D4ED8;"
-                :disabled="queueActionLoading || queueLoading || !hasCallableTicket"
-                @click="queueCallNext"
-            >
-                <BellRing class="h-4 w-4" />
-                Panggil Berikutnya
-            </button>
-            <span class="text-xs text-[#94A3B8]">Cabang: {{ activeBranchName }}</span>
-        </div>
-
         <AdminModal :show="addModalOpen" panel-class="max-w-xl">
-                <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-[#0F172A]">Tambah ke Antrean</h3>
+                <div class="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-[#0F172A]">Tambah Antrean Manual Darurat</h3>
+                        <p class="mt-1 text-sm text-[#64748B]">Booking dan walk-in normal masuk otomatis. Gunakan form ini hanya saat flow otomatis gagal agar operasional photo tetap berjalan.</p>
+                    </div>
                     <button type="button" class="rounded-lg px-2 py-1 text-sm text-[#64748B]" @click="closeAddModal">Tutup</button>
                 </div>
 
@@ -771,89 +717,49 @@ const submitQueue = async () => {
                     {{ localError }}
                 </p>
 
-                <div class="space-y-3">
-                    <div class="grid grid-cols-2 gap-2 rounded-2xl border p-1" style="border-color: #E2E8F0; background: #F8FAFC;">
-                        <button
-                            type="button"
-                            class="rounded-xl px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
-                            :style="queueSourceType === 'booking'
-                                ? 'background: #2563EB; color: #FFFFFF;'
-                                : 'background: transparent; color: #64748B;'"
-                            :disabled="!hasBookingOptions"
-                            @click="setQueueSourceType('booking')"
-                        >
-                            Dari Booking
-                        </button>
-                        <button
-                            type="button"
-                            class="rounded-xl px-3 py-2 text-sm font-semibold transition"
-                            :style="queueSourceType === 'walk_in'
-                                ? 'background: #2563EB; color: #FFFFFF;'
-                                : 'background: transparent; color: #64748B;'"
-                            @click="setQueueSourceType('walk_in')"
-                        >
-                            Walk-in
-                        </button>
-                    </div>
+                <div class="mb-4 flex gap-3 rounded-2xl border px-4 py-3 text-sm" style="border-color: #FCD34D; background: #FFFBEB; color: #92400E;">
+                    <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>Antrean manual akan tampil di queue board sebagai Walk-in dan mengikuti urutan nomor masuk.</span>
+                </div>
 
-                    <div v-if="queueSourceType === 'booking'" class="space-y-3">
-                        <label class="text-sm text-[#475569]">
-                            Booking
-                            <select v-model="bookingForm.booking_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
-                                <option :value="null">Pilih booking</option>
-                                <option v-for="booking in bookingOptions" :key="`queue-booking-${booking.id}`" :value="booking.id">
-                                    {{ booking.display_text || `${booking.booking_code} - ${booking.customer_name}` }}
-                                </option>
-                            </select>
-                        </label>
+                <div class="rtp-admin-form-grid">
+                    <label class="text-sm text-[#475569]">
+                        Cabang
+                        <select v-model="walkInForm.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
+                            <option :value="null">Pilih cabang</option>
+                            <option v-for="branch in branchOptions" :key="`queue-branch-${branch.id}`" :value="branch.id">
+                                {{ branch.name }}
+                            </option>
+                        </select>
+                    </label>
 
-                        <p v-if="!bookingOptions.length" class="rounded-lg border px-3 py-2 text-sm" style="border-color: #E2E8F0; background: #F8FAFC; color: #64748B;">
-                            Tidak ada booking yang siap dimasukkan ke antrean hari ini.
-                        </p>
+                    <label class="text-sm text-[#475569]">
+                        Tanggal Antrean
+                        <input v-model="walkInForm.queue_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                    </label>
 
-                        <div v-else-if="selectedBooking" class="rounded-lg border px-3 py-2 text-sm" style="border-color: #DBEAFE; background: #EFF6FF; color: #1E3A8A;">
-                            {{ selectedBooking.customer_name }} | {{ selectedBooking.branch_name }} | {{ selectedBooking.package_name }}
-                        </div>
-                    </div>
+                    <label class="text-sm text-[#475569] md:col-span-2">
+                        Nama Pelanggan
+                        <input v-model="walkInForm.customer_name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                    </label>
 
-                    <div v-else class="rtp-admin-form-grid">
-                        <label class="text-sm text-[#475569]">
-                            Cabang
-                            <select v-model="walkInForm.branch_id" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;">
-                                <option :value="null">Pilih cabang</option>
-                                <option v-for="branch in branchOptions" :key="`queue-branch-${branch.id}`" :value="branch.id">
-                                    {{ branch.name }}
-                                </option>
-                            </select>
-                        </label>
-
-                        <label class="text-sm text-[#475569]">
-                            Tanggal Antrean
-                            <input v-model="walkInForm.queue_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
-                        </label>
-
-                        <label class="text-sm text-[#475569] md:col-span-2">
-                            Nama Pelanggan
-                            <input v-model="walkInForm.customer_name" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
-                        </label>
-
-                        <label class="text-sm text-[#475569] md:col-span-2">
-                            Nomor HP (opsional)
-                            <input v-model="walkInForm.customer_phone" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
-                        </label>
-                    </div>
+                    <label class="text-sm text-[#475569] md:col-span-2">
+                        Nomor HP (opsional)
+                        <input v-model="walkInForm.customer_phone" type="text" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                    </label>
                 </div>
 
                 <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closeAddModal">Batal</button>
                     <button
                         type="button"
-                        class="rounded-xl px-4 py-2 text-sm font-semibold"
-                        style="background: #2563EB; color: #FFFFFF;"
+                        class="inline-flex items-center gap-1 rounded-xl px-4 py-2 text-sm font-semibold"
+                        style="background: #B45309; color: #FFFFFF;"
                         :disabled="queueActionLoading"
-                        @click="submitQueue"
+                        @click="submitWalkIn"
                     >
-                        {{ queueActionLoading ? 'Menyimpan...' : 'Tambah Antrean' }}
+                        <Plus class="h-4 w-4" />
+                        {{ queueActionLoading ? 'Menyimpan...' : 'Buat Antrean Manual' }}
                     </button>
                 </div>
         </AdminModal>

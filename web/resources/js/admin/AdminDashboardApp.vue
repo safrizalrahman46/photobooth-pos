@@ -61,10 +61,6 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
-    queueBookingOptions: {
-        type: Array,
-        default: () => [],
-    },
     ownerHighlights: {
         type: Array,
         default: () => [],
@@ -175,10 +171,6 @@ const props = defineProps({
         default: '',
     },
     queueCallNextUrl: {
-        type: String,
-        default: '',
-    },
-    queueCheckInUrl: {
         type: String,
         default: '',
     },
@@ -1022,7 +1014,7 @@ const currentQueue = computed(() => {
 const waitingQueue = computed(() => {
     const list = Array.isArray(queueLiveState.value?.waiting) ? queueLiveState.value.waiting : [];
 
-    return list.slice(0, 5).map((item, index) => ({
+    return list.map((item, index) => ({
         ticket_id: item.ticket_id ? Number(item.ticket_id) : null,
         booking_id: item.booking_id ? Number(item.booking_id) : null,
         branch_id: item.branch_id ? Number(item.branch_id) : null,
@@ -1557,7 +1549,6 @@ const queueActionLoading = ref(false);
 const queueError = ref('');
 const queueProcessingTicketId = ref(null);
 const queueViewBranchId = ref(null);
-const queueBookingOptions = ref(Array.isArray(props.queueBookingOptions) ? props.queueBookingOptions : []);
 
 const queueBranchOptions = computed(() => {
     const branches = bookingOptions.value?.branches;
@@ -2005,14 +1996,9 @@ const applyReferralPayload = (payload) => {
 
 const applyQueuePayload = (payload) => {
     const nextQueueLive = payload?.data?.queue_live;
-    const nextQueueBookingOptions = payload?.data?.queue_booking_options;
 
     if (nextQueueLive && typeof nextQueueLive === 'object') {
         queueLiveState.value = nextQueueLive;
-    }
-
-    if (Array.isArray(nextQueueBookingOptions)) {
-        queueBookingOptions.value = nextQueueBookingOptions;
     }
 };
 
@@ -3633,44 +3619,6 @@ const transitionQueueTicket = async ({ ticketId, status }) => {
     }
 };
 
-const addQueueBooking = async (formPayload) => {
-    const bookingId = Number(formPayload?.booking_id || 0);
-
-    if (!props.queueCheckInUrl || !bookingId) {
-        return;
-    }
-
-    queueActionLoading.value = true;
-    queueError.value = '';
-    queueProcessingTicketId.value = null;
-
-    try {
-        const response = await fetch(props.queueCheckInUrl, {
-            method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': getCsrfToken(),
-            },
-            body: JSON.stringify({ booking_id: bookingId }),
-        });
-
-        if (!response.ok) {
-            throw new Error(await parseRequestError(response));
-        }
-
-        await response.json();
-        await fetchQueueData({ silent: true });
-    } catch (error) {
-        queueError.value = resolveRequestErrorMessage(error, 'Gagal memasukkan booking ke antrean.');
-        throw error;
-    } finally {
-        queueActionLoading.value = false;
-        queueProcessingTicketId.value = null;
-    }
-};
-
 const addQueueWalkIn = async (formPayload) => {
     if (!props.queueWalkInUrl) {
         return;
@@ -4058,11 +4006,11 @@ onBeforeUnmount(() => {
                             :resolve-queue-status="resolveQueueStatus" :queue-loading="queueLoading"
                             :queue-action-loading="queueActionLoading"
                             :queue-processing-ticket-id="queueProcessingTicketId" :queue-error="queueError"
-                            :branch-options="queueBranchOptions" :booking-options="queueBookingOptions"
+                            :branch-options="queueBranchOptions"
                             :default-branch-id="defaultQueueBranchId" :view-branch-id="queueViewBranchId"
                             @refresh-queue="fetchQueueData($event || {})" @set-view-branch="setQueueViewBranchId"
                             @call-next="callNextQueue" @transition-ticket="transitionQueueTicket"
-                            @add-booking="addQueueBooking" @add-walk-in="addQueueWalkIn" />
+                            @add-walk-in="addQueueWalkIn" />
 
                         <TransactionsPage v-else-if="activeModuleId === 'transactions'"
                             :panel-transactions-url="panelTransactionsUrl"

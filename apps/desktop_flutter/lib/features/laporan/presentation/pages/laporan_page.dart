@@ -253,9 +253,14 @@ class LaporanPage extends StatelessWidget {
           .toList();
 
       return Transaction(
+        backendId: row.id,
         id: row.transactionCode,
         waktu: DateTime.tryParse(row.createdAt ?? '') ?? DateTime.now(),
         namaPelanggan: row.customerName.isEmpty ? '-' : row.customerName,
+        branchName: row.branchName,
+        packageId: packageItems.isNotEmpty
+            ? packageItems.first.itemRefId
+            : null,
         paket: packageItems.isNotEmpty ? packageItems.first.itemName : '-',
         addOns: addOnItems.isEmpty
             ? null

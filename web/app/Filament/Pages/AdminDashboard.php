@@ -17,7 +17,7 @@ class AdminDashboard extends Page
 
     protected static ?int $navigationSort = -2;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-squares-2x2';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-squares-2x2';
 
     protected static ?string $navigationLabel = 'Dashboard';
 
@@ -35,7 +35,7 @@ class AdminDashboard extends Page
         $this->redirectRoute('admin.dashboard');
     }
 
-    public function getHeading(): string | Htmlable | null
+    public function getHeading(): string|Htmlable|null
     {
         return null;
     }
@@ -63,7 +63,6 @@ class AdminDashboard extends Page
             'ownerHighlights' => $reportService->ownerHighlights(),
             'ownerModules' => $service->ownerModules(),
             'queueLive' => $queuePageService->live(),
-            'queueBookingOptions' => $queuePageService->bookingOptions(),
             'recentTransactions' => $transactionReadService->recentDetailed(),
             'recentActivities' => $activityLogger->recentRows(),
             'queueSnapshot' => $queuePageService->snapshot(),

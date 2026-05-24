@@ -18,7 +18,6 @@ class AdminQueuePageService
     {
         return [
             'queue_live' => $this->live($queueDate, $branchId),
-            'queue_booking_options' => $this->bookingOptions($queueDate, $branchId),
         ];
     }
 
@@ -98,7 +97,6 @@ class AdminQueuePageService
                 QueueStatus::Skipped->value,
             ])
             ->orderBy('queue_number')
-            ->limit(8)
             ->get([
                 'id',
                 'booking_id',
@@ -209,64 +207,6 @@ class AdminQueuePageService
             ] : null,
             'waiting' => $waitingTickets,
         ];
-    }
-
-    public function bookingOptions(?string $queueDate = null, ?int $branchId = null): array
-    {
-        $targetDate = $queueDate ?: $this->queueTodayDate();
-        $resolvedBranchId = $branchId && $branchId > 0 ? (int) $branchId : null;
-
-        return Booking::query()
-            ->with(['branch:id,name', 'package:id,name'])
-            ->whereDate('booking_date', $targetDate)
-            ->when($resolvedBranchId, fn ($query) => $query->where('branch_id', $resolvedBranchId))
-            ->whereIn('status', [
-                BookingStatus::Confirmed->value,
-                BookingStatus::Paid->value,
-                BookingStatus::CheckedIn->value,
-            ])
-            ->whereDoesntHave('queueTicket')
-            ->orderBy('start_at')
-            ->orderBy('id')
-            ->limit(100)
-            ->get([
-                'id',
-                'booking_code',
-                'branch_id',
-                'package_id',
-                'customer_name',
-                'booking_date',
-                'start_at',
-                'status',
-            ])
-            ->map(function (Booking $booking): array {
-                $dateText = $booking->booking_date?->format('d M Y') ?? '-';
-                $timeText = $booking->start_at?->format('H:i') ?? '--:--';
-
-                return [
-                    'id' => (int) $booking->id,
-                    'booking_code' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
-                    'branch_id' => (int) $booking->branch_id,
-                    'branch_name' => (string) ($booking->branch?->name ?? '-'),
-                    'package_id' => $booking->package_id ? (int) $booking->package_id : null,
-                    'package_name' => (string) ($booking->package?->name ?? '-'),
-                    'customer_name' => (string) $booking->customer_name,
-                    'booking_date' => $booking->booking_date?->toDateString(),
-                    'start_time' => $booking->start_at?->format('H:i:s'),
-                    'status' => (string) ($booking->status?->value ?? $booking->status),
-                    'status_label' => $this->statusLabel((string) ($booking->status?->value ?? $booking->status)),
-                    'display_text' => sprintf(
-                        '%s - %s (%s, %s %s)',
-                        (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
-                        (string) $booking->customer_name,
-                        (string) ($booking->branch?->name ?? '-'),
-                        $dateText,
-                        $timeText,
-                    ),
-                ];
-            })
-            ->values()
-            ->all();
     }
 
     public function snapshot(int $limit = 6): array

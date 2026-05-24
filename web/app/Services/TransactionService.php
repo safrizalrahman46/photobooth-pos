@@ -4,13 +4,16 @@ namespace App\Services;
 
 use App\Enums\BookingStatus;
 use App\Enums\TransactionStatus;
+use App\Models\AddOn;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Support\CodeGenerator;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TransactionService
 {
@@ -18,6 +21,7 @@ class TransactionService
         private readonly CodeGenerator $codeGenerator,
         private readonly ActivityLogger $activityLogger,
         private readonly ReferralService $referralService,
+        private readonly InventoryService $inventoryService,
     ) {}
 
     public function create(array $payload, int $cashierId): Transaction
@@ -89,6 +93,8 @@ class TransactionService
     public function addPayment(Transaction $transaction, array $payload, int $cashierId): Transaction
     {
         return DB::transaction(function () use ($transaction, $payload, $cashierId): Transaction {
+            /** @var Transaction $transaction */
+            $transaction = Transaction::query()->whereKey($transaction->id)->lockForUpdate()->firstOrFail();
             $amount = (float) $payload['amount'];
             $beforePaidAmount = (float) $transaction->paid_amount;
             $beforeStatus = $transaction->status instanceof TransactionStatus
@@ -104,6 +110,7 @@ class TransactionService
                 'paid_at' => now(),
                 'cashier_id' => $cashierId,
                 'notes' => $payload['notes'] ?? null,
+                'meta' => $payload['meta'] ?? null,
             ]);
 
             $newPaidAmount = (float) $transaction->paid_amount + $amount;
@@ -156,11 +163,11 @@ class TransactionService
                             [
                                 'message' => sprintf(
                                     'Status booking %s berubah dari %s ke %s melalui pembayaran transaksi.',
-                                    (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                                    (string) ($booking->booking_code ?? ('BK-'.$booking->id)),
                                     $beforeBookingStatus,
                                     $afterBookingStatus,
                                 ),
-                                'label' => (string) ($booking->booking_code ?? ('BK-' . $booking->id)),
+                                'label' => (string) ($booking->booking_code ?? ('BK-'.$booking->id)),
                                 'transaction_code' => (string) $transaction->transaction_code,
                                 'from_status' => $beforeBookingStatus,
                                 'to_status' => $afterBookingStatus,
@@ -195,5 +202,163 @@ class TransactionService
 
             return $transaction->refresh();
         });
+    }
+
+    public function addExtraPrint(Transaction $transaction, array $payload, int $cashierId): Transaction
+    {
+        return DB::transaction(function () use ($transaction, $payload, $cashierId): Transaction {
+            /** @var Transaction $lockedTransaction */
+            $lockedTransaction = Transaction::query()
+                ->with('items')
+                ->whereKey($transaction->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $this->ensureExtraPrintAllowed($lockedTransaction);
+
+            $idempotencyKey = trim((string) ($payload['idempotency_key'] ?? ''));
+
+            if ($idempotencyKey !== '') {
+                $alreadyProcessed = Payment::query()
+                    ->where('transaction_id', (int) $lockedTransaction->id)
+                    ->where('meta->extra_print_idempotency_key', $idempotencyKey)
+                    ->exists();
+
+                if ($alreadyProcessed) {
+                    return $lockedTransaction->refresh();
+                }
+            }
+
+            /** @var AddOn $addOn */
+            $addOn = AddOn::query()
+                ->whereKey((int) $payload['add_on_id'])
+                ->where('is_active', true)
+                ->firstOrFail();
+
+            $packageIds = $this->packageIdsFromTransaction($lockedTransaction);
+
+            if ($addOn->package_id !== null && ! $packageIds->contains((int) $addOn->package_id)) {
+                throw ValidationException::withMessages([
+                    'add_on_id' => 'Add-on tidak sesuai dengan paket transaksi ini.',
+                ]);
+            }
+
+            $qty = max(1, (int) $payload['qty']);
+            $maxQty = max(1, (int) $addOn->max_qty);
+
+            if ($qty > $maxQty) {
+                throw ValidationException::withMessages([
+                    'qty' => sprintf('Maksimum qty untuk %s adalah %d.', (string) $addOn->name, $maxQty),
+                ]);
+            }
+
+            $unitPrice = (float) $addOn->price;
+            $lineTotal = $qty * $unitPrice;
+            $paymentAmount = array_key_exists('paid_amount', $payload)
+                ? max(0, (float) $payload['paid_amount'])
+                : $lineTotal;
+
+            if ($paymentAmount < $lineTotal) {
+                throw ValidationException::withMessages([
+                    'paid_amount' => 'Nominal pembayaran tidak boleh kurang dari total tambah cetak.',
+                ]);
+            }
+
+            /** @var TransactionItem $line */
+            $line = TransactionItem::query()->create([
+                'transaction_id' => $lockedTransaction->id,
+                'item_type' => 'add_on',
+                'item_ref_id' => (int) $addOn->id,
+                'item_name' => (string) $addOn->name,
+                'qty' => $qty,
+                'unit_price' => $unitPrice,
+                'line_total' => $lineTotal,
+            ]);
+
+            $subtotal = (float) $lockedTransaction->subtotal + $lineTotal;
+            $discount = (float) $lockedTransaction->discount_amount;
+            $tax = (float) $lockedTransaction->tax_amount;
+            $total = max(0, $subtotal - $discount + $tax);
+            $paid = (float) $lockedTransaction->paid_amount;
+
+            $lockedTransaction->subtotal = $subtotal;
+            $lockedTransaction->total_amount = $total;
+            $lockedTransaction->change_amount = max(0, $paid - $total);
+            $lockedTransaction->status = $paid >= $total ? TransactionStatus::Paid : TransactionStatus::Partial;
+            $lockedTransaction->save();
+
+            $updatedTransaction = $this->addPayment($lockedTransaction, [
+                'method' => (string) $payload['payment_method'],
+                'amount' => $paymentAmount,
+                'reference_no' => $payload['reference_no'] ?? null,
+                'notes' => $payload['notes'] ?? 'Tambah cetak.',
+                'meta' => [
+                    'type' => 'extra_print',
+                    'extra_print_idempotency_key' => $idempotencyKey !== '' ? $idempotencyKey : null,
+                    'transaction_item_id' => (int) $line->id,
+                    'add_on_id' => (int) $addOn->id,
+                    'qty' => $qty,
+                ],
+            ], $cashierId);
+
+            $this->inventoryService->deductForTransactionItems(
+                $updatedTransaction,
+                [$line],
+                $cashierId,
+                InventoryService::SOURCE_TRANSACTION_EXTRA_PRINT
+            );
+
+            $this->activityLogger->log(
+                'transactions',
+                'extra_print_added',
+                $cashierId,
+                Transaction::class,
+                (int) $lockedTransaction->id,
+                [
+                    'message' => sprintf('Tambah cetak ditambahkan ke transaksi %s.', (string) $lockedTransaction->transaction_code),
+                    'label' => (string) $lockedTransaction->transaction_code,
+                    'add_on_id' => (int) $addOn->id,
+                    'item_name' => (string) $addOn->name,
+                    'qty' => $qty,
+                    'line_total' => $lineTotal,
+                    'payment_amount' => $paymentAmount,
+                ],
+            );
+
+            return $updatedTransaction->refresh();
+        });
+    }
+
+    private function ensureExtraPrintAllowed(Transaction $transaction): void
+    {
+        $status = $transaction->status instanceof TransactionStatus
+            ? $transaction->status->value
+            : (string) $transaction->status;
+
+        if ($status !== TransactionStatus::Paid->value) {
+            throw ValidationException::withMessages([
+                'transaction' => 'Tambah cetak hanya bisa untuk transaksi yang sudah lunas.',
+            ]);
+        }
+
+        $timezone = config('app.queue_timezone', 'Asia/Jakarta');
+        $transactionDate = $transaction->created_at?->copy()->timezone($timezone)->toDateString();
+        $today = Carbon::now($timezone)->toDateString();
+
+        if ($transactionDate !== $today) {
+            throw ValidationException::withMessages([
+                'transaction' => 'Tambah cetak hanya bisa untuk transaksi hari ini.',
+            ]);
+        }
+    }
+
+    private function packageIdsFromTransaction(Transaction $transaction): Collection
+    {
+        return collect($transaction->items ?? [])
+            ->filter(fn ($item): bool => in_array((string) $item->item_type, ['package', 'booking'], true) && (int) $item->item_ref_id > 0)
+            ->pluck('item_ref_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values();
     }
 }

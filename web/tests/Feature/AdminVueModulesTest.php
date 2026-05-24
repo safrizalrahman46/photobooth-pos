@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Branch;
 use App\Models\AddOn;
 use App\Models\Booking;
+use App\Models\Branch;
 use App\Models\InventoryItem;
 use App\Models\Package;
 use App\Models\TimeSlot;
@@ -397,7 +397,7 @@ class AdminVueModulesTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_queue_booking_options_exclude_pending_bookings(): void
+    public function test_queue_data_does_not_expose_booking_check_in_options(): void
     {
         $user = User::factory()->create();
 
@@ -452,16 +452,11 @@ class AdminVueModulesTest extends TestCase
             'deposit_amount' => 0,
         ]);
 
-        $response = $this->actingAs($user)
+        $this->actingAs($user)
             ->getJson('/admin/queue-data')
             ->assertOk()
             ->assertJsonPath('success', true)
-            ->json('data.queue_booking_options');
-
-        $bookingCodes = collect($response)->pluck('booking_code')->all();
-
-        $this->assertContains('BK-CONFIRMED-QUEUE', $bookingCodes);
-        $this->assertNotContains('BK-PENDING-QUEUE', $bookingCodes);
+            ->assertJsonMissingPath('data.queue_booking_options');
     }
 
     public function test_packages_data_counts_this_month_bookings_until_end_of_month(): void

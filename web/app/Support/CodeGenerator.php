@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Transaction;
+use App\Models\WalkInRequest;
 use Carbon\Carbon;
 
 class CodeGenerator
@@ -22,6 +23,11 @@ class CodeGenerator
     public function generatePaymentCode(Carbon $date): string
     {
         return $this->generateDailyCode('PAY', $date, Payment::query(), 'payment_code');
+    }
+
+    public function generateWalkInRequestCode(Carbon $date): string
+    {
+        return $this->generateDailyCode('WLK', $date, WalkInRequest::query(), 'request_code');
     }
 
     public function generateQueueCode(Carbon $date, int $queueNumber): string

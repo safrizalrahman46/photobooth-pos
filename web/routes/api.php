@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AddOnController;
 use App\Http\Controllers\Api\V1\AppSettingController;
-use App\Http\Controllers\Api\V1\BranchController;
+use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BookingController;
+use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CashierSessionController;
 use App\Http\Controllers\Api\V1\DesignCatalogController;
 use App\Http\Controllers\Api\V1\InventoryController;
@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\SlotAvailabilityController;
 use App\Http\Controllers\Api\V1\TimeSlotController;
 use App\Http\Controllers\Api\V1\TransactionController;
+use App\Http\Controllers\Api\V1\WalkInRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -78,6 +79,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/bookings/{booking}/decline', [BookingController::class, 'decline']);
 
         Route::post('/pos/walk-in/checkout', [PosController::class, 'walkInCheckout']);
+        Route::get('/walk-in-requests', [WalkInRequestController::class, 'index']);
+        Route::post('/walk-in-requests/{walkInRequest}/confirm-payment', [WalkInRequestController::class, 'confirmPayment']);
 
         Route::get('/queue-live', [QueueController::class, 'live']);
         Route::get('/queue-tickets', [QueueController::class, 'index']);
@@ -89,6 +92,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/transactions', [TransactionController::class, 'index']);
         Route::post('/transactions', [TransactionController::class, 'store']);
         Route::get('/transactions/{transaction}', [TransactionController::class, 'show']);
+        Route::post('/transactions/{transaction}/extra-print', [TransactionController::class, 'extraPrint']);
         Route::post('/transactions/{transaction}/payments', [PaymentController::class, 'store']);
 
         Route::get('/reports/summary', [ReportController::class, 'summary']);

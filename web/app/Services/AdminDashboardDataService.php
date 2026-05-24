@@ -4,9 +4,13 @@ namespace App\Services;
 
 use App\Enums\PaymentMethod;
 use App\Models\AddOn;
+use App\Models\Booking;
 use App\Models\Branch;
 use App\Models\DesignCatalog;
 use App\Models\Package;
+use App\Models\QueueTicket;
+use App\Models\Transaction;
+use App\Models\User;
 
 class AdminDashboardDataService
 {
@@ -51,7 +55,6 @@ class AdminDashboardDataService
             'ownerHighlights' => $this->reportService->ownerHighlights(),
             'ownerModules' => $this->ownerModules(),
             'queueLive' => $this->adminQueuePageService->live(),
-            'queueBookingOptions' => $this->adminQueuePageService->bookingOptions(),
             'recentTransactions' => $this->transactionReadService->recentDetailed(),
             'recentActivities' => $this->activityLogger->recentRows(),
             'queueSnapshot' => $this->adminQueuePageService->snapshot(),
@@ -164,7 +167,7 @@ class AdminDashboardDataService
                 'label' => 'Kelola Booking',
                 'description' => 'Monitoring booking, ubah status, dan cek detail pelanggan.',
                 'url' => url('/admin/bookings'),
-                'badge' => number_format(\App\Models\Booking::query()->count()),
+                'badge' => number_format(Booking::query()->count()),
                 'tone' => 'blue',
                 'icon' => 'calendar',
             ],
@@ -172,7 +175,7 @@ class AdminDashboardDataService
                 'label' => 'Transaksi',
                 'description' => 'Pantau pembayaran dan performa transaksi harian.',
                 'url' => url('/admin/transactions'),
-                'badge' => number_format(\App\Models\Transaction::query()->count()),
+                'badge' => number_format(Transaction::query()->count()),
                 'tone' => 'emerald',
                 'icon' => 'receipt',
             ],
@@ -180,7 +183,7 @@ class AdminDashboardDataService
                 'label' => 'Antrian Studio',
                 'description' => 'Pantau antrean pelanggan aktif secara real-time.',
                 'url' => url('/admin/queue'),
-                'badge' => number_format(\App\Models\QueueTicket::query()->count()),
+                'badge' => number_format(QueueTicket::query()->count()),
                 'tone' => 'violet',
                 'icon' => 'queue',
             ],
@@ -204,7 +207,7 @@ class AdminDashboardDataService
                 'label' => 'User Admin/Cashier',
                 'description' => 'Manajemen akun owner dan cashier.',
                 'url' => url('/admin/users'),
-                'badge' => number_format(\App\Models\User::query()->count()),
+                'badge' => number_format(User::query()->count()),
                 'tone' => 'slate',
                 'icon' => 'users',
             ],
@@ -213,6 +216,6 @@ class AdminDashboardDataService
 
     private function formatRupiah(float $amount): string
     {
-        return 'Rp ' . number_format($amount, 0, ',', '.');
+        return 'Rp '.number_format($amount, 0, ',', '.');
     }
 }

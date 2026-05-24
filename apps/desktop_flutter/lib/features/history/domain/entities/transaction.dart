@@ -19,18 +19,24 @@ extension TransactionStatusX on TransactionStatus {
 
 /// Entity utama transaksi
 class Transaction {
+  final int backendId;
   final String id; // e.g. "TRX-9402"
   final DateTime waktu;
   final String namaPelanggan;
+  final String branchName;
+  final int? packageId;
   final String paket;
   final String? addOns; // nullable, bisa tidak ada add-on
   final int totalBayar; // dalam rupiah, tanpa desimal
   final TransactionStatus status;
 
   const Transaction({
+    this.backendId = 0,
     required this.id,
     required this.waktu,
     required this.namaPelanggan,
+    this.branchName = '',
+    this.packageId,
     required this.paket,
     this.addOns,
     required this.totalBayar,

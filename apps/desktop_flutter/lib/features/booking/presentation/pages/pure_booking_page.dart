@@ -44,7 +44,7 @@ class _PureBookingPageState extends State<PureBookingPage> {
                     Text('Daftar Booking', style: AppTextStyles.h2),
                     const SizedBox(height: 4),
                     Text(
-                      'Kelola pesanan online dan konfirmasi antrean',
+                      'Verifikasi booking; booking hari ini otomatis masuk antrean',
                       style: AppTextStyles.bodySmall,
                     ),
                   ],
@@ -134,6 +134,20 @@ class _BookingTable extends StatelessWidget {
                   onAcc: () async {
                     controller.selectQueue(index);
                     await controller.accBooking();
+                    if (!context.mounted) return;
+
+                    final errorMessage = controller.errorMessage;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          errorMessage ??
+                              'Booking terverifikasi dan otomatis masuk antrean hari ini.',
+                        ),
+                        backgroundColor: errorMessage == null
+                            ? const Color(0xFF10B981)
+                            : Colors.redAccent,
+                      ),
+                    );
                   },
                   onCancel: () async {
                     controller.selectQueue(index);

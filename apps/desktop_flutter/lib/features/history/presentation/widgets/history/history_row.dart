@@ -14,7 +14,7 @@ class HistoryRow extends StatelessWidget {
   static const int _flexPaket = 4;
   static const int _flexTotal = 2;
   static const int _flexStatus = 2;
-  static const double _colAction = 140;
+  static const double _colAction = 150;
 
   const HistoryRow({
     super.key,
@@ -108,7 +108,7 @@ class HistoryRow extends StatelessWidget {
               ),
             ),
 
-            // Action: Cetak Ulang
+            // Action: Tambah Cetak
             SizedBox(
               width: _colAction,
               child: Align(
@@ -119,9 +119,9 @@ class HistoryRow extends StatelessWidget {
                     // Untuk sekarang kita asumsikan controller dikirim atau via callback
                     onActionPressed();
                   },
-                  icon: const Icon(Icons.print_rounded, size: 16),
+                  icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
                   label: const Text(
-                    'Cetak Ulang',
+                    'Tambah Cetak',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                   style: TextButton.styleFrom(
