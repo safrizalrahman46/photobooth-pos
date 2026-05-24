@@ -22,6 +22,7 @@ import 'package:desktop_flutter/shared/models/auth_user.dart';
 import 'package:desktop_flutter/shared/models/desktop_session.dart';
 import 'package:desktop_flutter/shared/models/transaction_record.dart';
 import 'package:desktop_flutter/shared/models/time_slot_management_item.dart';
+import 'package:desktop_flutter/shared/models/walk_in_request_item.dart';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
@@ -1074,6 +1075,89 @@ class ApiClient {
     }
 
     return TransactionRecord.fromJson(data);
+  }
+
+  Future<TransactionRecord> addTransactionExtraPrint({
+    required int transactionId,
+    required int addOnId,
+    required int qty,
+    required String paymentMethod,
+    String? referenceNo,
+    String? idempotencyKey,
+    String? notes,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/transactions/$transactionId/extra-print',
+      authenticated: true,
+      body: {
+        'add_on_id': addOnId,
+        'qty': qty,
+        'payment_method': paymentMethod,
+        if (referenceNo != null && referenceNo.isNotEmpty)
+          'reference_no': referenceNo,
+        if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+          'idempotency_key': idempotencyKey,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons tambah cetak tidak valid.');
+    }
+
+    return TransactionRecord.fromJson(data);
+  }
+
+  Future<List<WalkInRequestItem>> fetchWalkInRequests({
+    int? branchId,
+    String? status,
+    String? search,
+    int perPage = 50,
+  }) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/walk-in-requests',
+      authenticated: true,
+      query: {
+        'per_page': '$perPage',
+        if (branchId != null) 'branch_id': '$branchId',
+        if (status != null && status.isNotEmpty) 'status': status,
+        if (search != null && search.isNotEmpty) 'search': search,
+      },
+    );
+
+    final data = payload['data'];
+
+    if (data is! List) {
+      return <WalkInRequestItem>[];
+    }
+
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(WalkInRequestItem.fromJson)
+        .toList();
+  }
+
+  Future<WalkInConfirmResult> confirmWalkInRequestPayment({
+    required int requestId,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/walk-in-requests/$requestId/confirm-payment',
+      authenticated: true,
+      body: {'payment_method': 'cash'},
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons konfirmasi QR walk-in tidak valid.');
+    }
+
+    return WalkInConfirmResult.fromJson(data);
   }
 
   Future<TransactionRecord> createTransaction({

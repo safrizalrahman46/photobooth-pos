@@ -8,6 +8,7 @@ import '../../../app/theme/app_text_styles.dart';
 
 // Pages
 import '../../booking/presentation/pages/walkin_page.dart';
+import '../../booking/presentation/pages/qr_walkin_page.dart';
 import '../../booking/presentation/pages/pure_booking_page.dart';
 import '../../history/presentation/pages/history_page.dart';
 import '../../laporan/presentation/pages/laporan_page.dart';
@@ -44,6 +45,13 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         icon: Icons.calendar_today_rounded,
         builder: WalkinPage.new,
       ),
+      if (user.can('transaction.manage') && user.can('queue.manage'))
+        const _DesktopDestination(
+          id: _DesktopPageIds.qrWalkIn,
+          label: 'QR Walk-in',
+          icon: Icons.qr_code_2_rounded,
+          builder: QrWalkinPage.new,
+        ),
       const _DesktopDestination(
         id: _DesktopPageIds.booking,
         label: 'Booking',
@@ -266,6 +274,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
 
 class _DesktopPageIds {
   static const walkIn = 'walk-in';
+  static const qrWalkIn = 'qr-walk-in';
   static const booking = 'booking';
   static const queue = 'queue';
   static const history = 'history';

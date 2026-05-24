@@ -1,6 +1,8 @@
 // features/history/application/history_controller.dart
 
 import 'package:flutter/foundation.dart';
+import 'package:desktop_flutter/shared/models/add_on_catalog_item.dart';
+import 'package:desktop_flutter/shared/models/transaction_record.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
 import '../domain/entities/transaction.dart';
@@ -92,9 +94,14 @@ class HistoryController extends ChangeNotifier {
             .toList();
 
         return Transaction(
+          backendId: row.id,
           id: row.transactionCode,
           waktu: DateTime.tryParse(row.createdAt ?? '') ?? DateTime.now(),
           namaPelanggan: row.customerName.isEmpty ? '-' : row.customerName,
+          branchName: row.branchName,
+          packageId: packageItems.isNotEmpty
+              ? packageItems.first.itemRefId
+              : null,
           paket: packageItems.isNotEmpty ? packageItems.first.itemName : '-',
           addOns: addOnItems.isEmpty
               ? null
@@ -143,6 +150,48 @@ class HistoryController extends ChangeNotifier {
   /// Placeholder aksi per-baris (edit / hapus / detail)
   void onRowAction(Transaction transaction) {
     debugPrint('Row action: ${transaction.id}');
+  }
+
+  Future<TransactionRecord?> addExtraPrint({
+    required Transaction transaction,
+    required AddOnCatalogItem addOn,
+    required int qty,
+    required String paymentMethod,
+    String? referenceNo,
+  }) async {
+    final client = ApiSession.client;
+
+    if (client == null) {
+      errorMessage = 'Sesi kasir tidak aktif. Silakan login ulang.';
+      notifyListeners();
+      return null;
+    }
+
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final updated = await client.addTransactionExtraPrint(
+        transactionId: transaction.backendId,
+        addOnId: addOn.id,
+        qty: qty,
+        paymentMethod: paymentMethod,
+        referenceNo: referenceNo,
+        idempotencyKey:
+            '${transaction.backendId}-${DateTime.now().microsecondsSinceEpoch}',
+      );
+
+      await loadTransactions();
+
+      return updated;
+    } catch (error) {
+      errorMessage = resolveRequestErrorMessage(
+        error,
+        fallback: 'Tambah cetak belum berhasil.',
+      );
+      notifyListeners();
+      return null;
+    }
   }
 
   /// Aksi Cetak Ulang

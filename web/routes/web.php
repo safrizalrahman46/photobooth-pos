@@ -23,10 +23,16 @@ use App\Http\Controllers\Web\BookingController;
 use App\Http\Controllers\Web\LandingController;
 use App\Http\Controllers\Web\PackageSamplePhotoController;
 use App\Http\Controllers\Web\QueueBoardController;
+use App\Http\Controllers\Web\WalkInRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::get('/queue-board', [QueueBoardController::class, 'index'])->name('queue.board');
+Route::prefix('walk-in')->name('walk-in.')->group(function () {
+    Route::get('/', [WalkInRequestController::class, 'create'])->name('create');
+    Route::post('/', [WalkInRequestController::class, 'store'])->middleware('throttle:walk-in')->name('store');
+    Route::get('/success/{walkInRequest:request_code}', [WalkInRequestController::class, 'success'])->name('success');
+});
 Route::get('/media/package-samples/{path}', PackageSamplePhotoController::class)
     ->where('path', '.*')
     ->name('media.package-samples');
@@ -53,7 +59,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
         Route::get('/', AdminDashboardController::class)->name('dashboard');
-        Route::get('/admin-dashboard', fn() => redirect()->route('admin.dashboard'));
+        Route::get('/admin-dashboard', fn () => redirect()->route('admin.dashboard'));
         Route::get('/packages', AdminDashboardController::class);
         Route::get('/add-ons', AdminDashboardController::class);
         Route::get('/stock', AdminDashboardController::class);

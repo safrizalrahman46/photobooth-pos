@@ -5,6 +5,8 @@ import BookingApp from './booking/BookingApp.vue';
 import BookingCustomerApp from './booking/BookingCustomerApp.vue';
 import PaymentApp from './booking/PaymentApp.vue';
 import BookingSuccessApp from './booking/BookingSuccessApp.vue';
+import WalkInRequestApp from './booking/WalkInRequestApp.vue';
+import WalkInSuccessApp from './booking/WalkInSuccessApp.vue';
 
 const parseProps = (elementId) => {
 	const propsNode = document.getElementById(elementId);
@@ -69,6 +71,30 @@ const mountBookingSuccessApp = () => {
 	createApp(BookingSuccessApp, props).mount(mountNode);
 };
 
+const mountWalkInRequestApp = () => {
+	const mountNode = document.getElementById('walk-in-request-app');
+
+	if (!mountNode) {
+		return;
+	}
+
+	const props = parseProps('walk-in-request-app-props');
+
+	createApp(WalkInRequestApp, props).mount(mountNode);
+};
+
+const mountWalkInSuccessApp = () => {
+	const mountNode = document.getElementById('walk-in-success-app');
+
+	if (!mountNode) {
+		return;
+	}
+
+	const props = parseProps('walk-in-success-app-props');
+
+	createApp(WalkInSuccessApp, props).mount(mountNode);
+};
+
 const mountAdminDashboardApp = () => {
 	const mountNode = document.getElementById('admin-dashboard-app');
 
@@ -85,6 +111,8 @@ const mountApps = () => {
 	mountBookingApp();
 	mountPaymentApp();
 	mountBookingSuccessApp();
+	mountWalkInRequestApp();
+	mountWalkInSuccessApp();
 	mountAdminDashboardApp();
 };
 
