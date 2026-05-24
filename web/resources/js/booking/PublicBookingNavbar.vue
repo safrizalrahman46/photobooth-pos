@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref } from 'vue';
-import defaultLogo from '../../images/logo/logo.png';
 
 const props = defineProps({
     routes: {
@@ -35,7 +34,7 @@ const links = computed(() => {
     ];
 });
 
-const logoSrc = computed(() => props.site.logo_url || props.routes.logo || defaultLogo);
+const logoSrc = computed(() => props.routes.logo || '/images/logo/logo.png');
 const brandName = computed(() => props.site.brand_name || 'Ready to Pict');
 const shortName = computed(() => props.site.short_name || 'Studio');
 
@@ -57,11 +56,11 @@ const isActive = (href) => {
 
 <template>
     <nav class="sticky top-0 z-50 border-b border-slate-300 bg-white/80 backdrop-blur-xl">
-        <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-            <a :href="props.routes.landing || '/'" class="flex items-center gap-2.5">
-                <img :src="logoSrc" alt="Ready to Pict" class="h-12 w-12 rounded-full object-cover ring-2 ring-[#2563EB]/30 ring-offset-1">
+        <div class="mx-auto flex min-h-16 max-w-7xl items-center justify-between px-4 py-2 sm:px-6">
+            <a :href="props.routes.landing || '/'" class="flex items-center gap-2 md:gap-3">
+                <img :src="logoSrc" :alt="brandName" class="h-16 w-auto shrink-0 md:h-20">
                 <div class="flex flex-col leading-tight">
-                    <span class="text-[#1F2937]" style="font-size: 1rem; font-weight: 700;">
+                    <span class="text-[#118AB2]" style="font-size: 1rem; font-weight: 700;">
                         {{ brandName }}
                     </span>
                     <span class="text-[0.6rem] uppercase tracking-widest text-gray-400">{{ shortName }}</span>
