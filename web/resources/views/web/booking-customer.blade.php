@@ -41,7 +41,7 @@
         'site' => [
             'brand_name' => $general['brand_name'] ?? config('app.name', 'Ready To Pict'),
             'short_name' => $general['short_name'] ?? 'Studio',
-            'logo_url' => $general['logo_url'] ?? asset('images/logo/logo.png'),
+            'logo_url' => asset('images/logo/logo.png'),
         ],
         'csrfToken' => csrf_token(),
     ];
