@@ -9,6 +9,7 @@ import 'package:desktop_flutter/shared/models/booking_item.dart';
 import 'package:desktop_flutter/shared/models/branch_management_item.dart';
 import 'package:desktop_flutter/shared/models/branch_option.dart';
 import 'package:desktop_flutter/shared/models/cashier_session_item.dart';
+import 'package:desktop_flutter/shared/models/cashier_settlement_item.dart';
 import 'package:desktop_flutter/shared/models/inventory_monitoring_payload.dart';
 import 'package:desktop_flutter/shared/models/package_management_item.dart';
 import 'package:desktop_flutter/shared/models/payment_record.dart';
@@ -479,6 +480,20 @@ class ApiClient {
     double? closingCash,
     String? notes,
   }) async {
+    final result = await closeCashierSessionWithSettlement(
+      sessionId: sessionId,
+      closingCash: closingCash,
+      notes: notes,
+    );
+
+    return result.session;
+  }
+
+  Future<CashierSessionCloseResult> closeCashierSessionWithSettlement({
+    required int sessionId,
+    double? closingCash,
+    String? notes,
+  }) async {
     final payload = await _send(
       method: 'PATCH',
       path: '/cashier-sessions/$sessionId/close',
@@ -495,7 +510,85 @@ class ApiClient {
       throw ApiException('Respons tutup sesi kasir tidak valid.');
     }
 
-    return CashierSessionItem.fromJson(data);
+    final session = data['session'];
+    final settlement = data['settlement'];
+
+    if (session is! Map<String, dynamic> || settlement is! Map<String, dynamic>) {
+      throw ApiException('Respons tutup sesi kasir tidak valid.');
+    }
+
+    return CashierSessionCloseResult(
+      session: CashierSessionItem.fromJson(session),
+      settlement: CashierSettlementItem.fromJson(settlement),
+    );
+  }
+
+  Future<Map<String, dynamic>> fetchCashierSettlementPreview({
+    required int sessionId,
+  }) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/cashier-sessions/$sessionId/settlement-preview',
+      authenticated: true,
+    );
+
+    final data = payload['data'];
+
+    return data is Map<String, dynamic> ? data : <String, dynamic>{};
+  }
+
+  Future<void> createCashExpense({
+    required int sessionId,
+    required double amount,
+    required String title,
+    String? notes,
+  }) async {
+    await _send(
+      method: 'POST',
+      path: '/cashier-sessions/$sessionId/expenses',
+      authenticated: true,
+      body: {
+        'amount': amount,
+        'title': title,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      },
+    );
+  }
+
+  Future<CashierSettlementItem> fetchCashierSettlement({
+    required int settlementId,
+  }) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/cashier-settlements/$settlementId',
+      authenticated: true,
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Data setoran kasir tidak valid.');
+    }
+
+    return CashierSettlementItem.fromJson(data);
+  }
+
+  Future<CashierSettlementItem> markCashierSettlementPrinted({
+    required int settlementId,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/cashier-settlements/$settlementId/print',
+      authenticated: true,
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Status cetak setoran kasir tidak valid.');
+    }
+
+    return CashierSettlementItem.fromJson(data);
   }
 
   Future<List<PrinterSettingItem>> fetchPrinterSettings({

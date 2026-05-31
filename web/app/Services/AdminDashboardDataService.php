@@ -31,6 +31,7 @@ class AdminDashboardDataService
         private readonly AdminPrinterSettingService $adminPrinterSettingService,
         private readonly AdminPaymentService $adminPaymentService,
         private readonly AdminReferralService $adminReferralService,
+        private readonly CashierSettlementService $cashierSettlementService,
     ) {}
 
     public function bootstrapPayload(
@@ -70,6 +71,8 @@ class AdminDashboardDataService
             'initialPrinterSettings' => $this->adminPrinterSettingService->rows(['include_inactive' => true]),
             'initialPayments' => $this->adminPaymentService->rows(),
             'initialPaymentTransactionOptions' => $this->adminPaymentService->transactionOptions(),
+            'initialCashierSettlements' => $this->cashierSettlementService->settlementRows(),
+            'initialOpenCashierSessions' => $this->cashierSettlementService->openSessionRows(),
             'initialReferralPayload' => $this->adminReferralService->payload(),
             'initialInventoryItems' => $this->inventoryService->itemRows(),
             'initialInventoryMovements' => $this->inventoryService->movementRows(),

@@ -22,6 +22,7 @@ class TransactionService
         private readonly ActivityLogger $activityLogger,
         private readonly ReferralService $referralService,
         private readonly InventoryService $inventoryService,
+        private readonly CashierSettlementService $cashierSettlementService,
     ) {}
 
     public function create(array $payload, int $cashierId): Transaction
@@ -95,17 +96,35 @@ class TransactionService
         return DB::transaction(function () use ($transaction, $payload, $cashierId): Transaction {
             /** @var Transaction $transaction */
             $transaction = Transaction::query()->whereKey($transaction->id)->lockForUpdate()->firstOrFail();
+            $session = $this->cashierSettlementService->requireActiveSession(
+                $cashierId,
+                (int) $transaction->branch_id,
+                true,
+            );
             $amount = (float) $payload['amount'];
             $beforePaidAmount = (float) $transaction->paid_amount;
+            $totalAmount = (float) $transaction->total_amount;
+            $remainingBeforePayment = max($totalAmount - $beforePaidAmount, 0);
+            $netAmount = $remainingBeforePayment > 0 ? min($amount, $remainingBeforePayment) : $amount;
             $beforeStatus = $transaction->status instanceof TransactionStatus
                 ? $transaction->status->value
                 : (string) $transaction->status;
+            $newPaidAmount = (float) $transaction->paid_amount + $amount;
+            $paymentStage = (string) ($payload['payment_stage'] ?? $this->resolvePaymentStage(
+                $payload,
+                $beforePaidAmount,
+                $newPaidAmount,
+                $totalAmount,
+            ));
 
             $payment = Payment::query()->create([
                 'transaction_id' => $transaction->id,
+                'cashier_session_id' => (int) $session->id,
                 'payment_code' => $this->codeGenerator->generatePaymentCode(now()),
                 'method' => $payload['method'],
+                'payment_stage' => $paymentStage,
                 'amount' => $amount,
+                'net_amount' => $netAmount,
                 'reference_no' => $payload['reference_no'] ?? null,
                 'paid_at' => now(),
                 'cashier_id' => $cashierId,
@@ -113,8 +132,6 @@ class TransactionService
                 'meta' => $payload['meta'] ?? null,
             ]);
 
-            $newPaidAmount = (float) $transaction->paid_amount + $amount;
-            $totalAmount = (float) $transaction->total_amount;
             $change = max(0, $newPaidAmount - $totalAmount);
 
             $transaction->paid_amount = $newPaidAmount;
@@ -202,6 +219,25 @@ class TransactionService
 
             return $transaction->refresh();
         });
+    }
+
+    private function resolvePaymentStage(array $payload, float $beforePaidAmount, float $newPaidAmount, float $totalAmount): string
+    {
+        $type = (string) data_get($payload, 'meta.type', '');
+
+        if ($type === 'extra_print') {
+            return CashierSettlementService::STAGE_EXTRA_PRINT;
+        }
+
+        if ($beforePaidAmount > 0) {
+            return CashierSettlementService::STAGE_PELUNASAN;
+        }
+
+        if ($totalAmount > 0 && $newPaidAmount < $totalAmount) {
+            return CashierSettlementService::STAGE_DP;
+        }
+
+        return CashierSettlementService::STAGE_FULL;
     }
 
     public function addExtraPrint(Transaction $transaction, array $payload, int $cashierId): Transaction

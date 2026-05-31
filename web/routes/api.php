@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CashierSessionController;
+use App\Http\Controllers\Api\V1\CashierSettlementController;
 use App\Http\Controllers\Api\V1\DesignCatalogController;
 use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\MidtransWebhookController;
@@ -68,7 +69,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/cashier-sessions', [CashierSessionController::class, 'index']);
         Route::get('/cashier-sessions/current', [CashierSessionController::class, 'current']);
         Route::post('/cashier-sessions/open', [CashierSessionController::class, 'open']);
+        Route::get('/cashier-sessions/{cashierSession}/settlement-preview', [CashierSessionController::class, 'preview']);
+        Route::post('/cashier-sessions/{cashierSession}/expenses', [CashierSessionController::class, 'storeExpense']);
         Route::patch('/cashier-sessions/{cashierSession}/close', [CashierSessionController::class, 'close']);
+        Route::get('/cashier-settlements/{cashierSettlement}', [CashierSettlementController::class, 'show']);
+        Route::post('/cashier-settlements/{cashierSettlement}/print', [CashierSettlementController::class, 'markPrinted']);
 
         Route::get('/bookings', [BookingController::class, 'index']);
         Route::get('/bookings/{booking}', [BookingController::class, 'show']);

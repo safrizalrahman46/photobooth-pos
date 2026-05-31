@@ -1,11 +1,157 @@
 import 'dart:typed_data';
 
+import 'package:desktop_flutter/shared/models/cashier_settlement_item.dart';
 import 'package:desktop_flutter/shared/models/transaction_record.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 class ReceiptPrinter {
+  static Future<void> printCashierSettlementReceipt({
+    required CashierSettlementItem settlement,
+    int? paperWidthMm,
+  }) async {
+    final bytes = await buildCashierSettlementReceiptPdf(
+      settlement: settlement,
+      paperWidthMm: paperWidthMm,
+    );
+
+    await Printing.layoutPdf(
+      name: 'settlement-${settlement.settlementCode}.pdf',
+      onLayout: (_) async => bytes,
+    );
+  }
+
+  static Future<Uint8List> buildCashierSettlementReceiptPdf({
+    required CashierSettlementItem settlement,
+    int? paperWidthMm,
+  }) async {
+    final doc = pw.Document();
+    final snapshot = settlement.snapshot;
+    final summary = _mapAt(snapshot, 'summary');
+    final nonCashRows = _listAt(snapshot, 'non_cash');
+    final packageRows = _listAt(snapshot, 'package_sales');
+    final dpRows = _listAt(snapshot, 'dp_info');
+    final expenseRows = _listAt(snapshot, 'expenses');
+    final notes = _listAt(snapshot, 'notes');
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: _pageFormatFromPaperWidth(paperWidthMm),
+        margin: const pw.EdgeInsets.all(14),
+        build: (context) => <pw.Widget>[
+          if (settlement.printCount > 1) ...[
+            pw.Center(
+              child: pw.Text(
+                'CETAK ULANG #${settlement.printCount}',
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 4),
+          ],
+          pw.Center(
+            child: pw.Text(
+              'LAPORAN',
+              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.Center(
+            child: pw.Text(
+              'REKAP SETORAN PER KASIR',
+              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.SizedBox(height: 8),
+          _labelValue('No Setoran', settlement.settlementCode),
+          _labelValue('Periode', settlement.periodLabel),
+          _labelValue('Kasir', settlement.cashierName),
+          _labelValue('Cabang', settlement.branchName),
+          pw.SizedBox(height: 6),
+          pw.Divider(thickness: 0.7),
+          _sectionTitle('RINGKASAN SETORAN'),
+          _labelValue('Total Penjualan', _stringAt(summary, 'total_sales_text')),
+          _labelValue('Cash Diterima', _stringAt(summary, 'cash_received_text')),
+          _labelValue('Non Cash', _stringAt(summary, 'non_cash_received_text')),
+          _labelValue(
+            'Pengeluaran Cash',
+            _stringAt(summary, 'cash_expenses_total_text'),
+          ),
+          pw.Divider(thickness: 0.7),
+          _labelValue(
+            'JML. DISETOR CASH',
+            _stringAt(summary, 'cash_to_deposit_text'),
+            bold: true,
+          ),
+          _labelValue(
+            'Uang Laci Disisakan',
+            _stringAt(summary, 'opening_cash_text'),
+          ),
+          pw.SizedBox(height: 6),
+          _sectionTitle('NON CASH'),
+          ...nonCashRows.map(
+            (row) => _labelValue(
+              _stringAt(row, 'method'),
+              _stringAt(row, 'amount_text'),
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          _sectionTitle('PENJUALAN PER PAKET'),
+          if (packageRows.isEmpty)
+            _labelValue('-', _currency(0))
+          else
+            ...packageRows.map(
+              (row) => _labelValue(
+                _stringAt(row, 'package_name'),
+                _stringAt(row, 'amount_text'),
+              ),
+            ),
+          pw.SizedBox(height: 6),
+          _sectionTitle('INFO DP'),
+          ...dpRows.map(
+            (row) => _labelValue(
+              _stringAt(row, 'label'),
+              _stringAt(row, 'amount_text'),
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          _sectionTitle('DETAIL PENGELUARAN'),
+          if (expenseRows.isEmpty)
+            _labelValue('-', _currency(0))
+          else
+            ...expenseRows.map(
+              (row) => _labelValue(
+                _stringAt(row, 'title'),
+                _stringAt(row, 'amount_text'),
+              ),
+            ),
+          if (notes.isNotEmpty) ...[
+            pw.SizedBox(height: 8),
+            pw.Divider(thickness: 0.7),
+            ...notes.map(
+              (note) => pw.Text(
+                note.toString(),
+                style: const pw.TextStyle(fontSize: 8),
+              ),
+            ),
+          ],
+          pw.SizedBox(height: 18),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: <pw.Widget>[
+              pw.Text('Kasir: __________', style: const pw.TextStyle(fontSize: 9)),
+              pw.Text('Owner: __________', style: const pw.TextStyle(fontSize: 9)),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    return doc.save();
+  }
+
   static Future<void> printTransactionReceipt({
     required TransactionRecord transaction,
     required String brandName,
@@ -208,6 +354,16 @@ class ReceiptPrinter {
     );
   }
 
+  static pw.Widget _sectionTitle(String title) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 4),
+      child: pw.Text(
+        title,
+        style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+      ),
+    );
+  }
+
   static String _currency(double value) {
     final rounded = value.round();
     final chars = rounded.toString().split('').reversed.toList();
@@ -250,5 +406,25 @@ class ReceiptPrinter {
     final minute = local.minute.toString().padLeft(2, '0');
 
     return '$year-$month-$day $hour:$minute';
+  }
+
+  static Map<String, dynamic> _mapAt(Map<String, dynamic> source, String key) {
+    final value = source[key];
+
+    return value is Map<String, dynamic> ? value : <String, dynamic>{};
+  }
+
+  static List<dynamic> _listAt(Map<String, dynamic> source, String key) {
+    final value = source[key];
+
+    return value is List ? value : const <dynamic>[];
+  }
+
+  static String _stringAt(dynamic source, String key) {
+    if (source is Map<String, dynamic>) {
+      return source[key]?.toString() ?? '-';
+    }
+
+    return '-';
   }
 }

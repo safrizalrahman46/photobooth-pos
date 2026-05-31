@@ -89,6 +89,8 @@ class AdminDashboardController extends Controller
                 'printerSettingBaseUrl' => url('/admin/printer-settings'),
                 'paymentsDataUrl' => route('admin.payments.data'),
                 'paymentsStoreUrlBase' => url('/admin/payments'),
+                'cashierSettlementsDataUrl' => route('admin.cashier-settlements.data'),
+                'cashierSettlementBaseUrl' => url('/admin/cashier-settlements'),
                 'referralsDataUrl' => route('admin.referrals.data'),
                 'referralStoreUrl' => route('admin.referrals.store'),
                 'referralBaseUrl' => url('/admin/referrals'),

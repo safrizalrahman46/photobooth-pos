@@ -20,6 +20,7 @@ import AddOnsPage from './pages/AddOnsPage.vue';
 import AppSettingsPage from './pages/AppSettingsPage.vue';
 import BlackoutDatesPage from './pages/BlackoutDatesPage.vue';
 import BranchesPage from './pages/BranchesPage.vue';
+import CashierSettlementsPage from './pages/CashierSettlementsPage.vue';
 import DesignsPage from './pages/DesignsPage.vue';
 import PackagesPage from './pages/PackagesPage.vue';
 import PaymentsPage from './pages/PaymentsPage.vue';
@@ -34,6 +35,7 @@ import { buildAdminModuleRegistry } from './moduleRegistry';
 import { useAppSettingsModule } from './composables/useAppSettingsModule';
 import { useBlackoutDatesModule } from './composables/useBlackoutDatesModule';
 import { useBranchesModule } from './composables/useBranchesModule';
+import { useCashierSettlementsModule } from './composables/useCashierSettlementsModule';
 import { usePaymentsModule } from './composables/usePaymentsModule';
 import { usePrinterSettingsModule } from './composables/usePrinterSettingsModule';
 import { useTimeSlotsModule } from './composables/useTimeSlotsModule';
@@ -273,6 +275,14 @@ const props = defineProps({
         type: String,
         default: '/admin/payments',
     },
+    cashierSettlementsDataUrl: {
+        type: String,
+        default: '',
+    },
+    cashierSettlementBaseUrl: {
+        type: String,
+        default: '/admin/cashier-settlements',
+    },
     referralsDataUrl: {
         type: String,
         default: '',
@@ -338,6 +348,14 @@ const props = defineProps({
         default: () => [],
     },
     initialPaymentTransactionOptions: {
+        type: Array,
+        default: () => [],
+    },
+    initialCashierSettlements: {
+        type: Array,
+        default: () => [],
+    },
+    initialOpenCashierSessions: {
         type: Array,
         default: () => [],
     },
@@ -736,7 +754,19 @@ const disabledSidebarItemIds = new Set([
 ]);
 
 const navItems = computed(() => {
-    const source = Array.isArray(props.uiConfig?.nav_items) ? props.uiConfig.nav_items : [];
+    const source = Array.isArray(props.uiConfig?.nav_items) ? [...props.uiConfig.nav_items] : [];
+
+    if (!source.some((item) => String(item?.id || '') === 'cashier-settlements')) {
+        source.push({
+            id: 'cashier-settlements',
+            label: 'Setoran Kasir',
+            icon: 'receipt',
+            href: '/admin/cashier-settlements',
+            group: 'operations',
+            sort_order: 345,
+        });
+    }
+
     const validGroupSet = new Set(navGroups.value.map((group) => group.key));
     const fallbackGroup = navGroups.value[0]?.key || 'overview';
 
@@ -3240,6 +3270,21 @@ const {
 });
 
 const {
+    cashierSettlementRows,
+    openCashierSessionRows,
+    settlementLoading,
+    settlementSaving,
+    settlementError,
+    fetchCashierSettlements,
+    verifySettlement,
+    createSettlementCorrection,
+} = useCashierSettlementsModule({
+    props,
+    parseRequestError,
+    getCsrfToken,
+});
+
+const {
     printerSettingRows,
     printerSettingLoading,
     printerSettingSaving,
@@ -3305,6 +3350,9 @@ const moduleRegistry = computed(() => buildAdminModuleRegistry({
     paymentRows,
     paymentLoading,
     fetchPaymentsData,
+    cashierSettlementRows,
+    settlementLoading,
+    fetchCashierSettlements,
     referralPayload,
     referralLoading,
     fetchReferralData,
@@ -4022,6 +4070,12 @@ onBeforeUnmount(() => {
                             :transaction-options="paymentTransactionRows" :loading="paymentLoading"
                             :saving="paymentSaving" :error-message="paymentError" @refresh-payments="fetchPaymentsData"
                             @create-payment="createPayment" />
+
+                        <CashierSettlementsPage v-else-if="activeModuleId === 'cashier-settlements'"
+                            :settlements="cashierSettlementRows" :open-sessions="openCashierSessionRows"
+                            :loading="settlementLoading" :saving="settlementSaving" :error-message="settlementError"
+                            @refresh="fetchCashierSettlements" @verify="verifySettlement"
+                            @create-correction="createSettlementCorrection" />
 
                         <ReferralsPage v-else-if="activeModuleId === 'referrals'" :payload="referralPayload"
                             :loading="referralLoading" :saving="referralSaving" :error-message="referralError"

@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use App\Services\AdminPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class AdminPaymentController extends Controller
 {
@@ -33,7 +34,15 @@ class AdminPaymentController extends Controller
         Transaction $transaction,
         AdminPaymentService $service,
     ): JsonResponse {
-        $service->storePayment($transaction, $request->validated(), (int) $request->user()->id);
+        try {
+            $service->storePayment($transaction, $request->validated(), (int) $request->user()->id);
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->validator->errors()->first() ?: 'Pembayaran gagal ditambahkan.',
+                'errors' => $exception->errors(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,

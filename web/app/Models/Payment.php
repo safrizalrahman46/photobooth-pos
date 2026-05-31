@@ -13,9 +13,12 @@ class Payment extends Model
 
     protected $fillable = [
         'transaction_id',
+        'cashier_session_id',
         'payment_code',
         'method',
+        'payment_stage',
         'amount',
+        'net_amount',
         'reference_no',
         'paid_at',
         'cashier_id',
@@ -27,6 +30,7 @@ class Payment extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'net_amount' => 'decimal:2',
             'paid_at' => 'datetime',
             'meta' => 'array',
             'method' => PaymentMethod::class,
@@ -36,6 +40,11 @@ class Payment extends Model
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);
+    }
+
+    public function cashierSession(): BelongsTo
+    {
+        return $this->belongsTo(CashierSession::class);
     }
 
     public function cashier(): BelongsTo

@@ -106,11 +106,19 @@ class TransactionController extends Controller
 
     public function extraPrint(AddExtraPrintRequest $request, Transaction $transaction): JsonResponse
     {
-        $updatedTransaction = $this->transactionService->addExtraPrint(
-            $transaction,
-            $request->validated(),
-            (int) $request->user()->id
-        );
+        try {
+            $updatedTransaction = $this->transactionService->addExtraPrint(
+                $transaction,
+                $request->validated(),
+                (int) $request->user()->id
+            );
+        } catch (ValidationException $exception) {
+            return $this->responder->error(
+                $exception->validator->errors()->first() ?: 'Tambah cetak gagal ditambahkan.',
+                422,
+                $exception->errors(),
+            );
+        }
 
         return $this->responder->success(
             new TransactionResource($updatedTransaction->load('branch', 'booking', 'queueTicket', 'items', 'payments')),
