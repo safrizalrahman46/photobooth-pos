@@ -15,6 +15,7 @@ import '../../laporan/presentation/pages/laporan_page.dart';
 import '../../addon/presentation/pages/addon_page.dart';
 import '../../antrian/presentation/pages/antrian_page.dart';
 import '../../stock/presentation/pages/stock_page.dart';
+import '../../kasir/presentation/pages/cashier_session_page.dart';
 
 // ╔═╗╦ ╦╔═╗╔═╗╔═╗  ╦╔═╔═╗╔╗╔╔╦╗╔═╗╦
 // ╚═╗║ ║║  ╠═╣╠═╝  ╠╩╗║ ║║║║ ║ ║ ║║
@@ -35,10 +36,26 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
   bool _isSidebarExpanded = true; // State baru untuk sidebar
   bool _loggingOut = false;
 
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.session.user.can('transaction.manage')) {
+      _selectedPageId = _DesktopPageIds.cashierSession;
+    }
+  }
+
   List<_DesktopDestination> _buildDestinations() {
     final user = widget.session.user;
 
     return [
+      if (user.can('transaction.manage'))
+        const _DesktopDestination(
+          id: _DesktopPageIds.cashierSession,
+          label: 'Sesi Kasir',
+          icon: Icons.point_of_sale_rounded,
+          builder: CashierSessionPage.new,
+        ),
       const _DesktopDestination(
         id: _DesktopPageIds.walkIn,
         label: 'Walk-in',
@@ -273,6 +290,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
 }
 
 class _DesktopPageIds {
+  static const cashierSession = 'cashier-session';
   static const walkIn = 'walk-in';
   static const qrWalkIn = 'qr-walk-in';
   static const booking = 'booking';

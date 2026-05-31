@@ -6,6 +6,7 @@ use App\Http\Controllers\Web\AdminAuthController;
 use App\Http\Controllers\Web\AdminBlackoutDateController;
 use App\Http\Controllers\Web\AdminBookingController;
 use App\Http\Controllers\Web\AdminBranchController;
+use App\Http\Controllers\Web\AdminCashierSettlementController;
 use App\Http\Controllers\Web\AdminDashboardController;
 use App\Http\Controllers\Web\AdminDashboardDataController;
 use App\Http\Controllers\Web\AdminDashboardReportController;
@@ -77,6 +78,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/blackout-dates', AdminDashboardController::class);
         Route::get('/printer-settings', AdminDashboardController::class);
         Route::get('/payments', AdminDashboardController::class);
+        Route::get('/cashier-settlements', AdminDashboardController::class);
         Route::get('/app-settings', AdminDashboardController::class);
 
         Route::get('/dashboard-data', AdminDashboardDataController::class)->name('dashboard.data');
@@ -145,6 +147,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/payments-data', [AdminPaymentController::class, 'index'])->name('payments.data');
         Route::post('/payments/{transaction}/store', [AdminPaymentController::class, 'store'])->name('payments.store');
+
+        Route::get('/cashier-settlements-data', [AdminCashierSettlementController::class, 'index'])->name('cashier-settlements.data');
+        Route::get('/cashier-settlements/{cashierSettlement}', [AdminCashierSettlementController::class, 'show']);
+        Route::post('/cashier-settlements/{cashierSettlement}/verify', [AdminCashierSettlementController::class, 'verify']);
+        Route::post('/cashier-settlements/{cashierSettlement}/correction', [AdminCashierSettlementController::class, 'correction']);
 
         Route::get('/referrals-data', [AdminReferralController::class, 'index'])->name('referrals.data');
         Route::post('/referrals', [AdminReferralController::class, 'store'])->name('referrals.store');

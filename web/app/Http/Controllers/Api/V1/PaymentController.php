@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Services\TransactionService;
 use App\Support\ApiResponder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class PaymentController extends Controller
 {
@@ -22,11 +23,19 @@ class PaymentController extends Controller
     {
         abort_unless($request->user()?->can('payment.manage'), 403);
 
-        $updatedTransaction = $this->transactionService->addPayment(
-            $transaction,
-            $request->validated(),
-            (int) $request->user()->id
-        );
+        try {
+            $updatedTransaction = $this->transactionService->addPayment(
+                $transaction,
+                $request->validated(),
+                (int) $request->user()->id
+            );
+        } catch (ValidationException $exception) {
+            return $this->responder->error(
+                $exception->validator->errors()->first() ?: 'Pembayaran gagal ditambahkan.',
+                422,
+                $exception->errors(),
+            );
+        }
 
         $latestPayment = $updatedTransaction->payments()->latest('id')->first();
 

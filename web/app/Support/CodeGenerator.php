@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Booking;
+use App\Models\CashierSettlement;
 use App\Models\Payment;
 use App\Models\Transaction;
 use App\Models\WalkInRequest;
@@ -23,6 +24,11 @@ class CodeGenerator
     public function generatePaymentCode(Carbon $date): string
     {
         return $this->generateDailyCode('PAY', $date, Payment::query(), 'payment_code');
+    }
+
+    public function generateSettlementCode(Carbon $date): string
+    {
+        return $this->generateDailyCode('SETOR', $date, CashierSettlement::query(), 'settlement_code');
     }
 
     public function generateWalkInRequestCode(Carbon $date): string

@@ -96,6 +96,13 @@ export const buildAdminModuleRegistry = (ctx) => ({
             }
         },
     },
+    'cashier-settlements': {
+        onEnter: () => {
+            if (!ctx.cashierSettlementRows.value.length && !ctx.settlementLoading.value) {
+                ctx.fetchCashierSettlements();
+            }
+        },
+    },
     referrals: {
         onEnter: () => {
             if (!ctx.referralLoading.value) {

@@ -74,6 +74,7 @@ class AdminPaymentService
                     'total_amount' => $total,
                     'paid_amount' => $paid,
                     'remaining_amount' => $remaining,
+                    'remaining_amount_text' => $this->formatRupiah($remaining),
                 ];
             })
             ->values()
@@ -91,12 +92,16 @@ class AdminPaymentService
             'id' => (int) $payment->id,
             'payment_code' => (string) $payment->payment_code,
             'transaction_id' => (int) $payment->transaction_id,
+            'cashier_session_id' => $payment->cashier_session_id ? (int) $payment->cashier_session_id : null,
             'transaction_code' => (string) ($payment->transaction?->transaction_code ?? '-'),
             'branch_name' => (string) ($payment->transaction?->branch?->name ?? '-'),
             'customer_name' => (string) ($payment->transaction?->booking?->customer_name ?? '-'),
             'method' => strtoupper((string) ($payment->method?->value ?? $payment->method)),
+            'payment_stage' => (string) ($payment->payment_stage ?? 'full'),
             'amount' => (float) $payment->amount,
+            'net_amount' => $payment->net_amount !== null ? (float) $payment->net_amount : (float) $payment->amount,
             'amount_text' => $this->formatRupiah((float) $payment->amount),
+            'net_amount_text' => $this->formatRupiah($payment->net_amount !== null ? (float) $payment->net_amount : (float) $payment->amount),
             'reference_no' => (string) ($payment->reference_no ?? ''),
             'cashier_name' => (string) ($payment->cashier?->name ?? '-'),
             'paid_at' => $payment->paid_at?->toIso8601String(),
@@ -112,4 +117,3 @@ class AdminPaymentService
         return 'Rp '.number_format($amount, 0, ',', '.');
     }
 }
-

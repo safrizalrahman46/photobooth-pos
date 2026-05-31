@@ -12,9 +12,12 @@ class PaymentResource extends JsonResource
         return [
             'id' => $this->id,
             'transaction_id' => $this->transaction_id,
+            'cashier_session_id' => $this->cashier_session_id,
             'payment_code' => $this->payment_code,
             'method' => $this->method?->value ?? $this->method,
+            'payment_stage' => $this->payment_stage,
             'amount' => (float) $this->amount,
+            'net_amount' => $this->net_amount !== null ? (float) $this->net_amount : (float) $this->amount,
             'reference_no' => $this->reference_no,
             'paid_at' => $this->paid_at?->toIso8601String(),
             'cashier_id' => $this->cashier_id,
