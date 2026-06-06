@@ -8,6 +8,7 @@ const props = defineProps({
     saving: { type: Boolean, default: false },
     deletingBlackoutDateId: { type: [Number, null], default: null },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -139,7 +140,7 @@ const submitDelete = (id) => {
                     Full Closed
                 </label>
             </div>
-            <button type="button" class="mt-3 w-full rounded-xl bg-[#C2410C] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
+            <button v-if="canManage" type="button" class="mt-3 w-full rounded-xl bg-[#C2410C] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
                 {{ saving ? 'Menyimpan...' : 'Buat Tanggal Blackout' }}
             </button>
         </section>
@@ -171,8 +172,8 @@ const submitDelete = (id) => {
                         </td>
                         <td class="px-4 py-3 align-top">
                             <div class="flex flex-col gap-2">
-                                <button type="button" class="rounded bg-[#EA580C] px-2 py-1 text-xs text-white" :disabled="saving" @click="submitUpdate(row.id)">Update</button>
-                                <button type="button" class="rounded bg-[#DC2626] px-2 py-1 text-xs text-white" :disabled="deletingBlackoutDateId === row.id" @click="submitDelete(row.id)">
+                                <button v-if="canManage" type="button" class="rounded bg-[#EA580C] px-2 py-1 text-xs text-white" :disabled="saving" @click="submitUpdate(row.id)">Update</button>
+                                <button v-if="canManage" type="button" class="rounded bg-[#DC2626] px-2 py-1 text-xs text-white" :disabled="deletingBlackoutDateId === row.id" @click="submitDelete(row.id)">
                                     {{ deletingBlackoutDateId === row.id ? 'Deleting...' : 'Delete' }}
                                 </button>
                             </div>

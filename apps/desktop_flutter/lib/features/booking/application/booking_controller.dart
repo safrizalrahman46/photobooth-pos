@@ -1,5 +1,6 @@
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
+import 'package:desktop_flutter/shared/models/booking_item.dart';
 import 'package:desktop_flutter/shared/models/pos_walk_in_checkout_result.dart';
 import 'package:desktop_flutter/shared/models/referral_preview.dart';
 import 'package:flutter/material.dart';
@@ -30,6 +31,20 @@ class BookingController extends ChangeNotifier {
   List<Booking> queues = [];
 
   int selectedQueueIndex = 0;
+
+  Booking get selectedBooking {
+    if (selectedQueueIndex < 0 || selectedQueueIndex >= queues.length) {
+      return const Booking(
+        id: '-',
+        customerName: '-',
+        phone: '-',
+        time: '-',
+        status: 'pending',
+        queueNumber: 0,
+      );
+    }
+    return queues[selectedQueueIndex];
+  }
 
   // Packages
   List<Package> packages = [];
@@ -387,13 +402,14 @@ class BookingController extends ChangeNotifier {
     }
   }
 
-  void deleteBooking() {
-    if (selectedQueueIndex >= 0 && selectedQueueIndex < queues.length) {
-      queues.removeAt(selectedQueueIndex);
-      if (selectedQueueIndex >= queues.length) {
-        selectedQueueIndex = queues.length - 1;
-      }
-      safeNotify();
+  Future<BookingItem?> fetchBookingDetail(int bookingId) async {
+    final client = ApiSession.client;
+    if (client == null) return null;
+
+    try {
+      return await client.fetchBookingDetail(bookingId: bookingId);
+    } catch (_) {
+      return null;
     }
   }
 

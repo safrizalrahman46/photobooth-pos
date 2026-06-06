@@ -76,17 +76,23 @@ export const useBranchesModule = ({
 
         branchSaving.value = true;
         branchError.value = '';
+        const isMultipart = formPayload instanceof FormData;
 
         try {
+            const headers = {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            };
+
+            if (!isMultipart) {
+                headers['Content-Type'] = 'application/json';
+            }
+
             const response = await fetch(props.branchStoreUrl, {
                 method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                },
-                body: JSON.stringify(formPayload),
+                headers,
+                body: isMultipart ? formPayload : JSON.stringify(formPayload),
             });
 
             if (!response.ok) {
@@ -112,17 +118,27 @@ export const useBranchesModule = ({
 
         branchSaving.value = true;
         branchError.value = '';
+        const isMultipart = payload instanceof FormData;
+
+        if (isMultipart && !payload.has('_method')) {
+            payload.append('_method', 'PUT');
+        }
 
         try {
+            const headers = {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            };
+
+            if (!isMultipart) {
+                headers['Content-Type'] = 'application/json';
+            }
+
             const response = await fetch(`${props.branchBaseUrl}/${branchId}`, {
-                method: 'PUT',
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                },
-                body: JSON.stringify(payload),
+                method: isMultipart ? 'POST' : 'PUT',
+                headers,
+                body: isMultipart ? payload : JSON.stringify(payload),
             });
 
             if (!response.ok) {

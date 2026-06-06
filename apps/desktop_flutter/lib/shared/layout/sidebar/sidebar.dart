@@ -305,16 +305,16 @@ class _SidebarFooter extends StatelessWidget {
                     ? const EdgeInsets.symmetric(horizontal: 14, vertical: 11)
                     : EdgeInsets.zero,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF1F1),
+                  color: AppColors.error.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFFCDD2)),
+                  border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.logout_rounded,
-                      color: Colors.redAccent,
+                      color: AppColors.error,
                       size: 16,
                     ),
                     if (isExpanded) ...[
@@ -322,7 +322,7 @@ class _SidebarFooter extends StatelessWidget {
                       Text(
                         'Keluar',
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: Colors.redAccent,
+                          color: AppColors.error,
                           fontWeight: FontWeight.w700,
                         ),
                       ),

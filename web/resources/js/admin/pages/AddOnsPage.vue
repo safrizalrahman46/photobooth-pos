@@ -12,6 +12,7 @@ const props = defineProps({
     saving: { type: Boolean, default: false },
     deletingAddOnId: { type: [Number, String, null], default: null },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['refresh-add-ons', 'create-add-on', 'update-add-on', 'delete-add-on']);
@@ -292,7 +293,7 @@ const requestDelete = async (addOn) => {
                         <RefreshCw class="mr-1.5 h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
                         Refresh
                     </button>
-                    <button type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #1D4ED8;" @click="openCreateModal">
+                    <button v-if="canManage" type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #1D4ED8;" @click="openCreateModal">
                         <Plus class="mr-1 inline h-3.5 w-3.5" />
                         Add Add-on
                     </button>
@@ -408,6 +409,7 @@ const requestDelete = async (addOn) => {
                                             type="button"
                                             class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold"
                                             style="border-color: #2563EB; color: #2563EB;"
+                                            v-if="canManage"
                                             @click="openEditModal(row)"
                                         >
                                             <Pencil class="h-3.5 w-3.5" />
@@ -417,6 +419,7 @@ const requestDelete = async (addOn) => {
                                             type="button"
                                             class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold"
                                             style="border-color: #FECACA; color: #EF4444;"
+                                            v-if="canManage"
                                             :disabled="Number(deletingAddOnId || 0) === Number(row.id)"
                                             @click="requestDelete(row)"
                                         >

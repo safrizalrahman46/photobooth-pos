@@ -1,5 +1,7 @@
 // features/history/domain/entities/transaction.dart
 
+import 'package:desktop_flutter/shared/models/transaction_item_line.dart';
+
 /// Enum untuk status transaksi
 enum TransactionStatus { lunas, pending, batal }
 
@@ -27,6 +29,7 @@ class Transaction {
   final int? packageId;
   final String paket;
   final String? addOns; // nullable, bisa tidak ada add-on
+  final List<TransactionItemLine> items;
   final int totalBayar; // dalam rupiah, tanpa desimal
   final TransactionStatus status;
 
@@ -39,6 +42,7 @@ class Transaction {
     this.packageId,
     required this.paket,
     this.addOns,
+    this.items = const <TransactionItemLine>[],
     required this.totalBayar,
     required this.status,
   });

@@ -10,6 +10,7 @@ const props = defineProps({
     saving: { type: Boolean, default: false },
     deletingInventoryItemId: { type: [Number, String, null], default: null },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -222,7 +223,7 @@ const requestDelete = async (item) => {
                         <RefreshCw class="mr-1.5 inline h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
                         Refresh
                     </button>
-                    <button type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #0F766E;" @click="openCreateItemModal">
+                    <button v-if="canManage" type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #0F766E;" @click="openCreateItemModal">
                         <Plus class="mr-1 inline h-3.5 w-3.5" />
                         Tambah Barang
                     </button>
@@ -288,11 +289,11 @@ const requestDelete = async (item) => {
                             </td>
                             <td class="px-3 py-2">
                                 <div class="flex flex-wrap items-center justify-end gap-1.5">
-                                    <button type="button" class="rounded-lg border px-2.5 py-1 text-xs font-semibold" style="border-color: #0EA5E9; color: #0369A1;" @click="openStockModal(row)">Stock</button>
-                                    <button type="button" class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold" style="border-color: #2563EB; color: #2563EB;" @click="openEditItemModal(row)">
+                                    <button v-if="canManage" type="button" class="rounded-lg border px-2.5 py-1 text-xs font-semibold" style="border-color: #0EA5E9; color: #0369A1;" @click="openStockModal(row)">Stock</button>
+                                    <button v-if="canManage" type="button" class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold" style="border-color: #2563EB; color: #2563EB;" @click="openEditItemModal(row)">
                                         <Pencil class="h-3.5 w-3.5" /> Edit
                                     </button>
-                                    <button type="button" class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold" style="border-color: #FECACA; color: #EF4444;" :disabled="Number(deletingInventoryItemId || 0) === Number(row.id)" @click="requestDelete(row)">
+                                    <button v-if="canManage" type="button" class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold" style="border-color: #FECACA; color: #EF4444;" :disabled="Number(deletingInventoryItemId || 0) === Number(row.id)" @click="requestDelete(row)">
                                         <Trash2 class="h-3.5 w-3.5" /> Delete
                                     </button>
                                 </div>

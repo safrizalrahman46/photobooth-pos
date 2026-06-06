@@ -13,7 +13,7 @@ class AuthUser {
   final List<String> roles;
   final List<String> permissions;
 
-  bool get isCashier => roles.contains('cashier') || roles.contains('admin');
+  bool get isCashier => roles.contains('cashier') || roles.contains('owner');
   bool get isOwner => roles.contains('owner') || roles.contains('admin');
   bool get isViewer => roles.contains('viewer');
   bool get canViewStock =>
@@ -24,6 +24,7 @@ class AuthUser {
   bool can(String permission) =>
       roles.contains('owner') ||
       roles.contains('admin') ||
+      roles.contains('cashier') ||
       permissions.contains(permission);
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {

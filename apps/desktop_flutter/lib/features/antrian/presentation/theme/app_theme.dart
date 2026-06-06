@@ -1,23 +1,20 @@
-// presentation/theme/app_theme.dart
-
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart' as main;
 
 class AppTheme {
-  // ─── Colors ────────────────────────────────────────────────────────────────
-  static const Color primary = Color(0xFF4AABF7);
-  static const Color primaryDark = Color(0xFF1A7FD4);
+  static const Color primary = main.AppColors.primary;
+  static const Color primaryDark = main.AppColors.primaryDark;
   static const Color primaryLight = Color(0xFFB8DCFC);
   static const Color background = Color(0xFFF0F2F5);
   static const Color surface = Colors.white;
-  static const Color textPrimary = Color(0xFF1A2B4A);
-  static const Color textSecondary = Color(0xFF6B7A99);
-  static const Color accent = Color(0xFF2DD4BF);
-  static const Color success = Color(0xFF22C55E);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color sidebarBg = Color(0xFFFFFFFF);
+  static const Color textPrimary = main.AppColors.textPrimary;
+  static const Color textSecondary = main.AppColors.textSecondary;
+  static const Color accent = main.AppColors.primary;
+  static const Color success = main.AppColors.success;
+  static const Color warning = main.AppColors.warning;
+  static const Color sidebarBg = Colors.white;
   static const Color divider = Color(0xFFE8EBF0);
 
-  // ─── Typography ────────────────────────────────────────────────────────────
   static const String fontFamily = 'Poppins';
 
   static ThemeData get theme {
@@ -42,8 +39,7 @@ class AppTheme {
     );
   }
 
-  // ─── Text Styles ───────────────────────────────────────────────────────────
-  static const nomorAntrian = TextStyle(
+  static TextStyle get nomorAntrian => const TextStyle(
     fontFamily: fontFamily,
     fontSize: 42,
     fontWeight: FontWeight.w800,
@@ -51,7 +47,7 @@ class AppTheme {
     letterSpacing: -1,
   );
 
-  static const nomorAntrianCard = TextStyle(
+  static TextStyle get nomorAntrianCard => TextStyle(
     fontFamily: fontFamily,
     fontSize: 22,
     fontWeight: FontWeight.w800,
@@ -59,21 +55,21 @@ class AppTheme {
     letterSpacing: -0.5,
   );
 
-  static const namaCustomer = TextStyle(
+  static TextStyle get namaCustomer => TextStyle(
     fontFamily: fontFamily,
     fontSize: 15,
     fontWeight: FontWeight.w600,
     color: textPrimary,
   );
 
-  static const bodySmall = TextStyle(
+  static TextStyle get bodySmall => TextStyle(
     fontFamily: fontFamily,
     fontSize: 13,
     fontWeight: FontWeight.w400,
     color: textSecondary,
   );
 
-  static const sectionTitle = TextStyle(
+  static TextStyle get sectionTitle => TextStyle(
     fontFamily: fontFamily,
     fontSize: 13,
     fontWeight: FontWeight.w700,
@@ -81,7 +77,7 @@ class AppTheme {
     letterSpacing: 1.2,
   );
 
-  static const timerText = TextStyle(
+  static TextStyle get timerText => TextStyle(
     fontFamily: fontFamily,
     fontSize: 28,
     fontWeight: FontWeight.w800,

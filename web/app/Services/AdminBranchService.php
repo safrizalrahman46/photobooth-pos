@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Branch;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -58,13 +60,16 @@ class AdminBranchService
 
     public function create(array $payload): Branch
     {
+        $qrUrl = $this->storeQrFile($payload['payment_qr_file'] ?? null)
+            ?? (! empty($payload['payment_qr_url']) ? (string) $payload['payment_qr_url'] : null);
+
         $branch = Branch::query()->create([
             'code' => ! empty($payload['code']) ? (string) $payload['code'] : $this->generateBranchCode((string) $payload['name']),
             'name' => (string) $payload['name'],
             'timezone' => (string) ($payload['timezone'] ?? 'Asia/Jakarta'),
             'phone' => ! empty($payload['phone']) ? (string) $payload['phone'] : null,
             'address' => ! empty($payload['address']) ? (string) $payload['address'] : null,
-            'payment_qr_url' => ! empty($payload['payment_qr_url']) ? (string) $payload['payment_qr_url'] : null,
+            'payment_qr_url' => $qrUrl,
             'is_active' => (bool) ($payload['is_active'] ?? true),
         ]);
 
@@ -92,22 +97,34 @@ class AdminBranchService
     public function update(Branch $branch, array $payload): Branch
     {
         $nextActive = (bool) ($payload['is_active'] ?? true);
+        $oldQrUrl = (string) ($branch->payment_qr_url ?? '');
 
         if (! $nextActive) {
             $this->ensureNotLastActiveBranch($branch);
         }
 
-        $branch->fill([
+        $attributes = [
             'code' => (string) $payload['code'],
             'name' => (string) $payload['name'],
             'timezone' => (string) ($payload['timezone'] ?? 'Asia/Jakarta'),
             'phone' => ! empty($payload['phone']) ? (string) $payload['phone'] : null,
             'address' => ! empty($payload['address']) ? (string) $payload['address'] : null,
-            'payment_qr_url' => ! empty($payload['payment_qr_url']) ? (string) $payload['payment_qr_url'] : null,
             'is_active' => $nextActive,
-        ]);
+        ];
+
+        if (($payload['payment_qr_file'] ?? null) instanceof UploadedFile) {
+            $attributes['payment_qr_url'] = $this->storeQrFile($payload['payment_qr_file']);
+        } elseif (array_key_exists('payment_qr_url', $payload) && ! empty($payload['payment_qr_url'])) {
+            $attributes['payment_qr_url'] = (string) $payload['payment_qr_url'];
+        }
+
+        $branch->fill($attributes);
 
         $branch->save();
+
+        if (isset($attributes['payment_qr_url']) && $attributes['payment_qr_url'] !== $oldQrUrl) {
+            $this->deleteStoredQr($oldQrUrl);
+        }
 
         $this->appSettingService->settingsPayload();
 
@@ -175,6 +192,7 @@ class AdminBranchService
         );
 
         $branch->delete();
+        $this->deleteStoredQr((string) ($branch->payment_qr_url ?? ''));
         $this->appSettingService->settingsPayload();
 
         return 'deleted';
@@ -213,5 +231,36 @@ class AdminBranchService
 
             $index++;
         }
+    }
+
+    private function storeQrFile(mixed $file): ?string
+    {
+        if (! $file instanceof UploadedFile) {
+            return null;
+        }
+
+        $path = $file->store('qr', 'public');
+
+        return Storage::disk('public')->url($path);
+    }
+
+    private function deleteStoredQr(string $url): void
+    {
+        if ($url === '') {
+            return;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH) ?: $url;
+        $path = ltrim((string) $path, '/');
+
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, strlen('storage/'));
+        }
+
+        if (! str_starts_with($path, 'qr/')) {
+            return;
+        }
+
+        Storage::disk('public')->delete($path);
     }
 }

@@ -7,21 +7,92 @@ const props = defineProps({
     saving: { type: Boolean, default: false },
     deletingBranchId: { type: [Number, null], default: null },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['refresh-branches', 'create-branch', 'update-branch', 'delete-branch']);
 
 const localError = ref('');
 const draftMap = ref({});
+const createQrPreview = ref('');
 const createForm = reactive({
     code: '',
     name: '',
     timezone: 'Asia/Jakarta',
     phone: '',
     address: '',
-    payment_qr_url: '',
+    payment_qr_file: null,
     is_active: true,
 });
+
+const maxQrFileSize = 5 * 1024 * 1024;
+const allowedQrTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+const validateQrFile = (file) => {
+    if (!file) {
+        return true;
+    }
+
+    if (!allowedQrTypes.has(file.type)) {
+        localError.value = 'QR cabang harus berformat JPG, PNG, atau WEBP.';
+        return false;
+    }
+
+    if (file.size > maxQrFileSize) {
+        localError.value = 'Ukuran QR cabang maksimal 5 MB.';
+        return false;
+    }
+
+    return true;
+};
+
+const handleCreateQrChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!validateQrFile(file)) {
+        event.target.value = '';
+        createForm.payment_qr_file = null;
+        createQrPreview.value = '';
+        return;
+    }
+
+    localError.value = '';
+    createForm.payment_qr_file = file;
+    createQrPreview.value = file ? URL.createObjectURL(file) : '';
+};
+
+const handleDraftQrChange = (row, event) => {
+    const draft = draftFor(row);
+    const file = event.target.files?.[0] || null;
+
+    if (!validateQrFile(file)) {
+        event.target.value = '';
+        draft.payment_qr_file = null;
+        draft.payment_qr_preview = String(row?.payment_qr_url || '');
+        return;
+    }
+
+    localError.value = '';
+    draft.payment_qr_file = file;
+    draft.payment_qr_preview = file ? URL.createObjectURL(file) : String(row?.payment_qr_url || '');
+};
+
+const branchPayload = (values) => {
+    const formData = new FormData();
+
+    formData.append('code', String(values.code || '').trim());
+    formData.append('name', String(values.name || '').trim());
+    formData.append('timezone', String(values.timezone || 'Asia/Jakarta').trim() || 'Asia/Jakarta');
+    formData.append('phone', String(values.phone || '').trim());
+    formData.append('address', String(values.address || '').trim());
+    formData.append('is_active', values.is_active ? '1' : '0');
+
+    if (values.payment_qr_file) {
+        formData.append('payment_qr_file', values.payment_qr_file);
+    }
+
+    return formData;
+};
 
 const draftFor = (row) => {
     const id = Number(row?.id || 0);
@@ -33,7 +104,8 @@ const draftFor = (row) => {
             timezone: 'Asia/Jakarta',
             phone: '',
             address: '',
-            payment_qr_url: '',
+            payment_qr_file: null,
+            payment_qr_preview: '',
             is_active: true,
         };
     }
@@ -45,7 +117,8 @@ const draftFor = (row) => {
             timezone: String(row?.timezone || 'Asia/Jakarta'),
             phone: String(row?.phone || ''),
             address: String(row?.address || ''),
-            payment_qr_url: String(row?.payment_qr_url || ''),
+            payment_qr_file: null,
+            payment_qr_preview: String(row?.payment_qr_url || ''),
             is_active: Boolean(row?.is_active),
         };
     }
@@ -60,22 +133,15 @@ const submitCreate = () => {
     }
 
     localError.value = '';
-    emit('create-branch', {
-        code: String(createForm.code || '').trim() || null,
-        name: String(createForm.name || '').trim(),
-        timezone: String(createForm.timezone || 'Asia/Jakarta').trim() || 'Asia/Jakarta',
-        phone: String(createForm.phone || '').trim(),
-        address: String(createForm.address || '').trim(),
-        payment_qr_url: String(createForm.payment_qr_url || '').trim(),
-        is_active: Boolean(createForm.is_active),
-    });
+    emit('create-branch', branchPayload(createForm));
 
     createForm.code = '';
     createForm.name = '';
     createForm.timezone = 'Asia/Jakarta';
     createForm.phone = '';
     createForm.address = '';
-    createForm.payment_qr_url = '';
+    createForm.payment_qr_file = null;
+    createQrPreview.value = '';
     createForm.is_active = true;
 };
 
@@ -95,15 +161,7 @@ const submitUpdate = (id) => {
     localError.value = '';
     emit('update-branch', {
         id: branchId,
-        payload: {
-            code: String(draft.code || '').trim(),
-            name: String(draft.name || '').trim(),
-            timezone: String(draft.timezone || 'Asia/Jakarta').trim() || 'Asia/Jakarta',
-            phone: String(draft.phone || '').trim(),
-            address: String(draft.address || '').trim(),
-            payment_qr_url: String(draft.payment_qr_url || '').trim(),
-            is_active: Boolean(draft.is_active),
-        },
+        payload: branchPayload(draft),
     });
 };
 
@@ -158,15 +216,17 @@ const submitDelete = (id) => {
                 <label class="text-xs text-[#64748B] md:col-span-2">Address
                     <input v-model="createForm.address" type="text" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;" >
                 </label>
-                <label class="text-xs text-[#64748B] md:col-span-2 xl:col-span-3">QR Payment URL
-                    <input v-model="createForm.payment_qr_url" type="url" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;" placeholder="https://..." >
+                <label class="text-xs text-[#64748B] md:col-span-2 xl:col-span-3">QR Payment Image
+                    <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: #CBD5E1;" @change="handleCreateQrChange" >
+                    <span class="mt-1 block text-[11px] text-[#94A3B8]">JPG, PNG, atau WEBP. Maksimal 5 MB.</span>
+                    <img v-if="createQrPreview" :src="createQrPreview" alt="Preview QR payment" class="mt-2 h-28 w-28 rounded-lg border object-contain p-1" style="border-color: #CBD5E1;" >
                 </label>
                 <label class="flex items-center gap-2 self-end text-sm text-[#334155]">
                     <input v-model="createForm.is_active" type="checkbox" >
                     Active
                 </label>
             </div>
-            <button type="button" class="mt-3 w-full rounded-xl bg-[#0F172A] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
+            <button v-if="canManage" type="button" class="mt-3 w-full rounded-xl bg-[#0F172A] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
                 {{ saving ? 'Menyimpan...' : 'Buat Cabang' }}
             </button>
         </section>
@@ -198,7 +258,10 @@ const submitDelete = (id) => {
                             <div class="grid grid-cols-1 gap-2">
                                 <input v-model="draftFor(row).phone" type="text" class="rounded-lg border px-2 py-1.5 text-sm" style="border-color: #CBD5E1;" >
                                 <input v-model="draftFor(row).address" type="text" class="rounded-lg border px-2 py-1.5 text-sm" style="border-color: #CBD5E1;" >
-                                <input v-model="draftFor(row).payment_qr_url" type="url" class="rounded-lg border px-2 py-1.5 text-sm" style="border-color: #CBD5E1;" placeholder="QR payment URL" >
+                                <label class="text-xs text-[#64748B]">QR Payment Image
+                                    <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border px-2 py-1.5 text-sm" style="border-color: #CBD5E1;" @change="handleDraftQrChange(row, $event)" >
+                                </label>
+                                <img v-if="draftFor(row).payment_qr_preview" :src="draftFor(row).payment_qr_preview" alt="QR payment" class="h-20 w-20 rounded-lg border object-contain p-1" style="border-color: #CBD5E1;" >
                             </div>
                         </td>
                         <td class="px-4 py-3 align-top text-sm text-[#475569]">
@@ -208,10 +271,10 @@ const submitDelete = (id) => {
                         </td>
                         <td class="px-4 py-3 align-top">
                             <div class="flex flex-col gap-2">
-                                <button type="button" class="rounded-lg bg-[#1D4ED8] px-3 py-1.5 text-xs text-white" :disabled="saving" @click="submitUpdate(row.id)">
+                                <button v-if="canManage" type="button" class="rounded-lg bg-[#1D4ED8] px-3 py-1.5 text-xs text-white" :disabled="saving" @click="submitUpdate(row.id)">
                                     Update
                                 </button>
-                                <button type="button" class="rounded-lg bg-[#DC2626] px-3 py-1.5 text-xs text-white" :disabled="deletingBranchId === row.id" @click="submitDelete(row.id)">
+                                <button v-if="canManage" type="button" class="rounded-lg bg-[#DC2626] px-3 py-1.5 text-xs text-white" :disabled="deletingBranchId === row.id" @click="submitDelete(row.id)">
                                     {{ deletingBranchId === row.id ? 'Deleting...' : 'Delete' }}
                                 </button>
                             </div>

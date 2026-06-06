@@ -27,6 +27,10 @@ class AdminDashboardController extends Controller
             $currentRole = (string) ($currentUser->getRoleNames()->first() ?? '');
         }
 
+        $currentPermissions = $currentUser && method_exists($currentUser, 'getAllPermissions')
+            ? $currentUser->getAllPermissions()->pluck('name')->values()->all()
+            : [];
+
         $bootstrap = array_merge(
             $service->bootstrapPayload('', 'all', 15),
             [
@@ -44,6 +48,7 @@ class AdminDashboardController extends Controller
                     'email' => (string) ($currentUser?->email ?? ''),
                     'role' => strtolower($currentRole),
                     'role_label' => $currentRole !== '' ? ucfirst($currentRole) : '',
+                    'permissions' => $currentPermissions,
                 ],
                 'uiConfig' => $adminUiConfig,
             ],

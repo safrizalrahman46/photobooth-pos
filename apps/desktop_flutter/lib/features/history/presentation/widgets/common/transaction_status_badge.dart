@@ -1,6 +1,7 @@
 // features/history/presentation/widgets/common/transaction_status_badge.dart
 
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import '../../../domain/entities/transaction.dart';
 
 // ─── Referensi global (gunakan dari shared/widgets/common/status_badge.dart) ──
@@ -45,18 +46,18 @@ class TransactionStatusBadge extends StatelessWidget {
     switch (status) {
       case TransactionStatus.lunas:
         return _BadgeConfig(
-          backgroundColor: const Color(0xFFDCFCE7), // green-100
-          textColor: const Color(0xFF16A34A), // green-600
+          backgroundColor: AppColors.success.withValues(alpha: 0.1),
+          textColor: AppColors.success,
         );
       case TransactionStatus.pending:
         return _BadgeConfig(
-          backgroundColor: const Color(0xFFFEF3C7), // amber-100
-          textColor: const Color(0xFFD97706), // amber-600
+          backgroundColor: AppColors.warning.withValues(alpha: 0.1),
+          textColor: AppColors.warning,
         );
       case TransactionStatus.batal:
         return _BadgeConfig(
-          backgroundColor: const Color(0xFFFEE2E2), // red-100
-          textColor: const Color(0xFFDC2626), // red-600
+          backgroundColor: AppColors.error.withValues(alpha: 0.1),
+          textColor: AppColors.error,
         );
     }
   }

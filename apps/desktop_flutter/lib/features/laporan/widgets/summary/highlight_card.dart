@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 
 class HighlightCard extends StatelessWidget {
   final String label;
@@ -13,7 +14,7 @@ class HighlightCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.icon = Icons.star_rounded,
-    this.backgroundColor = const Color(0xFF60B8F5),
+    this.backgroundColor = AppColors.primary,
   });
 
   @override

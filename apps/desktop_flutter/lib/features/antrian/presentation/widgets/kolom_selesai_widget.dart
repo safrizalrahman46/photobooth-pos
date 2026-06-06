@@ -1,6 +1,7 @@
 // presentation/widgets/kolom_selesai_widget.dart
 
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/antrian_entity.dart';
 import '../theme/app_theme.dart';
 
@@ -28,7 +29,7 @@ class KolomSelesaiWidget extends StatelessWidget {
                 width: 4,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981), // Emerald for finished
+                  color: AppColors.success, // Emerald for finished
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -141,8 +142,8 @@ class AntrianSelesaiCard extends StatelessWidget {
           Container(
             width: 24,
             height: 24,
-            decoration: const BoxDecoration(
-              color: Color(0xFF10B981),
+            decoration: BoxDecoration(
+              color: AppColors.success,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.check, color: Colors.white, size: 14),

@@ -1,6 +1,7 @@
 // features/history/presentation/sections/history_header_section.dart
 
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import '../widgets/filters/filter_button.dart';
 import '../widgets/filters/export_button.dart';
 import '../../domain/entities/transaction.dart';
@@ -58,26 +59,26 @@ class HistoryHeaderSection extends StatelessWidget {
               style: const TextStyle(fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Cari No. Transaksi atau Nama...',
-                hintStyle: const TextStyle(
-                  color: Color(0xFF9CA3AF),
+                hintStyle: TextStyle(
+                  color: AppColors.textMuted,
                   fontSize: 14,
                 ),
-                prefixIcon: const Icon(
+                prefixIcon: Icon(
                   Icons.search_rounded,
                   size: 18,
-                  color: Color(0xFF9CA3AF),
+                  color: AppColors.textMuted,
                 ),
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  borderSide: BorderSide(color: AppColors.cardBorder),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF3B82F6), // blue-500
+                  borderSide: BorderSide(
+                    color: AppColors.primary,
                     width: 1.5,
                   ),
                 ),

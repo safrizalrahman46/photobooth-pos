@@ -1,6 +1,7 @@
 // presentation/widgets/antrian_berikutnya_banner.dart
 
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/antrian_entity.dart';
 import '../theme/app_theme.dart';
 
@@ -15,8 +16,8 @@ class AntrianBerikutnyaBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6EC6F5), Color(0xFF4AABF7)],
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -25,7 +26,7 @@ class AntrianBerikutnyaBanner extends StatelessWidget {
         ), // More rounded corners like mockup
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4AABF7).withValues(alpha: 0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 30,
             offset: const Offset(0, 12),
           ),

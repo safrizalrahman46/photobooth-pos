@@ -1,6 +1,7 @@
 // features/history/presentation/widgets/history/history_empty.dart
 
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 
 /// Widget empty state ketika tidak ada transaksi yang sesuai filter/pencarian.
 ///
@@ -13,16 +14,16 @@ class HistoryEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 64),
+        padding: const EdgeInsets.symmetric(vertical: 64),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.receipt_long_outlined,
               size: 48,
-              color: Color(0xFFD1D5DB), // gray-300
+              color: AppColors.textMuted,
             ),
             SizedBox(height: 16),
             Text(
@@ -30,7 +31,7 @@ class HistoryEmpty extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF6B7280), // gray-500
+                color: AppColors.textSecondary,
               ),
             ),
             SizedBox(height: 4),
@@ -38,7 +39,7 @@ class HistoryEmpty extends StatelessWidget {
               'Coba ubah kata kunci atau filter pencarian.',
               style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF9CA3AF), // gray-400
+                color: AppColors.textMuted,
               ),
             ),
           ],

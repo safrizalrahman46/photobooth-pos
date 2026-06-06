@@ -8,6 +8,7 @@ const props = defineProps({
     loading: { type: Boolean, default: false },
     saving: { type: Boolean, default: false },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['refresh-referrals', 'save-referral', 'delete-referral']);
@@ -329,7 +330,7 @@ watch(() => form.branch_id, () => {
                         <RefreshCw class="h-4 w-4" :class="loading ? 'animate-spin' : ''" />
                         {{ loading ? 'Refreshing...' : 'Refresh' }}
                     </button>
-                    <button type="button" class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#047857] transition hover:bg-[#ECFDF5]" @click="openCreate">
+                    <button v-if="canManage" type="button" class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#047857] transition hover:bg-[#ECFDF5]" @click="openCreate">
                         <Plus class="h-4 w-4" /> Kode Baru
                     </button>
                 </div>
@@ -438,10 +439,10 @@ watch(() => form.branch_id, () => {
                                 </td>
                                 <td class="px-4 py-3 text-xs text-[#64748B] min-w-[170px]">{{ periodLabel(row) }}</td>
                                 <td class="px-4 py-3 text-right">
-                                    <button type="button" class="mr-2 rounded-lg border p-2 text-[#2563EB] transition hover:bg-[#EFF6FF]" style="border-color: #DBEAFE;" @click="openEdit(row)">
+                                    <button v-if="canManage" type="button" class="mr-2 rounded-lg border p-2 text-[#2563EB] transition hover:bg-[#EFF6FF]" style="border-color: #DBEAFE;" @click="openEdit(row)">
                                         <Pencil class="h-4 w-4" />
                                     </button>
-                                    <button type="button" class="rounded-lg border p-2 text-[#DC2626] transition hover:bg-[#FEF2F2]" style="border-color: #FECACA;" @click="requestDelete(row)">
+                                    <button v-if="canManage" type="button" class="rounded-lg border p-2 text-[#DC2626] transition hover:bg-[#FEF2F2]" style="border-color: #FECACA;" @click="requestDelete(row)">
                                         <Trash2 class="h-4 w-4" />
                                     </button>
                                 </td>

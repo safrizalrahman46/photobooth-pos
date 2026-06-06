@@ -106,6 +106,7 @@ class HistoryController extends ChangeNotifier {
           addOns: addOnItems.isEmpty
               ? null
               : addOnItems.map((item) => item.itemName).join(', '),
+          items: row.items,
           totalBayar: row.totalAmount.round(),
           status: _mapTransactionStatus(row.status),
         );

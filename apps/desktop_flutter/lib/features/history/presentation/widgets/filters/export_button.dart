@@ -1,6 +1,7 @@
 // features/history/presentation/widgets/filters/export_button.dart
 
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 
 // ─── Referensi global ──────────────────────────────────────────────────────────
 // Jika project memiliki AppColors di app/theme/app_colors.dart,
@@ -24,22 +25,22 @@ class ExportButton extends StatelessWidget {
       height: 40,
       child: OutlinedButton.icon(
         onPressed: onPressed,
-        icon: const Icon(
+        icon: Icon(
           Icons.download_rounded,
           size: 16,
-          color: Color(0xFF374151),
+          color: AppColors.textPrimary,
         ),
-        label: const Text(
+        label: Text(
           'Export',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF374151),
+            color: AppColors.textPrimary,
           ),
         ),
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
-          side: const BorderSide(color: Color(0xFFE5E7EB)),
+          side: BorderSide(color: AppColors.cardBorder),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 14),
         ),

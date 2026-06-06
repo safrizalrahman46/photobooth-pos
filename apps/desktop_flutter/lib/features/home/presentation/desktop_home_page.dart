@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:desktop_flutter/shared/models/desktop_session.dart';
 import '../../../shared/layout/sidebar/sidebar.dart';
 import '../../../shared/layout/header/app_header.dart';
-import '../../../app/theme/app_colors.dart';
-import '../../../app/theme/app_text_styles.dart';
+import 'widgets/dialogs/logout_dialog.dart';
+import 'widgets/dialogs/session_active_warning_dialog.dart';
+import 'package:desktop_flutter/shared/widgets/session_guard.dart';
+import 'package:desktop_flutter/core/session/api_session.dart';
 
 // Pages
 import '../../booking/presentation/pages/walkin_page.dart';
@@ -56,37 +58,52 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           icon: Icons.point_of_sale_rounded,
           builder: CashierSessionPage.new,
         ),
-      const _DesktopDestination(
+      _DesktopDestination(
         id: _DesktopPageIds.walkIn,
         label: 'Walk-in',
         icon: Icons.calendar_today_rounded,
-        builder: WalkinPage.new,
+        builder: () => SessionGuard(
+          builder: () => const WalkinPage(),
+          onNavigateToSession: _navigateToSession,
+        ),
       ),
       if (user.can('transaction.manage') && user.can('queue.manage'))
-        const _DesktopDestination(
+        _DesktopDestination(
           id: _DesktopPageIds.qrWalkIn,
           label: 'QR Walk-in',
           icon: Icons.qr_code_2_rounded,
-          builder: QrWalkinPage.new,
+          builder: () => SessionGuard(
+            builder: () => const QrWalkinPage(),
+            onNavigateToSession: _navigateToSession,
+          ),
         ),
-      const _DesktopDestination(
+      _DesktopDestination(
         id: _DesktopPageIds.booking,
         label: 'Booking',
         icon: Icons.book_online_rounded,
-        builder: PureBookingPage.new,
+        builder: () => SessionGuard(
+          builder: () => const PureBookingPage(),
+          onNavigateToSession: _navigateToSession,
+        ),
       ),
       if (user.can('queue.view'))
         _DesktopDestination(
           id: _DesktopPageIds.queue,
           label: 'Antrean',
           icon: Icons.people_alt_rounded,
-          builder: AntrianPage.new,
+          builder: () => SessionGuard(
+            builder: () => const AntrianPage(),
+            onNavigateToSession: _navigateToSession,
+          ),
         ),
-      const _DesktopDestination(
+      _DesktopDestination(
         id: _DesktopPageIds.history,
         label: 'Riwayat',
         icon: Icons.history_rounded,
-        builder: HistoryPage.new,
+        builder: () => SessionGuard(
+          builder: () => const HistoryPage(),
+          onNavigateToSession: _navigateToSession,
+        ),
       ),
       if (user.can('report.view'))
         const _DesktopDestination(
@@ -117,95 +134,28 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
       return;
     }
 
+    final client = ApiSession.client;
+    if (client != null) {
+      try {
+        final session = await client.fetchCurrentCashierSession();
+        if (session != null && session.isOpen) {
+          if (!mounted) return;
+          await showDialog(
+            context: context,
+            builder: (_) => const SessionActiveWarningDialog(),
+          );
+          return;
+        }
+      } catch (_) {
+        // If session check fails, allow logout flow to continue
+      }
+    }
+
+    if (!mounted) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: AppColors.surface,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: AppColors.cardBorder, width: 1),
-          ),
-          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 8,
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF1F1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.logout_rounded,
-                  color: Colors.redAccent,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Keluar',
-                style: AppTextStyles.h2.copyWith(color: AppColors.textPrimary),
-              ),
-            ],
-          ),
-          content: Text(
-            'Yakin ingin keluar dari aplikasi desktop?',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'Batal',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'Keluar',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+      builder: (context) => const LogoutDialog(),
     );
 
     if (confirmed != true || !mounted) {
@@ -221,6 +171,13 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         setState(() => _loggingOut = false);
       }
     }
+  }
+
+  void _navigateToSession() {
+    SessionGuard.invalidateCache();
+    setState(() {
+      _selectedPageId = _DesktopPageIds.cashierSession;
+    });
   }
 
   @override

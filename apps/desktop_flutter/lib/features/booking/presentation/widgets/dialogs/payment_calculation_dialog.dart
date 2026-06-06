@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_text_styles.dart';
+import '../../../../../shared/widgets/base_dialog.dart';
+import '../../../../../shared/widgets/dialog_action_button.dart';
 import '../../../application/booking_controller.dart';
 
 class PaymentCalculationDialog extends StatefulWidget {
@@ -125,259 +127,230 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
     return KeyboardListener(
       focusNode: _focusNode,
       onKeyEvent: _handleKeyEvent,
-      child: Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 80, vertical: 40),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Left: Order Summary Info
-              Expanded(
-                flex: 2,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      bottomLeft: Radius.circular(24),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.arrow_back),
-                          ),
-                          const SizedBox(width: 8),
-                          Text('Detail Pembayaran', style: AppTextStyles.h2),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _InfoRow(
-                        label: 'Pelanggan',
-                        value: widget.controller.customerName,
-                      ),
-                      _InfoRow(
-                        label: 'Paket',
-                        value:
-                            '${widget.controller.selectedPackage.name} (${widget.controller.selectedPackage.duration})',
-                      ),
-                      _InfoRow(
-                        label: 'Metode',
-                        value: widget.controller.selectedPayment,
-                      ),
-
-                      if (widget.controller.selectedAddons.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          'Add-ons:',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: widget.controller.selectedAddons.length,
-                            itemBuilder: (context, index) {
-                              final addon =
-                                  widget.controller.selectedAddons[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        addon.name,
-                                        style: AppTextStyles.bodySmall.copyWith(
-                                          fontSize: 12,
-                                          color: AppColors.textPrimary
-                                              .withValues(alpha: 0.8),
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'x${addon.quantity}',
-                                      style: AppTextStyles.bodySmall.copyWith(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ] else
-                        const Spacer(),
-
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.cardBorder),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Total Tagihan',
-                                  style: AppTextStyles.bodyMedium,
-                                ),
-                                Text(
-                                  _formatPrice(widget.controller.grandTotal),
-                                  style: AppTextStyles.h3.copyWith(
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (!isQris) ...[
-                              const SizedBox(height: 16),
-                              const Divider(),
-                              const SizedBox(height: 16),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Kembalian',
-                                    style: AppTextStyles.bodyMedium,
-                                  ),
-                                  Text(
-                                    _formatPrice(
-                                      _changeAmount < 0 ? 0 : _changeAmount,
-                                    ),
-                                    style: AppTextStyles.h3.copyWith(
-                                      color: _changeAmount >= 0
-                                          ? Colors.green
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
+      child: BaseDialog(
+        padding: EdgeInsets.zero,
+        child: Row(
+          children: [
+            // Left: Order Summary Info
+            Expanded(
+              flex: 2,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(28),
+                    bottomLeft: Radius.circular(28),
                   ),
                 ),
-              ),
-
-              // Right: Numpad & Input
-              Expanded(
-                flex: 3,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Text('Uang Pembayaran', style: AppTextStyles.h3),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.primary,
-                            width: 2,
-                          ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_back),
                         ),
-                        child: Text(
-                          _formatPrice(_paidAmount),
-                          style: AppTextStyles.h2.copyWith(
-                            color: AppColors.primary,
-                          ),
-                          textAlign: TextAlign.center,
+                        const SizedBox(width: 8),
+                        Text('Detail Pembayaran', style: AppTextStyles.h2),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _InfoRow(
+                      label: 'Pelanggan',
+                      value: widget.controller.customerName,
+                    ),
+                    _InfoRow(
+                      label: 'Paket',
+                      value:
+                          '${widget.controller.selectedPackage.name} (${widget.controller.selectedPackage.duration})',
+                    ),
+                    _InfoRow(
+                      label: 'Metode',
+                      value: widget.controller.selectedPayment,
+                    ),
+
+                    if (widget.controller.selectedAddons.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Add-ons:',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
                         ),
                       ),
                       const SizedBox(height: 12),
                       Expanded(
-                        child: GridView.count(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 8,
-                          crossAxisSpacing: 8,
-                          childAspectRatio: 2.8,
-                          children: [
-                            for (var i = 1; i <= 9; i++)
-                              _NumButton(
-                                val: '$i',
-                                onTap: () => _onNumberPress('$i'),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: widget.controller.selectedAddons.length,
+                          itemBuilder: (context, index) {
+                            final addon =
+                                widget.controller.selectedAddons[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      addon.name,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        fontSize: 12,
+                                        color: AppColors.textPrimary
+                                            .withValues(alpha: 0.8),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'x${addon.quantity}',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            _NumButton(
-                              val: '000',
-                              onTap: () => _onNumberPress('000'),
-                            ),
-                            _NumButton(
-                              val: '0',
-                              onTap: () => _onNumberPress('0'),
-                            ),
-                            _NumButton(
-                              val: 'X',
-                              onTap: _onBackspace,
-                              isAction: true,
+                            );
+                          },
+                        ),
+                      ),
+                    ] else
+                      const Spacer(),
+
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Tagihan',
+                                style: AppTextStyles.bodyMedium,
+                              ),
+                              Text(
+                                _formatPrice(widget.controller.grandTotal),
+                                style: AppTextStyles.h3.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!isQris) ...[
+                            const SizedBox(height: 16),
+                            const Divider(),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Kembalian',
+                                  style: AppTextStyles.bodyMedium,
+                                ),
+                                Text(
+                                  _formatPrice(
+                                    _changeAmount < 0 ? 0 : _changeAmount,
+                                  ),
+                                  style: AppTextStyles.h3.copyWith(
+                                    color: _changeAmount >= 0
+                                        ? AppColors.success
+                                        : Colors.grey,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 44,
-                        child: ElevatedButton(
-                          onPressed: canConfirm ? widget.onConfirm : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            disabledBackgroundColor: Colors.grey.shade300,
-                          ),
-                          child: Text(
-                            'KONFIRMASI & CETAK',
-                            style: AppTextStyles.h4.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // Right: Numpad & Input
+            Expanded(
+              flex: 3,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text('Uang Pembayaran', style: AppTextStyles.h3),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
+                      ),
+                      child: Text(
+                        _formatPrice(_paidAmount),
+                        style: AppTextStyles.h2.copyWith(
+                          color: AppColors.primary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: GridView.count(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 2.8,
+                        children: [
+                          for (var i = 1; i <= 9; i++)
+                            _NumButton(
+                              val: '$i',
+                              onTap: () => _onNumberPress('$i'),
+                            ),
+                          _NumButton(
+                            val: '000',
+                            onTap: () => _onNumberPress('000'),
+                          ),
+                          _NumButton(
+                            val: '0',
+                            onTap: () => _onNumberPress('0'),
+                          ),
+                          _NumButton(
+                            val: 'X',
+                            onTap: _onBackspace,
+                            isAction: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DialogActionButton(
+                      label: 'KONFIRMASI & CETAK',
+                      primary: true,
+                      color: AppColors.primary,
+                      onPressed: canConfirm ? widget.onConfirm : null,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
