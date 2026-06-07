@@ -1,6 +1,7 @@
 // features/history/presentation/widgets/history/history_table.dart
 
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import '../../../domain/entities/transaction.dart';
 import 'history_row.dart';
 import 'history_empty.dart';
@@ -75,13 +76,13 @@ class HistoryTable extends StatelessWidget {
 
   Widget _buildHeader() {
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFF9FAFB), // gray-50
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
         ),
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+        border: Border(bottom: BorderSide(color: AppColors.cardBorder)),
       ),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
@@ -103,10 +104,10 @@ class HistoryTable extends StatelessWidget {
       flex: flex,
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF6B7280), // gray-500
+          color: AppColors.textSecondary,
           letterSpacing: 0.5,
         ),
       ),

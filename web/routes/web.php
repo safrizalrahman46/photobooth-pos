@@ -81,92 +81,96 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/cashier-settlements', AdminDashboardController::class);
         Route::get('/app-settings', AdminDashboardController::class);
 
-        Route::get('/dashboard-data', AdminDashboardDataController::class)->name('dashboard.data');
-        Route::get('/dashboard-report', AdminDashboardReportController::class)->name('dashboard.report');
+        Route::get('/dashboard-data', AdminDashboardDataController::class)
+            ->middleware('admin.permission:booking.view,queue.view,transaction.view,inventory.view,report.view,catalog.manage,settings.manage,user.manage,payment.manage')
+            ->name('dashboard.data');
+        Route::get('/dashboard-report', AdminDashboardReportController::class)
+            ->middleware('admin.permission:report.view')
+            ->name('dashboard.report');
 
-        Route::get('/packages-data', [AdminPackageController::class, 'index'])->name('packages.data');
-        Route::post('/packages', [AdminPackageController::class, 'store'])->name('packages.store');
-        Route::put('/packages/{package}', [AdminPackageController::class, 'update']);
-        Route::delete('/packages/{package}', [AdminPackageController::class, 'destroy']);
+        Route::get('/packages-data', [AdminPackageController::class, 'index'])->middleware('admin.permission:catalog.manage')->name('packages.data');
+        Route::post('/packages', [AdminPackageController::class, 'store'])->middleware('admin.permission:catalog.manage')->name('packages.store');
+        Route::put('/packages/{package}', [AdminPackageController::class, 'update'])->middleware('admin.permission:catalog.manage');
+        Route::delete('/packages/{package}', [AdminPackageController::class, 'destroy'])->middleware('admin.permission:catalog.manage');
 
-        Route::get('/add-ons-data', [AdminAddOnController::class, 'index'])->name('add-ons.data');
-        Route::post('/add-ons', [AdminAddOnController::class, 'store'])->name('add-ons.store');
-        Route::put('/add-ons/{addOn}', [AdminAddOnController::class, 'update']);
-        Route::delete('/add-ons/{addOn}', [AdminAddOnController::class, 'destroy']);
+        Route::get('/add-ons-data', [AdminAddOnController::class, 'index'])->middleware('admin.permission:catalog.manage')->name('add-ons.data');
+        Route::post('/add-ons', [AdminAddOnController::class, 'store'])->middleware('admin.permission:catalog.manage')->name('add-ons.store');
+        Route::put('/add-ons/{addOn}', [AdminAddOnController::class, 'update'])->middleware('admin.permission:catalog.manage');
+        Route::delete('/add-ons/{addOn}', [AdminAddOnController::class, 'destroy'])->middleware('admin.permission:catalog.manage');
 
-        Route::get('/stock-data', [AdminInventoryController::class, 'index'])->name('stock.data');
-        Route::post('/inventory-items', [AdminInventoryController::class, 'store'])->name('inventory-items.store');
-        Route::put('/inventory-items/{inventoryItem}', [AdminInventoryController::class, 'update']);
-        Route::delete('/inventory-items/{inventoryItem}', [AdminInventoryController::class, 'destroy']);
-        Route::post('/inventory-items/{inventoryItem}/movement', [AdminInventoryController::class, 'movement'])->name('inventory-items.movement');
+        Route::get('/stock-data', [AdminInventoryController::class, 'index'])->middleware('admin.permission:inventory.view')->name('stock.data');
+        Route::post('/inventory-items', [AdminInventoryController::class, 'store'])->middleware('admin.permission:settings.manage')->name('inventory-items.store');
+        Route::put('/inventory-items/{inventoryItem}', [AdminInventoryController::class, 'update'])->middleware('admin.permission:settings.manage');
+        Route::delete('/inventory-items/{inventoryItem}', [AdminInventoryController::class, 'destroy'])->middleware('admin.permission:settings.manage');
+        Route::post('/inventory-items/{inventoryItem}/movement', [AdminInventoryController::class, 'movement'])->middleware('admin.permission:settings.manage')->name('inventory-items.movement');
 
-        Route::get('/designs-data', [AdminDesignController::class, 'index'])->name('designs.data');
-        Route::post('/designs', [AdminDesignController::class, 'store'])->name('designs.store');
-        Route::put('/designs/{designCatalog}', [AdminDesignController::class, 'update']);
-        Route::delete('/designs/{designCatalog}', [AdminDesignController::class, 'destroy']);
+        Route::get('/designs-data', [AdminDesignController::class, 'index'])->middleware('admin.permission:catalog.manage')->name('designs.data');
+        Route::post('/designs', [AdminDesignController::class, 'store'])->middleware('admin.permission:catalog.manage')->name('designs.store');
+        Route::put('/designs/{designCatalog}', [AdminDesignController::class, 'update'])->middleware('admin.permission:catalog.manage');
+        Route::delete('/designs/{designCatalog}', [AdminDesignController::class, 'destroy'])->middleware('admin.permission:catalog.manage');
 
-        Route::get('/users-data', [AdminUserController::class, 'index'])->name('users.data');
-        Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
-        Route::put('/users/{user}', [AdminUserController::class, 'update']);
-        Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
+        Route::get('/users-data', [AdminUserController::class, 'index'])->middleware('admin.permission:user.manage')->name('users.data');
+        Route::post('/users', [AdminUserController::class, 'store'])->middleware('admin.permission:user.manage')->name('users.store');
+        Route::put('/users/{user}', [AdminUserController::class, 'update'])->middleware('admin.permission:user.manage');
+        Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->middleware('admin.permission:user.manage');
 
-        Route::get('/queue-data', [AdminQueueController::class, 'index'])->name('queue.data');
-        Route::post('/queue/call-next', [AdminQueueController::class, 'callNext'])->name('queue.call-next');
-        Route::post('/queue/check-in', [AdminQueueController::class, 'checkIn'])->name('queue.check-in');
-        Route::post('/queue/walk-in', [AdminQueueController::class, 'walkIn'])->name('queue.walk-in');
-        Route::patch('/queue/{queueTicket}/status', [AdminQueueController::class, 'transition']);
+        Route::get('/queue-data', [AdminQueueController::class, 'index'])->middleware('admin.permission:queue.view')->name('queue.data');
+        Route::post('/queue/call-next', [AdminQueueController::class, 'callNext'])->middleware('admin.permission:queue.manage')->name('queue.call-next');
+        Route::post('/queue/check-in', [AdminQueueController::class, 'checkIn'])->middleware('admin.permission:queue.manage')->name('queue.check-in');
+        Route::post('/queue/walk-in', [AdminQueueController::class, 'walkIn'])->middleware('admin.permission:queue.manage')->name('queue.walk-in');
+        Route::patch('/queue/{queueTicket}/status', [AdminQueueController::class, 'transition'])->middleware('admin.permission:queue.manage');
 
-        Route::get('/settings-data', [AdminSettingsController::class, 'index'])->name('settings.data');
-        Route::put('/settings/default-branch', [AdminSettingsController::class, 'updateDefaultBranch'])->name('settings.default-branch');
-        Route::post('/settings/branches', [AdminSettingsController::class, 'storeBranch'])->name('settings.branches.store');
-        Route::put('/settings/branches/{branch}', [AdminSettingsController::class, 'updateBranch']);
-        Route::delete('/settings/branches/{branch}', [AdminSettingsController::class, 'destroyBranch']);
+        Route::get('/settings-data', [AdminSettingsController::class, 'index'])->middleware('admin.permission:settings.manage')->name('settings.data');
+        Route::put('/settings/default-branch', [AdminSettingsController::class, 'updateDefaultBranch'])->middleware('admin.permission:settings.manage')->name('settings.default-branch');
+        Route::post('/settings/branches', [AdminSettingsController::class, 'storeBranch'])->middleware('admin.permission:settings.manage')->name('settings.branches.store');
+        Route::put('/settings/branches/{branch}', [AdminSettingsController::class, 'updateBranch'])->middleware('admin.permission:settings.manage');
+        Route::delete('/settings/branches/{branch}', [AdminSettingsController::class, 'destroyBranch'])->middleware('admin.permission:settings.manage');
 
-        Route::get('/branches-data', [AdminBranchController::class, 'index'])->name('branches.data');
-        Route::post('/branches', [AdminBranchController::class, 'store'])->name('branches.store');
-        Route::put('/branches/{branch}', [AdminBranchController::class, 'update']);
-        Route::delete('/branches/{branch}', [AdminBranchController::class, 'destroy']);
+        Route::get('/branches-data', [AdminBranchController::class, 'index'])->middleware('admin.permission:settings.manage')->name('branches.data');
+        Route::post('/branches', [AdminBranchController::class, 'store'])->middleware('admin.permission:settings.manage')->name('branches.store');
+        Route::put('/branches/{branch}', [AdminBranchController::class, 'update'])->middleware('admin.permission:settings.manage');
+        Route::delete('/branches/{branch}', [AdminBranchController::class, 'destroy'])->middleware('admin.permission:settings.manage');
 
-        Route::get('/time-slots-data', [AdminTimeSlotController::class, 'index'])->name('time-slots.data');
-        Route::post('/time-slots', [AdminTimeSlotController::class, 'store'])->name('time-slots.store');
-        Route::put('/time-slots/{timeSlot}', [AdminTimeSlotController::class, 'update']);
-        Route::delete('/time-slots/{timeSlot}', [AdminTimeSlotController::class, 'destroy']);
-        Route::post('/time-slots/generate', [AdminTimeSlotController::class, 'generate'])->name('time-slots.generate');
-        Route::post('/time-slots/bulk-bookable', [AdminTimeSlotController::class, 'bulkBookable'])->name('time-slots.bulk-bookable');
+        Route::get('/time-slots-data', [AdminTimeSlotController::class, 'index'])->middleware('admin.permission:settings.manage')->name('time-slots.data');
+        Route::post('/time-slots', [AdminTimeSlotController::class, 'store'])->middleware('admin.permission:settings.manage')->name('time-slots.store');
+        Route::put('/time-slots/{timeSlot}', [AdminTimeSlotController::class, 'update'])->middleware('admin.permission:settings.manage');
+        Route::delete('/time-slots/{timeSlot}', [AdminTimeSlotController::class, 'destroy'])->middleware('admin.permission:settings.manage');
+        Route::post('/time-slots/generate', [AdminTimeSlotController::class, 'generate'])->middleware('admin.permission:settings.manage')->name('time-slots.generate');
+        Route::post('/time-slots/bulk-bookable', [AdminTimeSlotController::class, 'bulkBookable'])->middleware('admin.permission:settings.manage')->name('time-slots.bulk-bookable');
 
-        Route::get('/blackout-dates-data', [AdminBlackoutDateController::class, 'index'])->name('blackout-dates.data');
-        Route::post('/blackout-dates', [AdminBlackoutDateController::class, 'store'])->name('blackout-dates.store');
-        Route::put('/blackout-dates/{blackoutDate}', [AdminBlackoutDateController::class, 'update']);
-        Route::delete('/blackout-dates/{blackoutDate}', [AdminBlackoutDateController::class, 'destroy']);
+        Route::get('/blackout-dates-data', [AdminBlackoutDateController::class, 'index'])->middleware('admin.permission:settings.manage')->name('blackout-dates.data');
+        Route::post('/blackout-dates', [AdminBlackoutDateController::class, 'store'])->middleware('admin.permission:settings.manage')->name('blackout-dates.store');
+        Route::put('/blackout-dates/{blackoutDate}', [AdminBlackoutDateController::class, 'update'])->middleware('admin.permission:settings.manage');
+        Route::delete('/blackout-dates/{blackoutDate}', [AdminBlackoutDateController::class, 'destroy'])->middleware('admin.permission:settings.manage');
 
-        Route::get('/printer-settings-data', [AdminPrinterSettingController::class, 'index'])->name('printer-settings.data');
-        Route::post('/printer-settings', [AdminPrinterSettingController::class, 'store'])->name('printer-settings.store');
-        Route::put('/printer-settings/{printerSetting}', [AdminPrinterSettingController::class, 'update']);
-        Route::delete('/printer-settings/{printerSetting}', [AdminPrinterSettingController::class, 'destroy']);
-        Route::patch('/printer-settings/{printerSetting}/default', [AdminPrinterSettingController::class, 'setDefault'])->name('printer-settings.set-default');
+        Route::get('/printer-settings-data', [AdminPrinterSettingController::class, 'index'])->middleware('admin.permission:settings.manage')->name('printer-settings.data');
+        Route::post('/printer-settings', [AdminPrinterSettingController::class, 'store'])->middleware('admin.permission:settings.manage')->name('printer-settings.store');
+        Route::put('/printer-settings/{printerSetting}', [AdminPrinterSettingController::class, 'update'])->middleware('admin.permission:settings.manage');
+        Route::delete('/printer-settings/{printerSetting}', [AdminPrinterSettingController::class, 'destroy'])->middleware('admin.permission:settings.manage');
+        Route::patch('/printer-settings/{printerSetting}/default', [AdminPrinterSettingController::class, 'setDefault'])->middleware('admin.permission:settings.manage')->name('printer-settings.set-default');
 
-        Route::get('/payments-data', [AdminPaymentController::class, 'index'])->name('payments.data');
-        Route::post('/payments/{transaction}/store', [AdminPaymentController::class, 'store'])->name('payments.store');
+        Route::get('/payments-data', [AdminPaymentController::class, 'index'])->middleware('admin.permission:transaction.view,payment.manage')->name('payments.data');
+        Route::post('/payments/{transaction}/store', [AdminPaymentController::class, 'store'])->middleware('admin.permission:payment.manage')->name('payments.store');
 
-        Route::get('/cashier-settlements-data', [AdminCashierSettlementController::class, 'index'])->name('cashier-settlements.data');
-        Route::get('/cashier-settlements/{cashierSettlement}', [AdminCashierSettlementController::class, 'show']);
-        Route::post('/cashier-settlements/{cashierSettlement}/verify', [AdminCashierSettlementController::class, 'verify']);
-        Route::post('/cashier-settlements/{cashierSettlement}/correction', [AdminCashierSettlementController::class, 'correction']);
+        Route::get('/cashier-settlements-data', [AdminCashierSettlementController::class, 'index'])->middleware('admin.permission:report.view')->name('cashier-settlements.data');
+        Route::get('/cashier-settlements/{cashierSettlement}', [AdminCashierSettlementController::class, 'show'])->middleware('admin.permission:report.view');
+        Route::post('/cashier-settlements/{cashierSettlement}/verify', [AdminCashierSettlementController::class, 'verify'])->middleware('admin.permission:report.view');
+        Route::post('/cashier-settlements/{cashierSettlement}/correction', [AdminCashierSettlementController::class, 'correction'])->middleware('admin.permission:report.view');
 
-        Route::get('/referrals-data', [AdminReferralController::class, 'index'])->name('referrals.data');
-        Route::post('/referrals', [AdminReferralController::class, 'store'])->name('referrals.store');
-        Route::put('/referrals/{referralCode}', [AdminReferralController::class, 'update']);
-        Route::delete('/referrals/{referralCode}', [AdminReferralController::class, 'destroy']);
+        Route::get('/referrals-data', [AdminReferralController::class, 'index'])->middleware('admin.permission:settings.manage')->name('referrals.data');
+        Route::post('/referrals', [AdminReferralController::class, 'store'])->middleware('admin.permission:settings.manage')->name('referrals.store');
+        Route::put('/referrals/{referralCode}', [AdminReferralController::class, 'update'])->middleware('admin.permission:settings.manage');
+        Route::delete('/referrals/{referralCode}', [AdminReferralController::class, 'destroy'])->middleware('admin.permission:settings.manage');
 
-        Route::get('/app-settings-data', [AdminAppSettingController::class, 'index'])->name('app-settings.data');
-        Route::put('/app-settings/{group}', [AdminAppSettingController::class, 'update'])->name('app-settings.update');
+        Route::get('/app-settings-data', [AdminAppSettingController::class, 'index'])->middleware('admin.permission:settings.manage')->name('app-settings.data');
+        Route::put('/app-settings/{group}', [AdminAppSettingController::class, 'update'])->middleware('admin.permission:settings.manage')->name('app-settings.update');
 
-        Route::post('/bookings', [AdminBookingController::class, 'store'])->name('bookings.store');
-        Route::put('/bookings/{booking}', [AdminBookingController::class, 'update']);
-        Route::delete('/bookings/{booking}', [AdminBookingController::class, 'destroy']);
-        Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm']);
-        Route::post('/bookings/{booking}/confirm-payment', [AdminBookingController::class, 'confirmPayment']);
-        Route::post('/bookings/{booking}/decline', [AdminBookingController::class, 'decline']);
-        Route::get('/bookings/{booking}/transfer-proof', [AdminBookingController::class, 'transferProof'])->name('bookings.transfer-proof');
+        Route::post('/bookings', [AdminBookingController::class, 'store'])->middleware('admin.permission:booking.manage')->name('bookings.store');
+        Route::put('/bookings/{booking}', [AdminBookingController::class, 'update'])->middleware('admin.permission:booking.manage');
+        Route::delete('/bookings/{booking}', [AdminBookingController::class, 'destroy'])->middleware('admin.permission:booking.manage');
+        Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm'])->middleware('admin.permission:booking.manage');
+        Route::post('/bookings/{booking}/confirm-payment', [AdminBookingController::class, 'confirmPayment'])->middleware('admin.permission:booking.manage,payment.manage');
+        Route::post('/bookings/{booking}/decline', [AdminBookingController::class, 'decline'])->middleware('admin.permission:booking.manage');
+        Route::get('/bookings/{booking}/transfer-proof', [AdminBookingController::class, 'transferProof'])->middleware('admin.permission:booking.view')->name('bookings.transfer-proof');
     });
 });

@@ -1,6 +1,7 @@
 // features/history/presentation/widgets/filters/filter_button.dart
 
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import '../../../domain/entities/transaction.dart';
 
 // ─── Referensi global ──────────────────────────────────────────────────────────
@@ -36,7 +37,7 @@ class FilterButton extends StatelessWidget {
       height: 40,
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFE5E7EB)), // gray-200
+        border: Border.all(color: AppColors.cardBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: PopupMenuButton<TransactionStatus?>(
@@ -56,18 +57,18 @@ class FilterButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // ikon filter (3 garis bertingkat)
-              const Icon(
+              Icon(
                 Icons.tune_rounded,
                 size: 16,
-                color: Color(0xFF374151), // gray-700
+                color: AppColors.textPrimary,
               ),
               const SizedBox(width: 6),
               Text(
                 selectedStatus == null ? 'Filter' : selectedStatus!.label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF374151),
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import '../common/percentage_badge.dart';
 
 class SummaryCard extends StatelessWidget {
@@ -45,10 +46,10 @@ class SummaryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: const Color(0xFF3B82F6), size: 20),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
               if (percentageChange != null)
                 PercentageBadge(percentage: percentageChange!),
@@ -57,10 +58,10 @@ class SummaryCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF94A3B8),
+              color: AppColors.textMuted,
               letterSpacing: 0.5,
             ),
           ),

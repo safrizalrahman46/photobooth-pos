@@ -1,7 +1,9 @@
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/features/kasir/services/receipt_printer.dart';
 import 'package:desktop_flutter/shared/models/walk_in_request_item.dart';
+import 'package:desktop_flutter/features/booking/presentation/widgets/dialogs/payment_confirm_dialog.dart';
 import 'package:flutter/material.dart';
 
 class QrWalkinPage extends StatefulWidget {
@@ -72,24 +74,7 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Konfirmasi Pembayaran Tunai'),
-          content: Text(
-            'Pastikan ${item.customerName} sudah membayar ${_currency(item.totalAmount)}. Setelah dikonfirmasi, transaksi dan antrean akan dibuat.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Sudah Bayar'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => PaymentConfirmDialog(item: item),
     );
 
     if (confirmed != true) {
@@ -172,13 +157,13 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF111827),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       SizedBox(height: 6),
                       Text(
                         'Konfirmasi customer yang scan QR dan bayar tunai di kasir.',
-                        style: TextStyle(color: Color(0xFF6B7280)),
+                        style: TextStyle(color: AppColors.textSecondary),
                       ),
                     ],
                   ),
@@ -221,7 +206,7 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
               const SizedBox(height: 16),
               Text(
                 _errorMessage!,
-                style: const TextStyle(color: Colors.redAccent),
+                style: TextStyle(color: AppColors.error, fontSize: 13),
               ),
             ],
             const SizedBox(height: 20),
@@ -229,10 +214,10 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _rows.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'Belum ada request QR walk-in hari ini.',
-                        style: TextStyle(color: Color(0xFF6B7280)),
+                        style: TextStyle(color: AppColors.textSecondary),
                       ),
                     )
                   : ListView.separated(

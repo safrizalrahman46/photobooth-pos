@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 
 class PercentageBadge extends StatelessWidget {
   final double percentage;
@@ -9,7 +10,7 @@ class PercentageBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPositive = percentage >= 0;
     final color = isPositive
-        ? const Color(0xFF22C55E)
+        ? AppColors.success
         : const Color(0xFFEF4444);
     final sign = isPositive ? '+' : '';
 

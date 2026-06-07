@@ -11,6 +11,7 @@ const props = defineProps({
     saving: { type: Boolean, default: false },
     deletingDesignId: { type: [Number, String, null], default: null },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['refresh-designs', 'create-design', 'update-design', 'delete-design']);
@@ -176,7 +177,7 @@ const requestDelete = async (design) => {
                         <RefreshCw class="mr-1.5 h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
                         Refresh
                     </button>
-                    <button type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #1D4ED8;" @click="openCreateModal">
+                    <button v-if="canManage" type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #1D4ED8;" @click="openCreateModal">
                         <Plus class="mr-1 inline h-3.5 w-3.5" />
                         Add Design
                     </button>
@@ -247,6 +248,7 @@ const requestDelete = async (design) => {
 
                     <div class="flex items-center gap-2">
                         <button
+                            v-if="canManage"
                             type="button"
                             class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-sm font-semibold"
                             style="border-color: #2563EB; color: #2563EB;"
@@ -256,6 +258,7 @@ const requestDelete = async (design) => {
                             Edit
                         </button>
                         <button
+                            v-if="canManage"
                             type="button"
                             class="inline-flex h-10 w-10 items-center justify-center rounded-full border"
                             style="border-color: #FECACA; color: #EF4444;"

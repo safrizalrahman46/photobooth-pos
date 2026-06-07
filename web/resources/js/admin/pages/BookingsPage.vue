@@ -15,6 +15,8 @@ const props = defineProps({
     loading: { type: Boolean, default: false },
     saving: { type: Boolean, default: false },
     bookingError: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
+    canDelete: { type: Boolean, default: false },
     bookingOptions: {
         type: Object,
         default: () => ({
@@ -739,7 +741,7 @@ watch(
                         <RefreshCw class="mr-1.5 h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
                         Refresh
                     </button>
-                    <button type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #0F766E;" @click="openCreateBookingModal">
+                    <button v-if="canManage" type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold" style="color: #0F766E;" @click="openCreateBookingModal">
                         <Plus class="mr-1 inline h-3.5 w-3.5" />
                         New Booking
                     </button>
@@ -862,17 +864,6 @@ watch(
                             <td class="px-5 py-3.5">
                                 <div class="flex flex-wrap items-center gap-1.5">
                                     <button
-                                        v-if="row.can_confirm_booking || row.can_confirm_payment"
-                                        type="button"
-                                        class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-                                        style="border-color: #A7F3D0; color: #059669;"
-                                        :disabled="Number(processingBookingId || 0) === Number(row.record_id)"
-                                        @click="requestConfirmBooking(row)"
-                                    >
-                                        <CheckCircle2 class="h-3 w-3" />
-                                        Verifikasi
-                                    </button>
-                                    <button
                                         type="button"
                                         class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold"
                                         style="border-color: #99F6E4; color: #0F766E;"
@@ -882,6 +873,7 @@ watch(
                                         Detail
                                     </button>
                                     <button
+                                        v-if="canManage"
                                         type="button"
                                         class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold"
                                         style="border-color: #BFDBFE; color: #2563EB;"
@@ -891,6 +883,7 @@ watch(
                                         Edit
                                     </button>
                                     <button
+                                        v-if="canDelete"
                                         type="button"
                                         class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold"
                                         style="border-color: #FECACA; color: #EF4444;"
@@ -1130,6 +1123,7 @@ watch(
                 <div class="rtp-admin-actions mt-5">
                     <button type="button" class="rounded-xl border px-4 py-2 text-sm" style="border-color: #E2E8F0; color: #64748B;" @click="closePaymentModal">Cancel</button>
                     <button
+                        v-if="canManage"
                         type="button"
                         class="rounded-xl px-4 py-2 text-sm font-semibold"
                         style="background: #0F766E; color: #FFFFFF;"
@@ -1240,7 +1234,7 @@ watch(
 
                 <div class="rtp-admin-actions mt-5">
                     <button
-                        v-if="bookingDetailCanDecline"
+                        v-if="canManage && bookingDetailCanDecline"
                         type="button"
                         class="rounded-xl border px-4 py-2 text-sm font-semibold"
                         style="border-color: #FECACA; color: #DC2626;"
@@ -1250,7 +1244,7 @@ watch(
                         Decline
                     </button>
                     <button
-                        v-if="bookingDetailShowVerify"
+                        v-if="canManage && bookingDetailShowVerify"
                         type="button"
                         class="inline-flex items-center gap-1 rounded-xl border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                         style="border-color: #A7F3D0; color: #059669;"

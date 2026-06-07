@@ -159,6 +159,7 @@ class ReceiptPrinter {
     required String cashierName,
     String? queueCode,
     String? receiptTitle,
+    Set<int> highlightedItemIds = const <int>{},
     int? paperWidthMm,
   }) async {
     final bytes = await buildTransactionReceiptPdf(
@@ -168,6 +169,7 @@ class ReceiptPrinter {
       cashierName: cashierName,
       queueCode: queueCode,
       receiptTitle: receiptTitle,
+      highlightedItemIds: highlightedItemIds,
       paperWidthMm: paperWidthMm,
     );
 
@@ -184,6 +186,7 @@ class ReceiptPrinter {
     required String cashierName,
     String? queueCode,
     String? receiptTitle,
+    Set<int> highlightedItemIds = const <int>{},
     int? paperWidthMm,
   }) async {
     final doc = pw.Document();
@@ -237,25 +240,35 @@ class ReceiptPrinter {
           ),
           pw.SizedBox(height: 4),
           ...transaction.items.map((item) {
+            final highlighted = highlightedItemIds.contains(item.id);
+            final itemStyle = pw.TextStyle(
+              fontSize: 10,
+              fontWeight: highlighted ? pw.FontWeight.bold : null,
+            );
+            final detailStyle = pw.TextStyle(
+              fontSize: 9,
+              fontWeight: highlighted ? pw.FontWeight.bold : null,
+            );
+
             return pw.Padding(
               padding: const pw.EdgeInsets.only(bottom: 4),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: <pw.Widget>[
                   pw.Text(
-                    item.itemName,
-                    style: const pw.TextStyle(fontSize: 10),
+                    highlighted ? '${item.itemName} (ADD-ON BARU)' : item.itemName,
+                    style: itemStyle,
                   ),
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: <pw.Widget>[
                       pw.Text(
                         '${_formatQty(item.qty)} x ${_currency(item.unitPrice)}',
-                        style: const pw.TextStyle(fontSize: 9),
+                        style: detailStyle,
                       ),
                       pw.Text(
                         _currency(item.lineTotal),
-                        style: const pw.TextStyle(fontSize: 9),
+                        style: detailStyle,
                       ),
                     ],
                   ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import '../../../history/domain/entities/transaction.dart';
 import '../../../history/presentation/widgets/common/transaction_status_badge.dart';
 
@@ -49,13 +50,13 @@ class ReportTable extends StatelessWidget {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
         ),
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+        border: Border(bottom: BorderSide(color: AppColors.cardBorder)),
       ),
       child: const Row(
         children: [
@@ -85,10 +86,10 @@ class _HeaderCell extends StatelessWidget {
       flex: flex,
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF64748B),
+          color: AppColors.textSecondary,
           letterSpacing: 0.5,
         ),
       ),
@@ -105,8 +106,8 @@ class _ReportRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.divider)),
       ),
       child: Row(
         children: [
@@ -121,7 +122,7 @@ class _ReportRow extends StatelessWidget {
             flex: ReportTable._flexWaktu,
             child: Text(
               DateFormat('dd Oct, HH:mm').format(transaction.waktu),
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ),
           Expanded(
@@ -135,14 +136,14 @@ class _ReportRow extends StatelessWidget {
             flex: ReportTable._flexPaket,
             child: Text(
               transaction.paket,
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ),
           Expanded(
             flex: ReportTable._flexAddon,
             child: Text(
               transaction.addOns ?? '-',
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ),
           Expanded(
@@ -172,15 +173,15 @@ class _ReportRow extends StatelessWidget {
                 icon: const Icon(Icons.print_rounded, size: 16),
                 label: const Text('Cetak'),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF6366F1),
-                  backgroundColor: const Color(0xFFF5F7FF),
+                  foregroundColor: AppColors.primary,
+                  backgroundColor: AppColors.cardBg,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 8,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
-                    side: const BorderSide(color: Color(0xFFE0E7FF)),
+                    side: BorderSide(color: AppColors.primaryLight),
                   ),
                 ),
               ),

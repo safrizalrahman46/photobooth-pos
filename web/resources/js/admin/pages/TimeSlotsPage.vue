@@ -8,6 +8,7 @@ const props = defineProps({
     saving: { type: Boolean, default: false },
     deletingTimeSlotId: { type: [Number, null], default: null },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -403,7 +404,7 @@ const applyTodayFilter = () => {
                     </label>
                 </div>
 
-                <button type="button" class="mt-3 w-full rounded-xl bg-[#15803D] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
+                <button v-if="canManage" type="button" class="mt-3 w-full rounded-xl bg-[#15803D] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitCreate">
                     {{ saving ? 'Menyimpan...' : 'Buat Slot' }}
                 </button>
             </div>
@@ -447,7 +448,7 @@ const applyTodayFilter = () => {
                     </label>
                 </div>
 
-                <button type="button" class="mt-3 w-full rounded-xl bg-[#166534] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitGenerate">
+                <button v-if="canManage" type="button" class="mt-3 w-full rounded-xl bg-[#166534] px-4 py-2 text-sm text-white sm:w-auto" :disabled="saving" @click="submitGenerate">
                     {{ saving ? 'Generating...' : 'Generate Slots' }}
                 </button>
             </div>
@@ -505,10 +506,10 @@ const applyTodayFilter = () => {
                 <button type="button" class="rounded-lg border px-3 py-1.5 text-xs" style="border-color: #CBD5E1; color: #64748B;" :disabled="!selectedSlotIds.length" @click="clearFilteredSelection">
                     Bersihkan Pilihan
                 </button>
-                <button type="button" class="rounded-lg border px-3 py-1.5 text-xs" style="border-color: #86EFAC; color: #166534;" :disabled="saving" @click="applyBulk(true)">
+                <button v-if="canManage" type="button" class="rounded-lg border px-3 py-1.5 text-xs" style="border-color: #86EFAC; color: #166534;" :disabled="saving" @click="applyBulk(true)">
                     Buka Booking Slot Terpilih
                 </button>
-                <button type="button" class="rounded-lg border px-3 py-1.5 text-xs" style="border-color: #FCA5A5; color: #B91C1C;" :disabled="saving" @click="applyBulk(false)">
+                <button v-if="canManage" type="button" class="rounded-lg border px-3 py-1.5 text-xs" style="border-color: #FCA5A5; color: #B91C1C;" :disabled="saving" @click="applyBulk(false)">
                     Tutup Booking Slot Terpilih
                 </button>
             </div>
@@ -585,8 +586,8 @@ const applyTodayFilter = () => {
                             </label>
 
                             <div class="flex gap-2">
-                                <button type="button" class="flex-1 rounded bg-[#15803D] px-3 py-2 text-xs text-white" :disabled="saving" @click="submitUpdate(row.id)">Simpan Perubahan</button>
-                                <button type="button" class="rounded bg-[#DC2626] px-3 py-2 text-xs text-white" :disabled="deletingTimeSlotId === row.id" @click="submitDelete(row.id)">
+                                <button v-if="canManage" type="button" class="flex-1 rounded bg-[#15803D] px-3 py-2 text-xs text-white" :disabled="saving" @click="submitUpdate(row.id)">Simpan Perubahan</button>
+                                <button v-if="canManage" type="button" class="rounded bg-[#DC2626] px-3 py-2 text-xs text-white" :disabled="deletingTimeSlotId === row.id" @click="submitDelete(row.id)">
                                     {{ deletingTimeSlotId === row.id ? 'Deleting...' : 'Hapus' }}
                                 </button>
                             </div>

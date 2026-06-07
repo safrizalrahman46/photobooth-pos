@@ -1252,6 +1252,25 @@ class ApiClient {
 
     return WalkInConfirmResult.fromJson(data);
   }
+  
+  Future<WalkInConfirmResult> confirmWalkInRequest({
+    required int requestId,
+  }) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/walk-in-requests/$requestId',
+      authenticated: true,
+      body: {'payment_method': 'cash'},
+    );
+
+    final data = payload['data'];
+
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respons konfirmasi QR walk-in tidak valid.');
+    }
+
+    return WalkInConfirmResult.fromJson(data);
+  }
 
   Future<TransactionRecord> createTransaction({
     required int branchId,

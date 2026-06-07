@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/booth_entity.dart';
 import '../theme/app_theme.dart';
 
@@ -31,7 +32,7 @@ class KolomSedangFotoWidget extends StatelessWidget {
                 width: 4,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4AABF7), // Blue accent for photo
+                  color: AppColors.primary, // Blue accent for photo
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -277,9 +278,7 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                       child: Container(
                         height: 8,
                         decoration: BoxDecoration(
-                          color: const Color(
-                            0xFF0F172A,
-                          ), // Dark blue progress like mockup
+                          color: AppColors.textPrimary, // Dark blue progress like mockup
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -293,8 +292,8 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                   child: OutlinedButton(
                     onPressed: widget.onKirimKeSelesai,
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                        color: Color(0xFF0F172A),
+                      side: BorderSide(
+                        color: AppColors.textPrimary,
                         width: 1.5,
                       ),
                       shape: RoundedRectangleBorder(
@@ -308,7 +307,7 @@ class _BoothAktifCardState extends State<BoothAktifCard> {
                         fontFamily: AppTheme.fontFamily,
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.textPrimary,
                         letterSpacing: 1,
                       ),
                     ),
@@ -386,7 +385,7 @@ class BoothTersediaCard extends StatelessWidget {
               onPressed: onSetReady,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFDBEAFE),
-                foregroundColor: const Color(0xFF2563EB),
+                foregroundColor: AppColors.primary,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),

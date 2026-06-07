@@ -7,6 +7,7 @@ const props = defineProps({
     loading: { type: Boolean, default: false },
     saving: { type: Boolean, default: false },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['refresh-payments', 'create-payment']);
@@ -64,7 +65,7 @@ const submitCreate = () => {
             {{ localError || errorMessage }}
         </p>
 
-        <section class="rounded-2xl border p-4" style="border-color: #E2E8F0; background: #FFFFFF;">
+        <section v-if="canManage" class="rounded-2xl border p-4" style="border-color: #E2E8F0; background: #FFFFFF;">
             <h3 class="text-sm font-semibold text-[#581C87]">Add Payment</h3>
             <div class="rtp-admin-form-grid mt-3 xl:grid-cols-5">
                 <label class="text-xs text-[#64748B] xl:col-span-2">Transaction

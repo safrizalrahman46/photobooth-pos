@@ -1,6 +1,7 @@
 // features/history/presentation/sections/history_pagination_section.dart
 
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 
 // ─── Referensi global ──────────────────────────────────────────────────────────
 // Gunakan AppColors dari app/theme/app_colors.dart untuk warna primary.
@@ -50,9 +51,9 @@ class HistoryPaginationSection extends StatelessWidget {
         // Label info
         Text(
           paginationLabel,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
-            color: Color(0xFF6B7280), // gray-500
+            color: AppColors.textSecondary,
           ),
         ),
 
@@ -154,7 +155,7 @@ class _NavButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+          border: Border.all(color: AppColors.cardBorder),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
@@ -163,8 +164,8 @@ class _NavButton extends StatelessWidget {
             fontSize: 13,
             fontWeight: FontWeight.w500,
             color: isDisabled
-                ? const Color(0xFFD1D5DB)
-                : const Color(0xFF374151),
+                ? AppColors.textMuted
+                : AppColors.textPrimary,
           ),
         ),
       ),
@@ -194,9 +195,9 @@ class _PageButton extends StatelessWidget {
         decoration: BoxDecoration(
           // Warna aktif biru sesuai desain
           // Ganti Color(0xFF3B82F6) dengan AppColors.primary jika tersedia
-          color: isActive ? const Color(0xFF3B82F6) : Colors.transparent,
+          color: isActive ? AppColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border: isActive ? null : Border.all(color: const Color(0xFFE5E7EB)),
+          border: isActive ? null : Border.all(color: AppColors.cardBorder),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -204,7 +205,7 @@ class _PageButton extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-            color: isActive ? Colors.white : const Color(0xFF374151),
+            color: isActive ? Colors.white : AppColors.textPrimary,
           ),
         ),
       ),
@@ -217,9 +218,9 @@ class _Ellipsis extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4),
-      child: Text('…', style: TextStyle(color: Color(0xFF9CA3AF))),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text('…', style: TextStyle(color: AppColors.textMuted)),
     );
   }
 }

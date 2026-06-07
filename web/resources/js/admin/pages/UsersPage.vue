@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref } from 'vue';
-import { Pencil, Plus, RefreshCw, Shield, Trash2, UserRound, UsersRound } from 'lucide-vue-next';
+import { Eye, EyeOff, Pencil, Plus, RefreshCw, Shield, Trash2, UserRound, UsersRound } from 'lucide-vue-next';
 import AdminModal from '../components/AdminModal.vue';
 
 const props = defineProps({
@@ -26,6 +26,7 @@ const modalOpen = ref(false);
 const modalMode = ref('create');
 const editingUserId = ref(null);
 const localError = ref('');
+const showPassword = ref(false);
 const form = reactive({
     name: '',
     email: '',
@@ -63,6 +64,7 @@ const resetForm = () => {
     modalMode.value = 'create';
     editingUserId.value = null;
     localError.value = '';
+    showPassword.value = false;
 };
 
 const openAddModal = () => {
@@ -82,6 +84,7 @@ const openEditModal = (user) => {
     form.role = String(user.role_key || '').trim();
     form.is_active = Boolean(user.is_active);
     localError.value = '';
+    showPassword.value = false;
     modalOpen.value = true;
 };
 
@@ -329,7 +332,14 @@ const requestDelete = async (user) => {
 
                     <label class="text-sm text-[#475569]">
                         Password {{ modalMode === 'edit' ? '(opsional)' : '' }}
-                        <input v-model="form.password" type="password" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
+                        <div class="mt-1 flex overflow-hidden rounded-lg border" style="border-color: #E2E8F0;">
+                            <input v-model="form.password" :type="showPassword ? 'text' : 'password'" class="min-w-0 flex-1 px-3 py-2 outline-none" >
+                            <button type="button" class="inline-flex items-center gap-1 border-l px-3 text-xs font-semibold text-[#475569]" style="border-color: #E2E8F0;" @click="showPassword = !showPassword">
+                                <EyeOff v-if="showPassword" class="h-3.5 w-3.5" />
+                                <Eye v-else class="h-3.5 w-3.5" />
+                                {{ showPassword ? 'Sembunyikan' : 'Tampilkan' }}
+                            </button>
+                        </div>
                     </label>
 
                     <label class="text-sm text-[#475569]">

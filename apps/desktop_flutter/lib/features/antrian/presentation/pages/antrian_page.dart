@@ -288,7 +288,7 @@ class _AntrianPageState extends State<AntrianPage> {
     final nextWaitingTicket = _nextWaitingTicket;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F7FB),
+      backgroundColor: AppColors.pageBg,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 1180;
@@ -441,11 +441,11 @@ class _Header extends StatelessWidget {
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFBFDBFE)),
+                borderSide: BorderSide(color: AppColors.primaryLight),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFBFDBFE)),
+                borderSide: BorderSide(color: AppColors.primaryLight),
               ),
             ),
             items: [
@@ -467,7 +467,7 @@ class _Header extends StatelessWidget {
           onPressed: onRefresh,
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primaryDark,
-            side: const BorderSide(color: Color(0xFFBFDBFE)),
+            side: BorderSide(color: AppColors.primaryLight),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -500,25 +500,25 @@ class _StatsGrid extends StatelessWidget {
         label: 'Dalam Antrean',
         value: stats.inQueue.toString(),
         icon: Icons.groups_rounded,
-        color: const Color(0xFF2563EB),
+        color: AppColors.primary,
       ),
       _StatCard(
         label: 'Sesi Berjalan',
         value: stats.inSession.toString(),
         icon: Icons.camera_alt_rounded,
-        color: const Color(0xFF7C3AED),
+        color: AppColors.primary,
       ),
       _StatCard(
         label: 'Menunggu',
         value: stats.waiting.toString(),
         icon: Icons.schedule_rounded,
-        color: const Color(0xFFD97706),
+        color: AppColors.warning,
       ),
       _StatCard(
         label: 'Selesai Hari Ini',
         value: stats.completedToday.toString(),
         icon: Icons.check_circle_rounded,
-        color: const Color(0xFF059669),
+        color: AppColors.success,
       ),
     ];
 
@@ -626,13 +626,13 @@ class _CurrentQueuePanel extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primaryDark, AppColors.primary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
-            ),
             child: ticket == null
                 ? _NoCurrentQueue(nextWaitingTicket: nextWaitingTicket)
                 : _CurrentQueueInfo(ticket: ticket),
@@ -816,8 +816,8 @@ class _SessionProgress extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 8,
-            backgroundColor: const Color(0xFFE2E8F0),
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+            backgroundColor: AppColors.cardBorder,
+            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
           ),
         ),
       ],
@@ -897,7 +897,7 @@ class _QueueListPanel extends StatelessWidget {
                   Text(
                     'Dilewati',
                     style: AppTextStyles.captionMedium.copyWith(
-                      color: const Color(0xFFD97706),
+                      color: AppColors.warning,
                       letterSpacing: 1,
                     ),
                   ),
@@ -980,7 +980,7 @@ class _QueueTicketRow extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: AppColors.primaryLight,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(
@@ -1065,9 +1065,9 @@ class _PrimaryActionButton extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2563EB),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        disabledBackgroundColor: const Color(0xFFE2E8F0),
+        disabledBackgroundColor: AppColors.cardBorder,
         disabledForegroundColor: AppColors.textMuted,
         elevation: 0,
         padding: EdgeInsets.symmetric(
@@ -1109,8 +1109,8 @@ class _SecondaryActionButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: isLoading ? null : onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFFD97706),
-        side: const BorderSide(color: Color(0xFFFDE68A)),
+        foregroundColor: AppColors.warning,
+        side: BorderSide(color: AppColors.warning.withValues(alpha: 0.3)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
@@ -1163,7 +1163,7 @@ class _SourceBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWalkIn = sourceLabel.toLowerCase().contains('walk');
-    final color = isWalkIn ? const Color(0xFFD97706) : const Color(0xFF2563EB);
+    final color = isWalkIn ? AppColors.warning : AppColors.primary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -1213,9 +1213,9 @@ class _CountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppColors.pageBg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Text(label, style: AppTextStyles.captionMedium),
     );
@@ -1281,18 +1281,18 @@ class _ErrorBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F1),
+        color: AppColors.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFCDD2)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: Colors.redAccent),
+          Icon(Icons.error_outline_rounded, color: AppColors.error),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+              style: TextStyle(color: AppColors.error, fontSize: 13),
             ),
           ),
         ],
@@ -1308,7 +1308,7 @@ BoxDecoration _panelDecoration() {
     border: Border.all(color: AppColors.cardBorder),
     boxShadow: [
       BoxShadow(
-        color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+        color: AppColors.textPrimary.withValues(alpha: 0.04),
         blurRadius: 18,
         offset: const Offset(0, 10),
       ),
@@ -1318,12 +1318,12 @@ BoxDecoration _panelDecoration() {
 
 Color _statusColor(QueueTicketStatus status) {
   return switch (status) {
-    QueueTicketStatus.waiting => const Color(0xFF2563EB),
-    QueueTicketStatus.called => const Color(0xFFD97706),
-    QueueTicketStatus.checkedIn => const Color(0xFF059669),
-    QueueTicketStatus.inSession => const Color(0xFF7C3AED),
-    QueueTicketStatus.finished => const Color(0xFF047857),
-    QueueTicketStatus.skipped => const Color(0xFFB91C1C),
+    QueueTicketStatus.waiting => AppColors.primary,
+    QueueTicketStatus.called => AppColors.warning,
+    QueueTicketStatus.checkedIn => AppColors.success,
+    QueueTicketStatus.inSession => AppColors.primary,
+    QueueTicketStatus.finished => AppColors.success,
+    QueueTicketStatus.skipped => AppColors.error,
     QueueTicketStatus.cancelled => const Color(0xFF64748B),
     QueueTicketStatus.unknown => AppColors.textSecondary,
   };

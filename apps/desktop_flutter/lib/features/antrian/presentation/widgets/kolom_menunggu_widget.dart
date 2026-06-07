@@ -1,6 +1,7 @@
 // presentation/widgets/kolom_menunggu_widget.dart
 
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/antrian_entity.dart';
 import '../theme/app_theme.dart';
 
@@ -45,7 +46,7 @@ class KolomMenungguWidget extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE2E8F0),
+                  color: AppColors.cardBorder,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(

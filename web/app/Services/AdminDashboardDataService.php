@@ -42,29 +42,35 @@ class AdminDashboardDataService
         string $sortDir = 'desc',
     ): array {
         return array_merge(
-            $this->snapshot(),
+            $this->snapshot(includeManagementData: false),
             $this->bookingReadService->rowsPayload($search, $status, $perPage, $sortBy, $sortDir),
         );
     }
 
-    public function snapshot(): array
+    public function snapshot(bool $includeManagementData = true): array
     {
-        return [
+        $payload = [
             'initialStats' => $this->reportService->stats(),
             'summaryCards' => $this->reportService->summaryCards(),
             'revenueOverview' => $this->reportService->revenueOverview(),
             'ownerHighlights' => $this->reportService->ownerHighlights(),
             'ownerModules' => $this->ownerModules(),
-            'queueLive' => $this->adminQueuePageService->live(),
             'recentTransactions' => $this->transactionReadService->recentDetailed(),
             'recentActivities' => $this->activityLogger->recentRows(),
             'queueSnapshot' => $this->adminQueuePageService->snapshot(),
+            'initialBookingOptions' => $this->bookingFormOptions(),
+        ];
+
+        if (! $includeManagementData) {
+            return $payload;
+        }
+
+        return array_merge($payload, [
             'initialPackages' => $this->adminPackageService->managementRows(),
             'initialAddOns' => $this->adminAddOnService->managementRows(),
             'initialDesigns' => $this->adminDesignService->managementRows(),
             'initialUsers' => $this->adminUserService->rows(),
             'initialUserRoles' => $this->adminUserService->roleOptions(),
-            'initialBookingOptions' => $this->bookingFormOptions(),
             'initialBranches' => $this->adminBranchService->rows(),
             'initialTimeSlots' => $this->adminTimeSlotService->rows(),
             'initialBlackoutDates' => $this->adminBlackoutDateService->rows(),
@@ -76,7 +82,7 @@ class AdminDashboardDataService
             'initialReferralPayload' => $this->adminReferralService->payload(),
             'initialInventoryItems' => $this->inventoryService->itemRows(),
             'initialInventoryMovements' => $this->inventoryService->movementRows(),
-        ];
+        ]);
     }
 
     public function bookingFormOptions(): array

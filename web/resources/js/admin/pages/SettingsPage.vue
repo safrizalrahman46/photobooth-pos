@@ -16,6 +16,7 @@ const props = defineProps({
     loading: { type: Boolean, default: false },
     saving: { type: Boolean, default: false },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
     successMessage: { type: String, default: '' },
 });
 
@@ -262,6 +263,7 @@ watch(
                                 </option>
                             </select>
                             <button
+                                v-if="canManage"
                                 type="button"
                                 class="rounded-xl bg-[#0F766E] px-4 py-2 text-sm text-white"
                                 :disabled="saving || loading"
@@ -326,6 +328,7 @@ watch(
 
                                 <div class="mt-2 flex justify-end gap-2">
                                     <button
+                                        v-if="canManage"
                                         type="button"
                                         class="rounded-lg border px-3 py-1.5 text-xs"
                                         style="border-color: #93C5FD; color: #1D4ED8;"
@@ -335,6 +338,7 @@ watch(
                                         Update
                                     </button>
                                     <button
+                                        v-if="canManage"
                                         type="button"
                                         class="rounded-lg border px-3 py-1.5 text-xs"
                                         style="border-color: #FCA5A5; color: #B91C1C;"
@@ -373,6 +377,7 @@ watch(
 
                         <div class="mt-3 flex justify-end">
                             <button
+                                v-if="canManage"
                                 type="button"
                                 class="rounded-xl bg-[#0F766E] px-4 py-2 text-sm text-white"
                                 :disabled="saving || loading"
@@ -416,6 +421,7 @@ watch(
 
                     <div class="rtp-admin-actions mt-5">
                         <button
+                            v-if="canManage"
                             type="button"
                             class="rounded-xl bg-[#0F766E] px-5 py-2 text-sm text-white"
                             :disabled="saving || loading"

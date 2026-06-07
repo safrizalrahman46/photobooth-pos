@@ -437,6 +437,8 @@ const sidebarCollapsed = ref(false);
 const showTopSearch = ref(false);
 const topSearchValue = ref('');
 const routePath = ref(typeof window !== 'undefined' ? String(window.location.pathname || '/admin') : '/admin');
+const accessDeniedMessage = ref('');
+const accessDeniedCountdown = ref(0);
 
 const rows = ref(Array.isArray(props.initialRows) ? props.initialRows : []);
 const pagination = ref({
@@ -452,6 +454,7 @@ let reportDebounceTimer = null;
 let activeRequestController = null;
 let queueRefreshInterval = null;
 let bookingsRefreshInterval = null;
+let accessDeniedTimer = null;
 
 const filterTabs = computed(() => {
     const source = Array.isArray(props.uiConfig?.booking_filter_tabs)
@@ -585,10 +588,6 @@ const sidebarDashboardLabel = computed(() => {
 
     if (role === 'owner') {
         return 'Owner Dashboard';
-    }
-
-    if (role === 'cashier') {
-        return 'Cashier Dashboard';
     }
 
     const value = String(props.brand?.dashboard_label || '').trim();
@@ -753,6 +752,49 @@ const disabledSidebarItemIds = new Set([
     'app-settings',
 ]);
 
+const modulePermissionMap = {
+    dashboard: [],
+    bookings: ['booking.view'],
+    queue: ['queue.view'],
+    transactions: ['transaction.view'],
+    stock: ['inventory.view'],
+    reports: ['report.view'],
+    'cashier-settlements': ['report.view'],
+    packages: ['catalog.manage'],
+    'add-ons': ['catalog.manage'],
+    designs: ['catalog.manage'],
+    users: ['user.manage'],
+    branches: ['settings.manage'],
+    'time-slots': ['settings.manage'],
+    'blackout-dates': ['settings.manage'],
+    'printer-settings': ['settings.manage'],
+    settings: ['settings.manage'],
+    referrals: ['settings.manage'],
+    'app-settings': ['settings.manage'],
+    payments: ['transaction.view', 'payment.manage'],
+    'activity-logs': ['settings.manage', 'report.view'],
+};
+
+const currentPermissionSet = computed(() => new Set(
+    Array.isArray(props.currentUser?.permissions) ? props.currentUser.permissions.map((item) => String(item)) : [],
+));
+
+const isOwner = computed(() => String(props.currentUser?.role || '').toLowerCase() === 'owner');
+
+const hasAnyPermission = (permissions) => {
+    if (isOwner.value) {
+        return true;
+    }
+
+    if (!Array.isArray(permissions) || permissions.length === 0) {
+        return true;
+    }
+
+    return permissions.some((permission) => currentPermissionSet.value.has(permission));
+};
+
+const canAccessModule = (moduleId) => hasAnyPermission(modulePermissionMap[String(moduleId || '')] || []);
+
 const navItems = computed(() => {
     const source = Array.isArray(props.uiConfig?.nav_items) ? [...props.uiConfig.nav_items] : [];
 
@@ -802,10 +844,51 @@ const navItems = computed(() => {
             };
         })
         .filter(Boolean)
+        .filter((item) => canAccessModule(item.id))
         .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 });
 
-const canManageUsers = computed(() => String(props.currentUser?.role || '').toLowerCase() === 'owner');
+const managePermissionMap = {
+    stock: ['settings.manage'],
+    payments: ['payment.manage'],
+    packages: ['catalog.manage'],
+    'add-ons': ['catalog.manage'],
+    designs: ['catalog.manage'],
+    branches: ['settings.manage'],
+    'time-slots': ['settings.manage'],
+    'blackout-dates': ['settings.manage'],
+    'printer-settings': ['settings.manage'],
+    referrals: ['settings.manage'],
+    'app-settings': ['settings.manage'],
+    settings: ['settings.manage'],
+    users: ['user.manage'],
+    bookings: ['booking.manage'],
+    queue: ['queue.manage'],
+    'cashier-settlements': ['report.view'],
+};
+
+const canManageModule = (moduleId) => hasAnyPermission(managePermissionMap[String(moduleId || '')] || []);
+
+const canManageUsers = computed(() => canManageModule('users'));
+const canManageStock = computed(() => canManageModule('stock'));
+const canManagePayments = computed(() => canManageModule('payments'));
+const canManagePackages = computed(() => canManageModule('packages'));
+const canManageAddOns = computed(() => canManageModule('add-ons'));
+const canManageDesigns = computed(() => canManageModule('designs'));
+const canManageBranches = computed(() => canManageModule('branches'));
+const canManageTimeSlots = computed(() => canManageModule('time-slots'));
+const canManageBlackoutDates = computed(() => canManageModule('blackout-dates'));
+const canManagePrinterSettings = computed(() => canManageModule('printer-settings'));
+const canManageReferrals = computed(() => canManageModule('referrals'));
+const canManageAppSettings = computed(() => canManageModule('app-settings'));
+const canManageSettings = computed(() => canManageModule('settings'));
+const canManageBookings = computed(() => canManageModule('bookings'));
+const canDeleteBooking = computed(() => {
+    const role = String(props.currentUser?.role || '').toLowerCase();
+    return role === 'owner' || role === 'admin';
+});
+const canManageQueue = computed(() => canManageModule('queue'));
+const canManageCashierSettlements = computed(() => canManageModule('cashier-settlements'));
 
 const currentPath = computed(() => String(routePath.value || '/admin'));
 
@@ -1945,7 +2028,40 @@ const getCsrfToken = () => {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 };
 
-const parseRequestError = (response, fallback) => parseResponseError(response, fallback);
+const startAccessDeniedCountdown = (message) => {
+    accessDeniedMessage.value = message || 'Anda tidak memiliki akses untuk modul ini.';
+    accessDeniedCountdown.value = 10;
+
+    if (accessDeniedTimer) {
+        return;
+    }
+
+    accessDeniedTimer = setInterval(() => {
+        accessDeniedCountdown.value = Math.max(0, Number(accessDeniedCountdown.value || 0) - 1);
+
+        if (accessDeniedCountdown.value > 0) {
+            return;
+        }
+
+        clearInterval(accessDeniedTimer);
+        accessDeniedTimer = null;
+
+        if (typeof window !== 'undefined') {
+            const redirectUrl = isOwner.value ? panelBaseUrl.value : panelBaseUrl.value + 'bookings';
+            window.location.href = redirectUrl;
+        }
+    }, 1000);
+};
+
+const parseRequestError = async (response, fallback) => {
+    const message = await parseResponseError(response, fallback);
+
+    if (Number(response?.status || 0) === 403) {
+        startAccessDeniedCountdown(message);
+    }
+
+    return message;
+};
 
 const submitLogout = () => {
     if (typeof document === 'undefined' || !props.logoutUrl) {
@@ -3938,6 +4054,11 @@ onBeforeUnmount(() => {
         clearTimeout(reportDebounceTimer);
     }
 
+    if (accessDeniedTimer) {
+        clearInterval(accessDeniedTimer);
+        accessDeniedTimer = null;
+    }
+
     if (activeRequestController) {
         activeRequestController.abort();
     }
@@ -3981,18 +4102,21 @@ onBeforeUnmount(() => {
                             :branch-options="branchOptionsForManagement" :panel-base-url="panelBaseUrl"
                             :inventory-options="inventoryItemOptions" :format-rupiah="formatRupiah" :loading="packageLoading" :saving="packageSaving"
                             :deleting-package-id="deletingPackageId" :error-message="packageError"
+                            :can-manage="canManagePackages"
                             @refresh-packages="fetchPackagesData" @create-package="createPackage"
                             @update-package="updatePackage" @delete-package="deletePackage" />
 
                         <AddOnsPage v-else-if="activeModuleId === 'add-ons'" :add-on-rows="addOnRows"
                             :package-options="packageOptions" :inventory-options="inventoryItemOptions" :format-rupiah="formatRupiah" :loading="addOnLoading"
                             :saving="addOnSaving" :deleting-add-on-id="deletingAddOnId" :error-message="addOnError"
+                            :can-manage="canManageAddOns"
                             @refresh-add-ons="fetchAddOnsData" @create-add-on="createAddOn" @update-add-on="updateAddOn"
                             @delete-add-on="deleteAddOn" />
 
                         <StockPage v-else-if="activeModuleId === 'stock'" :inventory-items="inventoryItemRows"
                             :inventory-movements="inventoryMovementRows" :loading="stockLoading" :saving="stockSaving"
                             :deleting-inventory-item-id="deletingInventoryItemId" :error-message="stockError"
+                            :can-manage="canManageStock"
                             @refresh-stock="fetchStockData" @create-inventory-item="createInventoryItem"
                             @update-inventory-item="updateInventoryItem" @delete-inventory-item="deleteInventoryItem"
                             @move-stock="moveInventoryStock" />
@@ -4000,18 +4124,21 @@ onBeforeUnmount(() => {
                         <DesignsPage v-else-if="activeModuleId === 'designs'" :design-cards="designCards"
                             :panel-base-url="panelBaseUrl" :package-options="packageOptions" :loading="designLoading"
                             :saving="designSaving" :deleting-design-id="deletingDesignId" :error-message="designError"
+                            :can-manage="canManageDesigns"
                             @refresh-designs="fetchDesignsData" @create-design="createDesign"
                             @update-design="updateDesign" @delete-design="deleteDesign" />
 
                         <BranchesPage v-else-if="activeModuleId === 'branches'" :branch-rows="branchRows"
                             :loading="branchLoading" :saving="branchSaving" :deleting-branch-id="deletingBranchId"
-                            :error-message="branchError" @refresh-branches="fetchBranchesData"
+                            :error-message="branchError" :can-manage="canManageBranches"
+                            @refresh-branches="fetchBranchesData"
                             @create-branch="createBranch" @update-branch="updateBranch" @delete-branch="deleteBranch" />
 
                         <TimeSlotsPage v-else-if="activeModuleId === 'time-slots'" :time-slot-rows="timeSlotRows"
                             :branch-options="branchOptionsForManagement" :loading="timeSlotLoading"
                             :saving="timeSlotSaving" :deleting-time-slot-id="deletingTimeSlotId"
-                            :error-message="timeSlotError" @refresh-time-slots="fetchTimeSlotsData"
+                            :error-message="timeSlotError" :can-manage="canManageTimeSlots"
+                            @refresh-time-slots="fetchTimeSlotsData"
                             @create-time-slot="createTimeSlot" @update-time-slot="updateTimeSlot"
                             @delete-time-slot="deleteTimeSlot" @generate-time-slots="generateTimeSlots"
                             @bulk-bookable="bulkBookableTimeSlots" />
@@ -4020,6 +4147,7 @@ onBeforeUnmount(() => {
                             :blackout-date-rows="blackoutDateRows" :branch-options="branchOptionsForManagement"
                             :loading="blackoutDateLoading" :saving="blackoutDateSaving"
                             :deleting-blackout-date-id="deletingBlackoutDateId" :error-message="blackoutDateError"
+                            :can-manage="canManageBlackoutDates"
                             @refresh-blackout-dates="fetchBlackoutDatesData" @create-blackout-date="createBlackoutDate"
                             @update-blackout-date="updateBlackoutDate" @delete-blackout-date="deleteBlackoutDate" />
 
@@ -4039,7 +4167,8 @@ onBeforeUnmount(() => {
                             :deleting-booking-id="deletingBookingId" :processing-booking-id="processingBookingId"
                             :booking-result-caption="bookingResultCaption" :can-go-prev="canGoPrev"
                             :can-go-next="canGoNext" :pagination="pagination"
-                            :resolve-booking-status="resolveBookingStatus" @update:search="search = $event"
+                            :can-manage="canManageBookings"
+                            :can-delete="canDeleteBooking" :resolve-booking-status="resolveBookingStatus" @update:search="search = $event"
                             @set-filter-status="setFilterStatus" @set-sort="setBookingSort"
                             @refresh-bookings="refreshBookings()" @create-booking="createBooking"
                             @update-booking="updateBooking" @delete-booking="deleteBooking"
@@ -4056,6 +4185,7 @@ onBeforeUnmount(() => {
                             :queue-processing-ticket-id="queueProcessingTicketId" :queue-error="queueError"
                             :branch-options="queueBranchOptions"
                             :default-branch-id="defaultQueueBranchId" :view-branch-id="queueViewBranchId"
+                            :can-manage="canManageQueue"
                             @refresh-queue="fetchQueueData($event || {})" @set-view-branch="setQueueViewBranchId"
                             @call-next="callNextQueue" @transition-ticket="transitionQueueTicket"
                             @add-walk-in="addQueueWalkIn" />
@@ -4068,12 +4198,14 @@ onBeforeUnmount(() => {
 
                         <PaymentsPage v-else-if="activeModuleId === 'payments'" :payment-rows="paymentRows"
                             :transaction-options="paymentTransactionRows" :loading="paymentLoading"
-                            :saving="paymentSaving" :error-message="paymentError" @refresh-payments="fetchPaymentsData"
+                            :saving="paymentSaving" :error-message="paymentError" :can-manage="canManagePayments"
+                            @refresh-payments="fetchPaymentsData"
                             @create-payment="createPayment" />
 
                         <CashierSettlementsPage v-else-if="activeModuleId === 'cashier-settlements'"
                             :settlements="cashierSettlementRows" :open-sessions="openCashierSessionRows"
                             :loading="settlementLoading" :saving="settlementSaving" :error-message="settlementError"
+                            :can-manage="canManageCashierSettlements"
                             @refresh="fetchCashierSettlements" @verify="verifySettlement"
                             @create-correction="createSettlementCorrection" />
 
@@ -4125,6 +4257,17 @@ onBeforeUnmount(() => {
                             @update-branch="updateBranchSetting" @remove-branch="removeBranchSetting" />
                     </div>
                 </main>
+            </div>
+        </div>
+
+        <div v-if="accessDeniedCountdown > 0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4">
+            <div class="w-full max-w-md rounded-3xl border border-red-100 bg-white p-6 text-center shadow-2xl">
+                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-red-500">Akses ditolak</p>
+                <h2 class="mt-3 text-2xl font-black text-slate-950">Tidak memiliki izin</h2>
+                <p class="mt-3 text-sm leading-6 text-slate-600">{{ accessDeniedMessage }}</p>
+                <p class="mt-5 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
+                    Kembali ke dashboard dalam {{ accessDeniedCountdown }} detik.
+                </p>
             </div>
         </div>
     </div>

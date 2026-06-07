@@ -1,8 +1,12 @@
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/features/kasir/services/receipt_printer.dart';
 import 'package:desktop_flutter/shared/models/branch_option.dart';
 import 'package:desktop_flutter/shared/models/cashier_session_item.dart';
+import 'package:desktop_flutter/features/kasir/presentation/widgets/dialogs/open_session_dialog.dart';
+import 'package:desktop_flutter/features/kasir/presentation/widgets/dialogs/expense_dialog.dart';
+import 'package:desktop_flutter/features/kasir/presentation/widgets/dialogs/close_preview_dialog.dart';
 import 'package:flutter/material.dart';
 
 class CashierSessionPage extends StatefulWidget {
@@ -84,9 +88,9 @@ class _CashierSessionPageState extends State<CashierSessionPage> {
       return;
     }
 
-    final result = await showDialog<_OpenSessionResult>(
+    final result = await showDialog<OpenSessionResult>(
       context: context,
-      builder: (context) => _OpenSessionDialog(branches: _branches),
+      builder: (context) => OpenSessionDialog(branches: _branches),
     );
 
     if (result == null) return;
@@ -119,9 +123,9 @@ class _CashierSessionPageState extends State<CashierSessionPage> {
 
     if (session == null || client == null) return;
 
-    final result = await showDialog<_ExpenseResult>(
+    final result = await showDialog<ExpenseResult>(
       context: context,
-      builder: (context) => const _ExpenseDialog(),
+      builder: (context) => const ExpenseDialog(),
     );
 
     if (result == null) return;
@@ -157,7 +161,7 @@ class _CashierSessionPageState extends State<CashierSessionPage> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => _ClosePreviewDialog(preview: _preview),
+      builder: (context) => ClosePreviewDialog(preview: _preview),
     );
 
     if (confirmed != true) return;
@@ -216,7 +220,7 @@ class _CashierSessionPageState extends State<CashierSessionPage> {
                   SizedBox(height: 6),
                   Text(
                     'Kelola uang laci, pengeluaran cash, dan setoran akhir shift.',
-                    style: TextStyle(color: Color(0xFF64748B)),
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -229,7 +233,7 @@ class _CashierSessionPageState extends State<CashierSessionPage> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 20),
-            _InfoBox(message: _error!, color: const Color(0xFFDC2626)),
+            _InfoBox(message: _error!, color: AppColors.error),
           ],
           const SizedBox(height: 24),
           if (session == null || !session.isOpen)
@@ -300,11 +304,11 @@ class _ActiveSessionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
         children: [
-          const Icon(Icons.lock_open_rounded, color: Color(0xFF059669), size: 32),
+          Icon(Icons.lock_open_rounded, color: AppColors.success, size: 32),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -317,7 +321,7 @@ class _ActiveSessionCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   '${session.branchName} | ${session.businessDate ?? '-'} | Uang laci ${_currency(session.openingCash)}',
-                  style: const TextStyle(color: Color(0xFF64748B)),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -339,9 +343,9 @@ class _EmptySessionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
+        color: AppColors.warning.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFFDE68A)),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,9 +355,9 @@ class _EmptySessionCard extends StatelessWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Buka sesi dan input uang laci sebelum menerima pembayaran.',
-            style: TextStyle(color: Color(0xFF92400E)),
+            style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
@@ -380,16 +384,16 @@ class _MetricCard extends StatelessWidget {
       width: 230,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: highlight ? const Color(0xFFECFDF5) : Colors.white,
+        color: highlight ? AppColors.success.withValues(alpha: 0.08) : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: highlight ? const Color(0xFFA7F3D0) : const Color(0xFFE2E8F0),
+          color: highlight ? AppColors.success.withValues(alpha: 0.3) : AppColors.cardBorder,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF64748B))),
+          Text(label, style: TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 8),
           Text(
             value,
@@ -419,210 +423,6 @@ class _InfoBox extends StatelessWidget {
       child: Text(message, style: TextStyle(color: color)),
     );
   }
-}
-
-class _OpenSessionDialog extends StatefulWidget {
-  const _OpenSessionDialog({required this.branches});
-
-  final List<BranchOption> branches;
-
-  @override
-  State<_OpenSessionDialog> createState() => _OpenSessionDialogState();
-}
-
-class _OpenSessionDialogState extends State<_OpenSessionDialog> {
-  late int _branchId = widget.branches.first.id;
-  final _cashController = TextEditingController(text: '100000');
-  final _notesController = TextEditingController();
-
-  @override
-  void dispose() {
-    _cashController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Buka Sesi Kasir'),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<int>(
-              initialValue: _branchId,
-              decoration: const InputDecoration(labelText: 'Cabang'),
-              items: widget.branches
-                  .map((branch) => DropdownMenuItem(value: branch.id, child: Text(branch.name)))
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) setState(() => _branchId = value);
-              },
-            ),
-            TextField(
-              controller: _cashController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Uang laci awal'),
-            ),
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(labelText: 'Catatan (opsional)'),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-        FilledButton(
-          onPressed: () {
-            final amount = double.tryParse(_cashController.text.replaceAll('.', '')) ?? 0;
-            Navigator.pop(
-              context,
-              _OpenSessionResult(
-                branchId: _branchId,
-                openingCash: amount,
-                notes: _notesController.text.trim(),
-              ),
-            );
-          },
-          child: const Text('Buka Sesi'),
-        ),
-      ],
-    );
-  }
-}
-
-class _ExpenseDialog extends StatefulWidget {
-  const _ExpenseDialog();
-
-  @override
-  State<_ExpenseDialog> createState() => _ExpenseDialogState();
-}
-
-class _ExpenseDialogState extends State<_ExpenseDialog> {
-  final _titleController = TextEditingController();
-  final _amountController = TextEditingController();
-  final _notesController = TextEditingController();
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _amountController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Input Pengeluaran Cash'),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'Judul')),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Nominal'),
-            ),
-            TextField(controller: _notesController, decoration: const InputDecoration(labelText: 'Catatan')),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-        FilledButton(
-          onPressed: () {
-            final amount = double.tryParse(_amountController.text.replaceAll('.', '')) ?? 0;
-            final title = _titleController.text.trim();
-
-            if (amount <= 0 || title.isEmpty) return;
-            Navigator.pop(
-              context,
-              _ExpenseResult(amount: amount, title: title, notes: _notesController.text.trim()),
-            );
-          },
-          child: const Text('Simpan'),
-        ),
-      ],
-    );
-  }
-}
-
-class _ClosePreviewDialog extends StatelessWidget {
-  const _ClosePreviewDialog({required this.preview});
-
-  final Map<String, dynamic>? preview;
-
-  @override
-  Widget build(BuildContext context) {
-    final summary = _mapAt(preview, 'summary');
-
-    return AlertDialog(
-      title: const Text('Tutup Sesi Kasir'),
-      content: SizedBox(
-        width: 460,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _PreviewLine(label: 'Total Penjualan', value: _stringAt(summary, 'total_sales_text')),
-            _PreviewLine(label: 'Cash Diterima', value: _stringAt(summary, 'cash_received_text')),
-            _PreviewLine(label: 'Non Cash', value: _stringAt(summary, 'non_cash_received_text')),
-            _PreviewLine(label: 'Pengeluaran', value: _stringAt(summary, 'cash_expenses_total_text')),
-            const Divider(),
-            _PreviewLine(label: 'JML. DISETOR CASH', value: _stringAt(summary, 'cash_to_deposit_text'), bold: true),
-            _PreviewLine(label: 'Uang Laci Disisakan', value: _stringAt(summary, 'opening_cash_text')),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Tutup & Print')),
-      ],
-    );
-  }
-}
-
-class _PreviewLine extends StatelessWidget {
-  const _PreviewLine({required this.label, required this.value, this.bold = false});
-
-  final String label;
-  final String value;
-  final bool bold;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label),
-          Text(value, style: TextStyle(fontWeight: bold ? FontWeight.w900 : FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-}
-
-class _OpenSessionResult {
-  const _OpenSessionResult({required this.branchId, required this.openingCash, required this.notes});
-
-  final int branchId;
-  final double openingCash;
-  final String notes;
-}
-
-class _ExpenseResult {
-  const _ExpenseResult({required this.amount, required this.title, required this.notes});
-
-  final double amount;
-  final String title;
-  final String notes;
 }
 
 Map<String, dynamic> _mapAt(Map<String, dynamic>? source, String key) {

@@ -14,7 +14,7 @@ class AdminAuthController extends Controller
     public function showLogin(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('admin.dashboard');
+            return redirect($this->resolvePostLoginUrl());
         }
 
         return view('web.admin-login');
@@ -38,7 +38,7 @@ class AdminAuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('admin.dashboard'));
+        return redirect($this->resolvePostLoginUrl());
     }
 
     public function logout(Request $request): RedirectResponse
@@ -49,5 +49,22 @@ class AdminAuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('admin.login');
+    }
+
+    private function resolvePostLoginUrl(): string
+    {
+        $user = Auth::user();
+
+        if ($user === null) {
+            return route('admin.dashboard');
+        }
+
+        $role = (string) ($user->getRoleNames()->first() ?? '');
+
+        return match ($role) {
+            'cashier' => url('/admin/bookings'),
+            'viewer' => url('/admin/bookings'),
+            default => route('admin.dashboard'),
+        };
     }
 }

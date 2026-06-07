@@ -21,6 +21,7 @@ class AdminStoreBranchRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string', 'max:500'],
             'payment_qr_url' => ['nullable', 'url', 'max:2048'],
+            'payment_qr_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'is_active' => ['nullable', 'boolean'],
         ];
     }

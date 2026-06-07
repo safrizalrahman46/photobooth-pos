@@ -94,29 +94,29 @@ class LaporanPage extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            border: Border.all(color: AppColors.cardBorder),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.event_note_rounded,
                                 size: 18,
-                                color: Color(0xFF64748B),
+                                color: AppColors.textSecondary,
                               ),
                               const SizedBox(width: 10),
                               Text(
                                 label,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1E293B),
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              const Icon(
+                              Icon(
                                 Icons.arrow_drop_down_rounded,
-                                color: Color(0xFF64748B),
+                                color: AppColors.textSecondary,
                               ),
                             ],
                           ),
@@ -178,7 +178,7 @@ class LaporanPage extends StatelessWidget {
                               snapshot.error,
                               fallback: 'Rincian transaksi belum dapat dimuat.',
                             ),
-                            style: const TextStyle(color: Colors.redAccent),
+                            style: TextStyle(color: AppColors.error),
                           );
                         }
 
@@ -218,11 +218,11 @@ class LaporanPage extends StatelessWidget {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF6366F1),
-              onPrimary: Colors.white,
-              onSurface: Color(0xFF1E293B),
-            ),
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+            onSurface: AppColors.textPrimary,
+          ),
           ),
           child: child!,
         );

@@ -1,6 +1,6 @@
 class AppConfig {
   static const String appName = 'Ready To Pict Desktop';
-  static const String productionApiBaseUrl = 'https://readytopict.com/api/v1';
+  static const String productionApiBaseUrl = 'http://readytopict.com/api/v1';
   static const String defaultApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: productionApiBaseUrl,

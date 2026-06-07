@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import '../../../domain/entities/transaction.dart';
 import '../common/transaction_status_badge.dart';
 
@@ -25,9 +26,9 @@ class HistoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6)), // gray-100
+          bottom: BorderSide(color: AppColors.divider),
         ),
       ),
       child: Padding(
@@ -39,10 +40,10 @@ class HistoryRow extends StatelessWidget {
               flex: _flexId,
               child: Text(
                 transaction.id,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF111827),
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),
@@ -52,9 +53,9 @@ class HistoryRow extends StatelessWidget {
               flex: _flexWaktu,
               child: Text(
                 _formatWaktu(transaction.waktu),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF4B5563),
+                  color: AppColors.textSecondary,
                   height: 1.5,
                 ),
               ),
@@ -65,10 +66,10 @@ class HistoryRow extends StatelessWidget {
               flex: _flexNama,
               child: Text(
                 transaction.namaPelanggan,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF374151),
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),
@@ -78,9 +79,9 @@ class HistoryRow extends StatelessWidget {
               flex: _flexPaket,
               child: Text(
                 transaction.paketDanAddOns,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF6B7280),
+                  color: AppColors.textSecondary,
                   height: 1.5,
                 ),
               ),
@@ -91,10 +92,10 @@ class HistoryRow extends StatelessWidget {
               flex: _flexTotal,
               child: Text(
                 _formatRupiah(transaction.totalBayar),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF111827),
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),
@@ -125,18 +126,18 @@ class HistoryRow extends StatelessWidget {
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                   style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF6366F1), // indigo-500
+                    foregroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
-                      side: const BorderSide(
-                        color: Color(0xFFE0E7FF),
-                      ), // indigo-100
+                      side: BorderSide(
+                        color: AppColors.primaryLight,
+                      ),
                     ),
-                    backgroundColor: const Color(0xFFF5F7FF),
+                    backgroundColor: AppColors.cardBg,
                   ),
                 ),
               ),

@@ -13,6 +13,7 @@ const props = defineProps({
     saving: { type: Boolean, default: false },
     deletingPackageId: { type: [Number, String, null], default: null },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['refresh-packages', 'create-package', 'update-package', 'delete-package']);
@@ -80,6 +81,8 @@ const existingSamplePhotos = ref([]);
 const newSamplePhotoFiles = ref([]);
 const newSamplePhotoPreviewList = ref([]);
 const samplePhotoInputKey = ref(0);
+const maxSamplePhotoSize = 5 * 1024 * 1024;
+const allowedSamplePhotoTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 const toFeatureList = (description) => {
     const raw = String(description || '')
@@ -148,6 +151,22 @@ const handleSamplePhotoFileChange = (event) => {
     resetNewSamplePhotoState();
 
     if (!incomingFiles.length) {
+        return;
+    }
+
+    const invalidType = incomingFiles.find((file) => !allowedSamplePhotoTypes.has(file.type));
+
+    if (invalidType) {
+        localError.value = 'Foto contoh hanya boleh JPG, PNG, atau WEBP.';
+        samplePhotoInputKey.value += 1;
+        return;
+    }
+
+    const oversizedFile = incomingFiles.find((file) => file.size > maxSamplePhotoSize);
+
+    if (oversizedFile) {
+        localError.value = `Ukuran foto ${oversizedFile.name} melebihi 5 MB.`;
+        samplePhotoInputKey.value += 1;
         return;
     }
 
@@ -248,6 +267,13 @@ const validateForm = () => {
 
     if ((existingSamplePhotos.value.length + newSamplePhotoFiles.value.length) > 12) {
         localError.value = 'Maksimal 12 foto contoh per paket.';
+        return false;
+    }
+
+    const oversizedFile = newSamplePhotoFiles.value.find((file) => file.size > maxSamplePhotoSize);
+
+    if (oversizedFile) {
+        localError.value = `Ukuran foto ${oversizedFile.name} melebihi 5 MB.`;
         return false;
     }
 
@@ -355,6 +381,7 @@ const requestDelete = async (pkg) => {
                 </button>
 
                 <button
+                    v-if="canManage"
                     type="button"
                     class="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold"
                     style="background: #2563EB; color: #FFFFFF; box-shadow: 0 6px 18px rgba(37,99,235,0.26);"
@@ -445,7 +472,7 @@ const requestDelete = async (pkg) => {
                         <span class="font-semibold" :style="{ color: pkg.tone.accent }">{{ pkg.thisMonthBookings }} bookings</span>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div v-if="canManage" class="flex items-center gap-2">
                         <button
                             type="button"
                             class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-sm font-semibold"

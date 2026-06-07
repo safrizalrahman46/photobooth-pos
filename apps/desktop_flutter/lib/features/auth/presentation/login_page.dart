@@ -98,55 +98,67 @@ class _LoginPageState extends State<LoginPage>
         opacity: _fadeAnim,
         child: SlideTransition(
           position: _slideAnim,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final bool isCompact = constraints.maxWidth < 900;
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(32),
-                child: Center(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool isCompact = constraints.maxWidth < 900;
+                return SingleChildScrollView(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 980),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                        border: Border.all(color: AppColors.cardBorder),
-                      ),
-                      child: isCompact
-                          ? Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildHeroCard(isCompact: true),
-                                _buildLoginCard(isCompact: true),
+                    constraints: BoxConstraints(
+                      minWidth: constraints.maxWidth,
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 980),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 8),
+                                ),
                               ],
-                            )
-                          : IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(
-                                    flex: 5,
-                                    child: _buildHeroCard(isCompact: false),
-                                  ),
-                                  Expanded(
-                                    flex: 5,
-                                    child: _buildLoginCard(isCompact: false),
-                                  ),
-                                ],
-                              ),
+                              border: Border.all(color: AppColors.cardBorder),
                             ),
+                            child: isCompact
+                                ? Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _buildHeroCard(isCompact: true),
+                                      _buildLoginCard(isCompact: true),
+                                    ],
+                                  )
+                                : IntrinsicHeight(
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        Expanded(
+                                          flex: 5,
+                                          child: _buildHeroCard(
+                                            isCompact: false,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          flex: 5,
+                                          child: _buildLoginCard(
+                                            isCompact: false,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
           ),
         ),
       ),
@@ -161,7 +173,7 @@ class _LoginPageState extends State<LoginPage>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF0F172A), // Deep Slate Navy
+            AppColors.textPrimary,
             AppColors.primary, // Sky Blue POS
           ],
           begin: Alignment.topLeft,
@@ -466,7 +478,7 @@ class _LoginPageState extends State<LoginPage>
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.redAccent),
+          borderSide: BorderSide(color: AppColors.error),
         ),
       ),
     );
@@ -476,23 +488,23 @@ class _LoginPageState extends State<LoginPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F1),
+        color: AppColors.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFFCDD2)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
-            color: Colors.redAccent,
+            color: AppColors.error,
             size: 18,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
-                color: Colors.redAccent,
+              style: TextStyle(
+                color: AppColors.error,
                 fontSize: 13,
                 height: 1.4,
               ),

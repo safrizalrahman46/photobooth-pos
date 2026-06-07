@@ -28,6 +28,7 @@ const props = defineProps({
     branchOptions: { type: Array, default: () => [] },
     defaultBranchId: { type: Number, default: null },
     viewBranchId: { type: [Number, String], default: null },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['refresh-queue', 'set-view-branch', 'call-next', 'transition-ticket', 'add-walk-in']);
@@ -512,6 +513,7 @@ const submitWalkIn = async () => {
 
                     <div v-if="currentQueue?.ticket_id" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <button
+                            v-if="canManage"
                             type="button"
                             class="inline-flex items-center justify-center gap-1 rounded-xl px-3 py-2.5 text-sm font-semibold"
                             style="background: #059669; color: #FFFFFF;"
@@ -522,6 +524,7 @@ const submitWalkIn = async () => {
                             {{ currentPrimaryAction?.label || 'Tidak Ada Aksi' }}
                         </button>
                         <button
+                            v-if="canManage"
                             type="button"
                             class="inline-flex items-center justify-center gap-1 rounded-xl border px-3 py-2.5 text-sm font-semibold"
                             style="border-color: #FDE68A; background: #FFFBEB; color: #D97706;"
@@ -534,7 +537,7 @@ const submitWalkIn = async () => {
                     </div>
 
                     <button
-                        v-else
+                        v-else-if="canManage"
                         type="button"
                         class="inline-flex w-full items-center justify-center gap-1 rounded-xl px-3 py-2.5 text-sm font-semibold"
                         style="background: #2563EB; color: #FFFFFF;"
@@ -591,6 +594,7 @@ const submitWalkIn = async () => {
                             Muat Ulang
                         </button>
                         <button
+                            v-if="canManage"
                             type="button"
                             class="inline-flex items-center justify-center gap-1 rounded-xl px-3.5 py-2 text-sm font-semibold"
                             style="border: 1px solid #FCD34D; background: #FFFBEB; color: #B45309;"
@@ -658,6 +662,7 @@ const submitWalkIn = async () => {
                                     <p class="text-sm text-[#64748B]">{{ resolveBranchName(ticket.branch_id) }} | {{ queuePackageLabel(ticket) }}</p>
                                 </div>
                                 <button
+                                    v-if="canManage"
                                     type="button"
                                     class="rounded-lg border px-3 py-1.5 text-xs font-semibold"
                                     style="border-color: #FDBA74; background: #FFEDD5; color: #C2410C;"
@@ -688,6 +693,7 @@ const submitWalkIn = async () => {
                                         {{ queueStatusLabel(ticket.status) }}
                                     </span>
                                     <button
+                                        v-if="canManage"
                                         type="button"
                                         class="rounded-lg border px-3 py-1.5 text-xs font-semibold"
                                         style="border-color: #BFDBFE; background: #EFF6FF; color: #1D4ED8;"

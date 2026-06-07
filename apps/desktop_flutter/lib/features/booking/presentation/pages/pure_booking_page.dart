@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../application/booking_controller.dart';
+import '../widgets/dialogs/booking_detail_dialog.dart';
 
 class PureBookingPage extends StatefulWidget {
   const PureBookingPage({super.key});
@@ -24,6 +25,17 @@ class _PureBookingPageState extends State<PureBookingPage> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _showDetailDialog(BuildContext context, BookingController controller, int index) {
+    if (index < 0 || index >= controller.queues.length) return;
+
+    controller.selectQueue(index);
+    showDialog(
+      context: context,
+      useSafeArea: false,
+      builder: (_) => BookingDetailDialog(controller: controller),
+    );
   }
 
   @override
@@ -91,7 +103,10 @@ class _PureBookingPageState extends State<PureBookingPage> {
             Expanded(
               child: _controller.isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : _BookingTable(controller: _controller),
+                  : _BookingTable(
+                      controller: _controller,
+                      onDetail: _showDetailDialog,
+                    ),
             ),
           ],
         ),
@@ -102,8 +117,9 @@ class _PureBookingPageState extends State<PureBookingPage> {
 
 class _BookingTable extends StatelessWidget {
   final BookingController controller;
+  final void Function(BuildContext, BookingController, int) onDetail;
 
-  const _BookingTable({required this.controller});
+  const _BookingTable({required this.controller, required this.onDetail});
 
   @override
   Widget build(BuildContext context) {
@@ -131,32 +147,7 @@ class _BookingTable extends StatelessWidget {
               itemBuilder: (context, index) {
                 return _BookingRow(
                   booking: controller.queues[index],
-                  onAcc: () async {
-                    controller.selectQueue(index);
-                    await controller.accBooking();
-                    if (!context.mounted) return;
-
-                    final errorMessage = controller.errorMessage;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          errorMessage ??
-                              'Booking terverifikasi dan otomatis masuk antrean hari ini.',
-                        ),
-                        backgroundColor: errorMessage == null
-                            ? const Color(0xFF10B981)
-                            : Colors.redAccent,
-                      ),
-                    );
-                  },
-                  onCancel: () async {
-                    controller.selectQueue(index);
-                    await controller.cancelBooking();
-                  },
-                  onDelete: () {
-                    controller.selectQueue(index);
-                    controller.deleteBooking();
-                  },
+                  onDetail: () => onDetail(context, controller, index),
                 );
               },
             ),
@@ -215,15 +206,11 @@ class _ColHeader extends StatelessWidget {
 
 class _BookingRow extends StatelessWidget {
   final dynamic booking;
-  final VoidCallback onAcc;
-  final VoidCallback onCancel;
-  final VoidCallback onDelete;
+  final VoidCallback onDetail;
 
   const _BookingRow({
     required this.booking,
-    required this.onAcc,
-    required this.onCancel,
-    required this.onDelete,
+    required this.onDetail,
   });
 
   @override
@@ -293,24 +280,10 @@ class _BookingRow extends StatelessWidget {
             child: Row(
               children: [
                 _MiniActionBtn(
-                  icon: Icons.check_circle_rounded,
-                  color: const Color(0xFF10B981),
-                  onTap: onAcc,
-                  label: 'Verifikasi',
-                ),
-                const SizedBox(width: 16),
-                _MiniActionBtn(
-                  icon: Icons.cancel_rounded,
-                  color: const Color(0xFFF59E0B),
-                  onTap: onCancel,
-                  label: 'Batal',
-                ),
-                const SizedBox(width: 16),
-                _MiniActionBtn(
-                  icon: Icons.delete_rounded,
-                  color: const Color(0xFFEF4444),
-                  onTap: onDelete,
-                  label: 'Hapus',
+                  icon: Icons.search_rounded,
+                  color: AppColors.primary,
+                  onTap: onDetail,
+                  label: 'Detail',
                 ),
               ],
             ),

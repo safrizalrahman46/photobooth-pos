@@ -50,6 +50,15 @@ class AppColors {
   // Divider
   static const Color divider = Color(0xFFF3F4F6);
 
-  // Green badge
-  static const Color lunas = Color(0xFF10B981);
+  // Status semantic
+  static const Color success = Color(0xFF10B981);
+  static const Color warning = Color(0xFFF59E0B);
+  static const Color error = Color(0xFFDC2626);
+
+  // Green badge (legacy)
+  static const Color lunas = success;
+
+  // Page & card backgrounds
+  static const Color pageBg = Color(0xFFF8FAFC);
+  static const Color cardBg = Color(0xFFF9FAFB);
 }

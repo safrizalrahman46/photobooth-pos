@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 
 class CashflowChart extends StatelessWidget {
   final double totalPendapatan;
@@ -30,7 +31,7 @@ class CashflowChart extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -38,13 +39,13 @@ class CashflowChart extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF1E293B),
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Berdasarkan transaksi dan booking dari API',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -54,17 +55,17 @@ class CashflowChart extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: AppColors.divider,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
                     Icon(
                       Icons.calendar_today_rounded,
                       size: 14,
-                      color: Color(0xFF64748B),
+                      color: AppColors.textSecondary,
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
                       'Bulan Ini',
                       style: TextStyle(
@@ -94,7 +95,7 @@ class CashflowChart extends StatelessWidget {
                         painter: _DonutChartPainter(
                           data: [
                             _ChartData(
-                              color: const Color(0xFF6366F1),
+                              color: AppColors.primary,
                               value: hasRevenue ? 100 : 1,
                             ),
                           ],
@@ -103,22 +104,22 @@ class CashflowChart extends StatelessWidget {
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
+                          Text(
                             'TOTAL',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF94A3B8),
+                              color: AppColors.textMuted,
                               letterSpacing: 2,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             hasRevenue ? '100%' : '0%',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF1E293B),
+                              color: AppColors.textPrimary,
                             ),
                           ),
                         ],
@@ -136,7 +137,7 @@ class CashflowChart extends StatelessWidget {
                     _LegendItem(
                       label: 'Pendapatan Terverifikasi',
                       percentage: hasRevenue ? '100%' : '0%',
-                      color: const Color(0xFF6366F1),
+                      color: AppColors.primary,
                       amount: _formatRupiah(totalPendapatan),
                     ),
                   ],
@@ -234,18 +235,18 @@ class _LegendItem extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1E293B),
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               amount,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF94A3B8),
+                color: AppColors.textMuted,
                 fontWeight: FontWeight.w500,
               ),
             ),

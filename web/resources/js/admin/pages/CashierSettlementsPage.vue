@@ -7,6 +7,7 @@ const props = defineProps({
     loading: { type: Boolean, default: false },
     saving: { type: Boolean, default: false },
     errorMessage: { type: String, default: '' },
+    canManage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['refresh', 'verify', 'create-correction']);
@@ -185,7 +186,7 @@ const dpRows = computed(() => Array.isArray(snapshot.value.dp_info) ? snapshot.v
                             <input v-model="verifyForm.owner_received_cash" type="number" class="rounded-xl border px-3 py-2 text-sm" placeholder="Uang cash diterima" style="border-color:#CBD5E1;">
                             <input v-model="verifyForm.notes" type="text" class="rounded-xl border px-3 py-2 text-sm" placeholder="Catatan" style="border-color:#CBD5E1;">
                         </div>
-                        <button type="button" class="mt-3 rounded-xl bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white" :disabled="saving" @click="submitVerify">Simpan Pencocokan</button>
+                        <button v-if="canManage" type="button" class="mt-3 rounded-xl bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white" :disabled="saving" @click="submitVerify">Simpan Pencocokan</button>
                     </div>
                     <div class="rounded-3xl border bg-white p-5" style="border-color:#E2E8F0;">
                         <h4 class="text-sm font-semibold text-[#0F172A]">Koreksi Setoran</h4>
@@ -194,7 +195,7 @@ const dpRows = computed(() => Array.isArray(snapshot.value.dp_info) ? snapshot.v
                             <input v-model="correctionForm.reason" type="text" class="rounded-xl border px-3 py-2 text-sm" placeholder="Alasan" style="border-color:#CBD5E1;">
                         </div>
                         <label class="mt-3 flex items-center gap-2 text-xs text-[#64748B]"><input v-model="correctionForm.affects_cash" type="checkbox"> Mempengaruhi cash disetor</label>
-                        <button type="button" class="mt-3 rounded-xl bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white" :disabled="saving" @click="submitCorrection">Tambah Koreksi</button>
+                        <button v-if="canManage" type="button" class="mt-3 rounded-xl bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white" :disabled="saving" @click="submitCorrection">Tambah Koreksi</button>
                     </div>
                 </section>
             </section>

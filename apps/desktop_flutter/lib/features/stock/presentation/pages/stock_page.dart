@@ -84,7 +84,7 @@ class _StockPageState extends State<StockPage> {
     final activeItems = _payload.items.where((item) => item.isActive).length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F7FB),
+      backgroundColor: AppColors.pageBg,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 1080;
@@ -301,8 +301,8 @@ class _HeaderMetric extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             label,
-            style: const TextStyle(
-              color: Color(0xFFE2E8F0),
+            style: TextStyle(
+              color: AppColors.cardBorder,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -410,24 +410,24 @@ class _InventoryHealthPanel extends StatelessWidget {
             label: 'Aman',
             value: readyStock.toString(),
             icon: Icons.check_circle_rounded,
-            color: const Color(0xFF047857),
-            background: const Color(0xFFECFDF5),
+            color: AppColors.success,
+            background: AppColors.success.withValues(alpha: 0.08),
           ),
           const SizedBox(height: 10),
           _MetricTile(
             label: 'Stok Menipis',
             value: lowStock.toString(),
             icon: Icons.warning_amber_rounded,
-            color: const Color(0xFFD97706),
-            background: const Color(0xFFFFF7ED),
+            color: AppColors.warning,
+            background: AppColors.warning.withValues(alpha: 0.08),
           ),
           const SizedBox(height: 10),
           _MetricTile(
             label: 'Stok Habis',
             value: outOfStock.toString(),
             icon: Icons.error_rounded,
-            color: const Color(0xFFDC2626),
-            background: const Color(0xFFFEF2F2),
+            color: AppColors.error,
+            background: AppColors.error.withValues(alpha: 0.08),
           ),
           const SizedBox(height: 10),
           _MetricTile(
@@ -494,23 +494,23 @@ class _HealthBar extends StatelessWidget {
           child: SizedBox(
             height: 12,
             child: totalItems == 0
-                ? Container(color: const Color(0xFFE5E7EB))
+                ? Container(color: AppColors.cardBorder)
                 : Row(
                     children: [
                       if (readyStock > 0)
                         Expanded(
                           flex: readyStock,
-                          child: Container(color: const Color(0xFF10B981)),
+                          child: Container(color: AppColors.success),
                         ),
                       if (lowStock > 0)
                         Expanded(
                           flex: lowStock,
-                          child: Container(color: const Color(0xFFF59E0B)),
+                          child: Container(color: AppColors.warning),
                         ),
                       if (outOfStock > 0)
                         Expanded(
                           flex: outOfStock,
-                          child: Container(color: const Color(0xFFEF4444)),
+                          child: Container(color: AppColors.error),
                         ),
                     ],
                   ),
@@ -521,9 +521,9 @@ class _HealthBar extends StatelessWidget {
           spacing: 12,
           runSpacing: 8,
           children: [
-            _HealthLegend(color: Color(0xFF10B981), label: 'Aman'),
-            _HealthLegend(color: Color(0xFFF59E0B), label: 'Menipis'),
-            _HealthLegend(color: Color(0xFFEF4444), label: 'Habis'),
+            _HealthLegend(color: AppColors.success, label: 'Aman'),
+            _HealthLegend(color: AppColors.warning, label: 'Menipis'),
+            _HealthLegend(color: AppColors.error, label: 'Habis'),
           ],
         ),
       ],
@@ -634,26 +634,26 @@ class _StockItemRow extends StatelessWidget {
 
   Color get _statusColor {
     if (item.isOut) {
-      return const Color(0xFFDC2626);
+      return AppColors.error;
     }
 
     if (item.isLow) {
-      return const Color(0xFFD97706);
+      return AppColors.warning;
     }
 
-    return const Color(0xFF059669);
+    return AppColors.success;
   }
 
   Color get _statusBackground {
     if (item.isOut) {
-      return const Color(0xFFFEF2F2);
+      return AppColors.error.withValues(alpha: 0.08);
     }
 
     if (item.isLow) {
-      return const Color(0xFFFFF7ED);
+      return AppColors.warning.withValues(alpha: 0.08);
     }
 
-    return const Color(0xFFECFDF5);
+    return AppColors.success.withValues(alpha: 0.08);
   }
 
   @override
@@ -665,7 +665,7 @@ class _StockItemRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFBFCFE),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
         children: [
@@ -697,11 +697,11 @@ class _StockItemRow extends StatelessWidget {
                     _SmallPill(
                       label: item.isActive ? 'Aktif' : 'Nonaktif',
                       color: item.isActive
-                          ? const Color(0xFF047857)
+                          ? AppColors.success
                           : AppColors.textMuted,
                       background: item.isActive
-                          ? const Color(0xFFEAFBF2)
-                          : const Color(0xFFF3F4F6),
+                          ? AppColors.success.withValues(alpha: 0.08)
+                          : AppColors.divider,
                     ),
                   ],
                 ),
@@ -712,14 +712,14 @@ class _StockItemRow extends StatelessWidget {
                   children: [
                     _SmallPill(
                       label: code,
-                      color: const Color(0xFF334155),
-                      background: const Color(0xFFEFF6FF),
+                      color: AppColors.textPrimary,
+                      background: AppColors.primaryLight,
                     ),
                     _SmallPill(
                       label:
                           'Batas minimum ${item.lowStockThreshold} ${item.unit}',
                       color: AppColors.textSecondary,
-                      background: const Color(0xFFF8FAFC),
+                      background: AppColors.pageBg,
                     ),
                   ],
                 ),
@@ -754,7 +754,7 @@ class _StockQuantity extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -810,11 +810,11 @@ class _MovementTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = movement.isIncoming
-        ? const Color(0xFF047857)
-        : const Color(0xFFB91C1C);
+        ? AppColors.success
+        : AppColors.error;
     final background = movement.isIncoming
-        ? const Color(0xFFECFDF5)
-        : const Color(0xFFFEF2F2);
+        ? AppColors.success.withValues(alpha: 0.08)
+        : AppColors.error.withValues(alpha: 0.08);
     final code = movement.inventoryItemCode.isEmpty
         ? '-'
         : movement.inventoryItemCode;
@@ -824,7 +824,7 @@ class _MovementTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -875,18 +875,18 @@ class _MovementTile extends StatelessWidget {
                   children: [
                     _SmallPill(
                       label: code,
-                      color: const Color(0xFF334155),
-                      background: const Color(0xFFEFF6FF),
+                      color: AppColors.textPrimary,
+                      background: AppColors.primaryLight,
                     ),
                     _SmallPill(
                       label: movement.sourceLabel,
                       color: AppColors.textSecondary,
-                      background: const Color(0xFFF8FAFC),
+                      background: AppColors.pageBg,
                     ),
                     _SmallPill(
                       label: movement.actorName,
                       color: AppColors.textSecondary,
-                      background: const Color(0xFFF8FAFC),
+                      background: AppColors.pageBg,
                     ),
                   ],
                 ),
@@ -975,7 +975,7 @@ class _ConsolePanel extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
+                    color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(icon, color: AppColors.primaryDark, size: 20),
@@ -1013,9 +1013,9 @@ class _CountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppColors.pageBg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Text(label, style: AppTextStyles.captionMedium),
     );
@@ -1095,18 +1095,18 @@ class _ErrorBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F1),
+        color: AppColors.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFCDD2)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: Colors.redAccent),
+          Icon(Icons.error_outline_rounded, color: AppColors.error),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+              style: TextStyle(color: AppColors.error, fontSize: 13),
             ),
           ),
         ],
@@ -1126,9 +1126,9 @@ class _EmptyState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppColors.pageBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Column(
         children: [
