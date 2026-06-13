@@ -1237,12 +1237,13 @@ class ApiClient {
 
   Future<WalkInConfirmResult> confirmWalkInRequestPayment({
     required int requestId,
+    String paymentMethod = 'cash',
   }) async {
     final payload = await _send(
       method: 'POST',
       path: '/walk-in-requests/$requestId/confirm-payment',
       authenticated: true,
-      body: {'payment_method': 'cash'},
+      body: {'payment_method': paymentMethod},
     );
 
     final data = payload['data'];

@@ -108,12 +108,14 @@ class _SessionGuardState extends State<SessionGuard> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
+        backgroundColor: Color(0xFFF8FAFC),
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (!_hasActiveSession) {
       return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
         body: _SessionBlockedPage(
           error: _error,
           onRetry: () {
