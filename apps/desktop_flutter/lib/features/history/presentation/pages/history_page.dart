@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:desktop_flutter/app/theme/app_text_styles.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/features/kasir/services/receipt_printer.dart';
@@ -45,19 +45,62 @@ class _HistoryPageState extends State<HistoryPage> {
     return Container(
       color: const Color(0xFFF8FAFC),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(40, 60, 40, 40),
+        padding: const EdgeInsets.fromLTRB(40, 40, 40, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title Premium
-            Text('Riwayat Transaksi', style: AppTextStyles.h1),
-            const SizedBox(height: 8),
-            Text(
-              'Kelola dan tinjau seluruh riwayat transaksi photobooth.',
-              style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
+            // Premium Solid Blue Header Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 36),
+                  ),
+                  const SizedBox(width: 20),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Riwayat Transaksi',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Kelola, filter, dan tinjau seluruh riwayat transaksi photobooth serta lakukan tambah cetak add-on.',
+                          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-
-            const SizedBox(height: 40),
+            const SizedBox(height: 24),
 
             // Header (Integrated Logic)
             HistoryHeaderSection(

@@ -21,28 +21,37 @@ class ExportButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: OutlinedButton.icon(
         onPressed: onPressed,
         icon: Icon(
           Icons.download_rounded,
-          size: 16,
+          size: 20,
           color: AppColors.textPrimary,
         ),
         label: Text(
-          'Export',
+          'Export Excel',
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
           ),
         ),
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
-          side: BorderSide(color: AppColors.cardBorder),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          side: const BorderSide(color: Color(0xFFE2E8F0)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
         ),
       ),
     );

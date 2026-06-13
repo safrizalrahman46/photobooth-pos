@@ -10,7 +10,7 @@ class HistoryRow extends StatelessWidget {
 
   // Flex factors - harus sama persis dengan HistoryTable
   static const int _flexId = 2;
-  static const int _flexWaktu = 2;
+  static const int _flexWaktu = 3;
   static const int _flexNama = 3;
   static const int _flexPaket = 4;
   static const int _flexTotal = 2;
@@ -26,24 +26,27 @@ class HistoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: AppColors.divider),
+          bottom: BorderSide(color: Color(0xFFF1F5F9)),
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
         child: Row(
           children: [
             // ID Transaksi
             Expanded(
               flex: _flexId,
-              child: Text(
-                transaction.id,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  transaction.id,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
                 ),
               ),
             ),
@@ -51,12 +54,15 @@ class HistoryRow extends StatelessWidget {
             // Waktu
             Expanded(
               flex: _flexWaktu,
-              child: Text(
-                _formatWaktu(transaction.waktu),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  _formatWaktu(transaction.waktu),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF64748B),
+                    height: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -64,12 +70,15 @@ class HistoryRow extends StatelessWidget {
             // Nama Pelanggan
             Expanded(
               flex: _flexNama,
-              child: Text(
-                transaction.namaPelanggan,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  transaction.namaPelanggan,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E293B),
+                  ),
                 ),
               ),
             ),
@@ -77,12 +86,15 @@ class HistoryRow extends StatelessWidget {
             // Paket & Add-ons
             Expanded(
               flex: _flexPaket,
-              child: Text(
-                transaction.paketDanAddOns,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  transaction.paketDanAddOns,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF64748B),
+                    height: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -90,12 +102,15 @@ class HistoryRow extends StatelessWidget {
             // Total Bayar
             Expanded(
               flex: _flexTotal,
-              child: Text(
-                _formatRupiah(transaction.totalBayar),
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  _formatRupiah(transaction.totalBayar),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ),
@@ -103,9 +118,12 @@ class HistoryRow extends StatelessWidget {
             // Status
             Expanded(
               flex: _flexStatus,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TransactionStatusBadge(status: transaction.status),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TransactionStatusBadge(status: transaction.status),
+                ),
               ),
             ),
 
@@ -114,30 +132,29 @@ class HistoryRow extends StatelessWidget {
               width: _colAction,
               child: Align(
                 alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () {
-                    // Di production, panggil _controller.onReprint(transaction)
-                    // Untuk sekarang kita asumsikan controller dikirim atau via callback
-                    onActionPressed();
-                  },
-                  icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-                  label: const Text(
-                    'Tambah Cetak',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                  style: TextButton.styleFrom(
+                child: OutlinedButton.icon(
+                  onPressed: onActionPressed,
+                  icon: const Icon(Icons.print_rounded, size: 14),
+                  label: const Text('Tambah Cetak'),
+                  style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
+                    side: BorderSide(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.04),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                      horizontal: 14,
+                      vertical: 10,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      side: BorderSide(
-                        color: AppColors.primaryLight,
-                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    backgroundColor: AppColors.cardBg,
+                    elevation: 0,
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),

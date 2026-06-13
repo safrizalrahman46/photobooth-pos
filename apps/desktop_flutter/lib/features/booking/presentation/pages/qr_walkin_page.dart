@@ -46,7 +46,9 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
     });
 
     try {
+      final session = await client.fetchCurrentCashierSession();
       final rows = await client.fetchWalkInRequests(
+        branchId: session?.branchId,
         search: _searchController.text.trim(),
       );
 
@@ -72,12 +74,12 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final paymentMethod = await showDialog<String>(
       context: context,
       builder: (context) => PaymentConfirmDialog(item: item),
     );
 
-    if (confirmed != true) {
+    if (paymentMethod == null) {
       return;
     }
 
@@ -96,6 +98,7 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
     try {
       final result = await client.confirmWalkInRequestPayment(
         requestId: item.id,
+        paymentMethod: paymentMethod,
       );
 
       if (!mounted) return;
@@ -139,6 +142,8 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
 
   @override
   Widget build(BuildContext context) {
+    final hasSearchFilter = _searchController.text.trim().isNotEmpty;
+
     return Container(
       color: const Color(0xFFF8FAFC),
       child: Padding(
@@ -146,89 +151,221 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'QR Walk-in',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
+            // Premium Solid Blue Header Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 36),
+                  ),
+                  const SizedBox(width: 20),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'QR Walk-in',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Konfirmasi data customer yang scan QR dan selesaikan pembayaran cash/QRIS untuk membuat nomor antrean.',
+                          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Material(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    child: InkWell(
+                      onTap: _loading ? null : _loadRows,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_loading)
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            else
+                              const Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Refresh',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                          ],
                         ),
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        'Konfirmasi customer yang scan QR dan bayar tunai di kasir.',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _loading ? null : _loadRows,
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Refresh'),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 24),
+
+            // Search Bar Section
             Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Cari kode WLK, nama, atau nomor HP',
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                      ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    onSubmitted: (_) => _loadRows(),
+                    child: TextField(
+                      controller: _searchController,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Cari berdasarkan kode request, nama customer, atau nomor HP...',
+                        hintStyle: const TextStyle(color: Colors.grey, fontWeight: FontWeight.normal),
+                        prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 20),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                  _loadRows();
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                        ),
+                      ),
+                      onSubmitted: (_) => _loadRows(),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _loading ? null : _loadRows,
-                  icon: const Icon(Icons.filter_alt_rounded, size: 18),
-                  label: const Text('Cari'),
+                const SizedBox(width: 14),
+                Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: _loading ? null : _loadRows,
+                    icon: const Icon(Icons.search_rounded, size: 18),
+                    label: const Text('Cari Data'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      elevation: 0,
+                      textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ),
                 ),
               ],
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                style: TextStyle(color: AppColors.error, fontSize: 13),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.error.withValues(alpha: 0.15)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+
+            // List Section
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _rows.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Belum ada request QR walk-in hari ini.',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    )
-                  : ListView.separated(
-                      itemCount: _rows.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) => _WalkInRequestCard(
-                        item: _rows[index],
-                        confirming: _confirmingId == _rows[index].id,
-                        onConfirm: () => _confirmPayment(_rows[index]),
-                      ),
-                    ),
+                      ? _EmptyStateWidget(hasFilter: hasSearchFilter)
+                      : ListView.separated(
+                          itemCount: _rows.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 14),
+                          itemBuilder: (context, index) => _WalkInRequestCard(
+                            item: _rows[index],
+                            confirming: _confirmingId == _rows[index].id,
+                            onConfirm: () => _confirmPayment(_rows[index]),
+                          ),
+                        ),
             ),
           ],
         ),
@@ -238,10 +375,7 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -258,106 +392,302 @@ class _WalkInRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isPaid = item.status == 'paid';
+
     return Container(
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.035),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.requestCode,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF111827),
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                _StatusBadge(status: item.status),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.customerName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.customerPhone,
-                  style: const TextStyle(color: Color(0xFF6B7280)),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.packageName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.branchName,
-                  style: const TextStyle(color: Color(0xFF6B7280)),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              _currency(item.totalAmount),
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF111827),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: 12,
+                color: isPaid ? AppColors.success : AppColors.primary,
               ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: Row(
+                    children: [
+                      // Section 1: Code, Status, and Package/Branch Details
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.confirmation_num_outlined, color: Color(0xFF64748B), size: 16),
+                                const SizedBox(width: 6),
+                                Text(
+                                  item.requestCode,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF1E293B),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            _StatusBadge(status: item.status, paymentMethod: item.paymentMethod),
+                            const SizedBox(height: 12),
+                            // Package & Branch metadata rows
+                            Row(
+                              children: [
+                                const Icon(Icons.photo_library_rounded, size: 14, color: AppColors.primary),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    item.packageName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                      color: Color(0xFF334155),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.store_rounded, size: 14, color: Color(0xFF64748B)),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    item.branchName,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const VerticalDivider(color: Color(0xFFE2E8F0), width: 32, thickness: 1, indent: 4, endIndent: 4),
+
+                      // Section 2: Customer Details
+                      Expanded(
+                        flex: 4,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.person_rounded, size: 14, color: Color(0xFF64748B)),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    item.customerName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.phone_rounded, size: 14, color: Color(0xFF64748B)),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    item.customerPhone,
+                                    style: const TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 13,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const VerticalDivider(color: Color(0xFFE2E8F0), width: 32, thickness: 1, indent: 4, endIndent: 4),
+
+                      // Section 3: Price & Pay Button (Vertically stacked to avoid overflow)
+                      Expanded(
+                        flex: 4,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'TOTAL TAGIHAN',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _currency(item.totalAmount),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 40,
+                              child: ElevatedButton(
+                                onPressed: item.isPendingPayment && !confirming ? onConfirm : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  disabledBackgroundColor: const Color(0xFFE2E8F0),
+                                  disabledForegroundColor: const Color(0xFF94A3B8),
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                child: confirming
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: const [
+                                          Icon(Icons.payments_rounded, size: 14),
+                                          SizedBox(width: 6),
+                                          Text('Bayar & Antrekan'),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status, this.paymentMethod});
+
+  final String status;
+  final String? paymentMethod;
+
+  @override
+  Widget build(BuildContext context) {
+    final paid = status == 'paid';
+    final expired = status == 'expired';
+
+    final Color color;
+    final Color bgColor;
+    final String label;
+
+    if (paid) {
+      color = const Color(0xFF0D9488);
+      bgColor = const Color(0xFFF0FDFA);
+      final String methodDisplay = paymentMethod != null
+          ? (paymentMethod!.toLowerCase() == 'qris' ? 'QRIS' : 'Tunai')
+          : '';
+      label = methodDisplay.isNotEmpty ? 'Sudah Dibayar ($methodDisplay)' : 'Sudah Dibayar';
+    } else if (expired) {
+      color = const Color(0xFFE11D48);
+      bgColor = const Color(0xFFFFF1F2);
+      label = 'Kedaluwarsa';
+    } else {
+      color = const Color(0xFFD97706);
+      bgColor = const Color(0xFFFFFBEB);
+      label = 'Menunggu Bayar';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
             ),
           ),
-          SizedBox(
-            width: 220,
-            child: ElevatedButton.icon(
-              onPressed: item.isPendingPayment && !confirming
-                  ? onConfirm
-                  : null,
-              icon: confirming
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.payments_rounded, size: 18),
-              label: Text(confirming ? 'Memproses...' : 'Bayar & Antrekan'),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -366,38 +696,55 @@ class _WalkInRequestCard extends StatelessWidget {
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+class _EmptyStateWidget extends StatelessWidget {
+  const _EmptyStateWidget({required this.hasFilter});
 
-  final String status;
+  final bool hasFilter;
 
   @override
   Widget build(BuildContext context) {
-    final paid = status == 'paid';
-    final expired = status == 'expired';
-    final color = paid
-        ? const Color(0xFF16A34A)
-        : expired
-        ? const Color(0xFFDC2626)
-        : const Color(0xFFD97706);
-    final label = paid
-        ? 'Sudah Dibayar'
-        : expired
-        ? 'Expired'
-        : 'Menunggu Bayar';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(40),
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF1F5F9),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                hasFilter ? Icons.search_off_rounded : Icons.qr_code_scanner_rounded,
+                size: 72,
+                color: const Color(0xFF94A3B8),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              hasFilter ? 'Pencarian Tidak Ditemukan' : 'Belum Ada Request Hari Ini',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1E293B),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              hasFilter
+                  ? 'Tidak ada request QR walk-in yang cocok dengan kata kunci Anda. Coba periksa kembali kata kunci pencarian.'
+                  : 'Saat customer scan QR dan mengisi form walk-in di website, request mereka akan muncul di sini untuk dikonfirmasi pembayarannya.',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF64748B),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );

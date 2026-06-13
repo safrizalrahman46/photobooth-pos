@@ -30,13 +30,12 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-    });
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     _focusNode.dispose();
     super.dispose();
   }
@@ -54,7 +53,6 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
         _paidAmountString += val;
       }
     });
-    _focusNode.requestFocus();
   }
 
   void _onBackspace() {
@@ -68,10 +66,9 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
         );
       }
     });
-    _focusNode.requestFocus();
   }
 
-  void _handleKeyEvent(KeyEvent event) {
+  bool _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
       final key = event.logicalKey;
 
@@ -79,35 +76,46 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
       if (key == LogicalKeyboardKey.digit0 ||
           key == LogicalKeyboardKey.numpad0) {
         _onNumberPress('0');
+        return true;
       } else if (key == LogicalKeyboardKey.digit1 ||
           key == LogicalKeyboardKey.numpad1) {
         _onNumberPress('1');
+        return true;
       } else if (key == LogicalKeyboardKey.digit2 ||
           key == LogicalKeyboardKey.numpad2) {
         _onNumberPress('2');
+        return true;
       } else if (key == LogicalKeyboardKey.digit3 ||
           key == LogicalKeyboardKey.numpad3) {
         _onNumberPress('3');
+        return true;
       } else if (key == LogicalKeyboardKey.digit4 ||
           key == LogicalKeyboardKey.numpad4) {
         _onNumberPress('4');
+        return true;
       } else if (key == LogicalKeyboardKey.digit5 ||
           key == LogicalKeyboardKey.numpad5) {
         _onNumberPress('5');
+        return true;
       } else if (key == LogicalKeyboardKey.digit6 ||
           key == LogicalKeyboardKey.numpad6) {
         _onNumberPress('6');
+        return true;
       } else if (key == LogicalKeyboardKey.digit7 ||
           key == LogicalKeyboardKey.numpad7) {
         _onNumberPress('7');
+        return true;
       } else if (key == LogicalKeyboardKey.digit8 ||
           key == LogicalKeyboardKey.numpad8) {
         _onNumberPress('8');
+        return true;
       } else if (key == LogicalKeyboardKey.digit9 ||
           key == LogicalKeyboardKey.numpad9) {
         _onNumberPress('9');
+        return true;
       } else if (key == LogicalKeyboardKey.backspace) {
         _onBackspace();
+        return true;
       } else if (key == LogicalKeyboardKey.enter ||
           key == LogicalKeyboardKey.numpadEnter) {
         final isQris = widget.controller.selectedPayment == 'QRIS';
@@ -116,8 +124,10 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
         if (canConfirm) {
           widget.onConfirm(isQris ? widget.controller.grandTotal : _paidAmount);
         }
+        return true;
       }
     }
+    return false;
   }
 
   List<double> _getQuickCashSuggestions(double total) {
@@ -151,7 +161,6 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
     setState(() {
       _paidAmountString = val.toInt().toString();
     });
-    _focusNode.requestFocus();
   }
 
   @override
@@ -163,18 +172,14 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
       onTap: () {
         _focusNode.requestFocus();
       },
-      child: KeyboardListener(
-        focusNode: _focusNode,
-        autofocus: true,
-        onKeyEvent: _handleKeyEvent,
-        child: BaseDialog(
-          padding: EdgeInsets.zero,
-          width: 860,
-          maxHeight: 560,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: BaseDialog(
+        padding: EdgeInsets.zero,
+        width: 860,
+        maxHeight: 560,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Left: Order Summary Info
                 Expanded(
@@ -427,8 +432,7 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildQrisInfoPanel(BuildContext context) {

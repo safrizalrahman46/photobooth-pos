@@ -34,17 +34,24 @@ class FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 40,
+      height: 56,
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: AppColors.cardBorder),
-        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: PopupMenuButton<TransactionStatus?>(
         initialValue: selectedStatus,
         onSelected: onChanged,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        offset: const Offset(0, 44),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        offset: const Offset(0, 60),
         itemBuilder: (_) => [
           const PopupMenuItem(value: null, child: Text('Semua Status')),
           ...TransactionStatus.values.map(
@@ -52,24 +59,29 @@ class FilterButton extends StatelessWidget {
           ),
         ],
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ikon filter (3 garis bertingkat)
               Icon(
                 Icons.tune_rounded,
-                size: 16,
+                size: 20,
                 color: AppColors.textPrimary,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Text(
-                selectedStatus == null ? 'Filter' : selectedStatus!.label,
+                selectedStatus == null ? 'Filter Status' : selectedStatus!.label,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: AppColors.textSecondary,
               ),
             ],
           ),

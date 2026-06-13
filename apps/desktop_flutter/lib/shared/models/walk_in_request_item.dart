@@ -11,6 +11,7 @@ class WalkInRequestItem {
     required this.customerPhone,
     required this.totalAmount,
     required this.status,
+    this.paymentMethod,
     required this.expiresAt,
     required this.transactionId,
     required this.queueTicketId,
@@ -24,6 +25,7 @@ class WalkInRequestItem {
   final String customerPhone;
   final double totalAmount;
   final String status;
+  final String? paymentMethod;
   final String? expiresAt;
   final int? transactionId;
   final int? queueTicketId;
@@ -40,6 +42,7 @@ class WalkInRequestItem {
       customerPhone: json['customer_phone']?.toString() ?? '-',
       totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
       status: json['status']?.toString() ?? 'pending_payment',
+      paymentMethod: json['payment_method']?.toString(),
       expiresAt: json['expires_at']?.toString(),
       transactionId: (json['transaction_id'] as num?)?.toInt(),
       queueTicketId: (json['queue_ticket_id'] as num?)?.toInt(),
