@@ -106,31 +106,29 @@ const selectedPackage = computed(() => {
 
 const showBranchSelector = computed(() => props.branches.length > 1);
 
-const selectedPackagePhotoSet = computed(() => {
-    const selected = selectedPackage.value;
-
-    if (!selected) {
+const getPackagePhotoSet = (pkg) => {
+    if (!pkg) {
         return [];
     }
 
-    let samplePhotos = Array.isArray(selected.sample_photos) ? [...selected.sample_photos] : [];
+    let samplePhotos = Array.isArray(pkg.sample_photos) ? [...pkg.sample_photos] : [];
 
-    if (samplePhotos.length === 0 && selected.code) {
-        if (selected.code === 'PKG-EXPRESS') {
+    if (samplePhotos.length === 0 && pkg.code) {
+        if (pkg.code === 'PKG-EXPRESS') {
             samplePhotos = [
                 '/images/landing/Basic/IMG_0394.JPG',
                 '/images/landing/Mini/IMG_1228.JPG',
                 '/images/landing/Basic/IMG_0879.JPG',
                 '/images/landing/Mini/IMG_1555.JPG'
             ];
-        } else if (selected.code === 'PKG-PARTY') {
+        } else if (pkg.code === 'PKG-PARTY') {
             samplePhotos = [
                 '/images/landing/manbol/IMG_0244.JPG',
                 '/images/landing/Vintage/IMG_0032.JPG',
                 '/images/landing/manbol/IMG_2968.JPG',
                 '/images/landing/Vintage/IMG_3356.JPG'
             ];
-        } else if (selected.code === 'PKG-PREMIUM') {
+        } else if (pkg.code === 'PKG-PREMIUM') {
             samplePhotos = [
                 '/images/landing/Sofa/IMG_0350.JPG',
                 '/images/landing/Sofa/IMG_0689.JPG',
@@ -149,10 +147,12 @@ const selectedPackagePhotoSet = computed(() => {
     return samplePhotos
         .map((src, index) => ({
             src: asString(src).trim(),
-            label: `${asString(selected.name || 'Paket')} ${index + 1}`,
+            label: `${asString(pkg.name || 'Paket')} ${index + 1}`,
         }))
         .filter((photo) => photo.src !== '');
-});
+};
+
+const selectedPackagePhotoSet = computed(() => getPackagePhotoSet(selectedPackage.value));
 
 const selectedBookingDateObject = computed({
     get: () => {
@@ -798,11 +798,10 @@ onBeforeUnmount(() => {
 
                             <div class="p-4 sm:p-6">
                                 <div class="grid gap-3 sm:grid-cols-3">
-                                    <button
+                                    <div
                                         v-for="(pkg, index) in filteredPackages"
                                         :key="pkg.id"
-                                        type="button"
-                                        class="relative rounded-xl border-2 p-4 text-left transition-all duration-200"
+                                        class="relative rounded-xl border-2 p-4 text-left transition-all duration-200 cursor-pointer"
                                         :class="packageId === String(pkg.id)
                                             ? 'scale-[1.02] shadow-md'
                                             : 'border-slate-200 bg-white hover:border-slate-400 hover:shadow-sm'"
@@ -850,55 +849,24 @@ onBeforeUnmount(() => {
                                         <div class="mt-2 w-fit rounded-md bg-gray-100 px-2 py-0.5 text-[0.65rem] text-gray-400">
                                             {{ index % 2 === 0 ? 'Device 1' : 'Device 2' }}
                                         </div>
-                                    </button>
-                                </div>
-                            </div>
 
-                            <div v-if="isMobile && packageId" class="border-t border-slate-100 bg-slate-50/50 lg:hidden">
-                                <div class="px-4 py-5">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <h3 class="flex items-center gap-2 text-[#1F2937]" style="font-size: 0.875rem; font-weight: 600;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#2563EB]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                                <circle cx="8.5" cy="8.5" r="1.5" />
-                                                <path d="M21 15l-5-5L5 21" />
-                                            </svg>
-                                            Hasil Foto - {{ selectedPackage?.name || 'Paket' }}
-                                        </h3>
-                                    </div>
-                                    <div v-if="!selectedPackagePhotoSet.length" class="py-6 text-center text-sm text-gray-400">
-                                        Belum ada contoh hasil foto untuk paket ini.
-                                    </div>
-                                    <div
-                                        v-else
-                                        ref="mobilePhotoScrollRef"
-                                        class="photo-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto select-none pb-2"
-                                        style="-ms-overflow-style: none; scrollbar-width: none;"
-                                    >
-                                        <div
-                                            v-for="(photo, index) in selectedPackagePhotoSet"
-                                            :key="`mobile-photo-${index}`"
-                                            class="group relative h-[180px] w-[260px] shrink-0 snap-center overflow-hidden rounded-xl border border-slate-200/60 shadow-sm cursor-zoom-in"
-                                            @click="openPreview(photo)"
-                                        >
-                                            <img :src="photo.src" :alt="photo.label" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
-                                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                                            <div class="absolute inset-x-0 bottom-0 px-3 pb-3">
-                                                <span class="text-xs text-white" style="font-weight: 600;">{{ photo.label }}</span>
-                                                <p class="mt-0.5 text-[0.6rem] text-white/80">Paket {{ selectedPackage?.name || '-' }}</p>
-                                            </div>
-                                            <div class="absolute right-2 top-2 rounded-full bg-black/40 backdrop-blur-sm px-2 py-0.5 text-[0.6rem] text-white">
-                                                {{ index + 1 }}/{{ selectedPackagePhotoSet.length }}
+                                        <div v-if="isMobile && getPackagePhotoSet(pkg).length" class="mt-4 pt-3 border-t border-slate-100" @click.stop>
+                                            <p class="text-[0.65rem] font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Hasil Foto</p>
+                                            <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-none photo-thumbnails snap-x snap-mandatory">
+                                                <div
+                                                    v-for="(photo, pIdx) in getPackagePhotoSet(pkg)"
+                                                    :key="`pkg-thumb-${pkg.id}-${pIdx}`"
+                                                    class="group/thumb relative h-[300px] w-full flex-shrink-0 snap-center overflow-hidden rounded-xl border border-slate-200 cursor-zoom-in"
+                                                    @click="openPreview(photo)"
+                                                >
+                                                    <img :src="photo.src" :alt="photo.label" class="h-full w-full object-cover transition-transform duration-300 group-hover/thumb:scale-110">
+                                                    <div class="absolute inset-0 bg-black/0 transition-colors group-hover/thumb:bg-black/10" />
+                                                    <div class="absolute right-2 top-2 rounded-full bg-black/40 backdrop-blur-sm px-1.5 py-0.5 text-[0.55rem] text-white">
+                                                        {{ pIdx + 1 }}/{{ getPackagePhotoSet(pkg).length }}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div v-if="selectedPackagePhotoSet.length" class="flex justify-center gap-1.5 mt-2">
-                                        <div
-                                            v-for="(photo, index) in selectedPackagePhotoSet"
-                                            :key="`mobile-photo-indicator-${index}`"
-                                            class="h-1.5 rounded-full bg-gray-300 transition-all"
-                                            :style="index === 0 ? { width: '16px', backgroundColor: '#2563EB' } : { width: '6px' }"
-                                        />
                                     </div>
                                 </div>
                             </div>
@@ -1330,5 +1298,12 @@ onBeforeUnmount(() => {
 <style scoped>
 .photo-scroll::-webkit-scrollbar {
     display: none;
+}
+.photo-thumbnails::-webkit-scrollbar {
+    display: none;
+}
+.photo-thumbnails {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 </style>
