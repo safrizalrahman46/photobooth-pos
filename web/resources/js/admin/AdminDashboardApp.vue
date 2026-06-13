@@ -2047,7 +2047,7 @@ const startAccessDeniedCountdown = (message) => {
         accessDeniedTimer = null;
 
         if (typeof window !== 'undefined') {
-            const redirectUrl = isOwner.value ? panelBaseUrl.value : panelBaseUrl.value + 'bookings';
+            const redirectUrl = isOwner.value ? panelBaseUrl.value : panelBaseUrl.value + '/bookings';
             window.location.href = redirectUrl;
         }
     }, 1000);
