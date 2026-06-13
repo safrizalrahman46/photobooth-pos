@@ -19,6 +19,7 @@ class PackageResource extends JsonResource
             'base_price' => (float) $this->base_price,
             'is_active' => (bool) $this->is_active,
             'sort_order' => $this->sort_order,
+            'sample_photos' => $this->resolvedSamplePhotos(),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

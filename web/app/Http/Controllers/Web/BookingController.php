@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -115,11 +116,12 @@ class BookingController extends Controller
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'name', 'description', 'duration_minutes', 'base_price', 'branch_id', 'sample_photos'])
+                ->get(['id', 'name', 'description', 'duration_minutes', 'base_price', 'branch_id', 'sample_photos', 'code'])
                 ->map(function (Package $package): array {
                     return [
                         'id' => (int) $package->id,
                         'name' => (string) $package->name,
+                        'code' => (string) $package->code,
                         'description' => (string) ($package->description ?? ''),
                         'duration_minutes' => (int) $package->duration_minutes,
                         'base_price' => (float) $package->base_price,
@@ -245,6 +247,16 @@ class BookingController extends Controller
 
         $branch = Branch::query()->find($payload['branch_id'] ?? null);
         $package = Package::query()->find($payload['package_id'] ?? null);
+        
+        // Debug logging untuk troubleshoot QR issue
+        if ($branch && config('app.debug')) {
+            \Log::info('Payment page branch data:', [
+                'branch_id' => $branch->id,
+                'branch_name' => $branch->name,
+                'payment_qr_url' => $branch->payment_qr_url,
+            ]);
+        }
+        
         $designCatalog = null;
 
         if (! empty($payload['design_catalog_id'])) {
@@ -282,13 +294,21 @@ class BookingController extends Controller
 
         $payload['source'] = BookingSource::Web;
 
+        $booking = null;
+        $storedProofPath = null;
+
         try {
+            // Step 1: Create booking — already wrapped in DB::transaction inside BookingService::create()
+            // No nested transaction needed: we commit booking first, then update path separately
             $booking = $this->bookingService->create($payload);
+
+            // Step 2: Store file to disk
             $storedProofPath = $this->storeTransferProof(
                 $request->file('transfer_proof'),
                 $booking->booking_code
             );
 
+            // Step 3: Update booking with proof path — standalone query, no nested transaction
             $booking->forceFill([
                 'payment_gateway' => 'manual_transfer',
                 'payment_url' => null,
@@ -310,8 +330,18 @@ class BookingController extends Controller
                 ->with('booking_created', true)
                 ->with('booking_payment_notice', 'Bukti pembayaran berhasil diunggah. Booking menunggu verifikasi admin.');
         } catch (Throwable $exception) {
-            if (isset($booking) && $booking instanceof Booking) {
-                $booking->delete();
+            // Cleanup: hapus file orphan jika sudah tersimpan
+            if ($storedProofPath !== null && Storage::disk('public')->exists($storedProofPath)) {
+                Storage::disk('public')->delete($storedProofPath);
+            }
+
+            // Cleanup: hapus booking orphan jika sudah dibuat (DB mungkin kembali normal)
+            if (isset($booking) && $booking instanceof Booking && $booking->exists) {
+                try {
+                    $booking->delete();
+                } catch (Throwable) {
+                    // DB masih down — booking tetap ada tanpa path, user bisa coba lagi
+                }
             }
 
             return back()
@@ -384,6 +414,12 @@ class BookingController extends Controller
         $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
         $fileName = Str::slug($bookingCode).'-'.Str::lower(Str::random(10)).'.'.$extension;
 
-        return $file->storeAs($directory, $fileName, 'public');
+        $storedPath = $file->storeAs($directory, $fileName, 'public');
+
+        if ($storedPath === false) {
+            throw new RuntimeException('Gagal menyimpan bukti pembayaran. Coba lagi.');
+        }
+
+        return $storedPath;
     }
 }

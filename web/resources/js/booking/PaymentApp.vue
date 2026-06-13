@@ -59,10 +59,24 @@ const qrImageUrl = computed(() => {
         props.paymentSettings.qr_url,
     ];
 
+    // Development debugging - akan di-remove oleh bundler di production
+    if (process.env.NODE_ENV === 'development') {
+        console.group('[PaymentApp] QR Image URL Debug');
+        console.log('Complete Branch Object:', props.branch);
+        console.log('Branch QR URL:', props.branch?.payment_qr_url);
+        console.log('Payment Settings QR URL:', props.paymentSettings.qr_image_url);
+        console.log('All candidates:', candidates);
+        console.groupEnd();
+    }
+
     for (const candidate of candidates) {
         const value = asString(candidate).trim();
 
         if (value !== '') {
+            // Development debugging
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[PaymentApp] Selected QR URL:', value);
+            }
             return value;
         }
     }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:desktop_flutter/core/config/app_config.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
@@ -1514,6 +1515,21 @@ class ApiClient {
     }
 
     return <String, dynamic>{};
+  }
+  Future<Uint8List?> downloadRaw(String path) async {
+    try {
+      final uri = Uri.parse('$baseUrl$path');
+      final headers = _headers(authenticated: true);
+      final response = await _sendHttp(() => http.get(uri, headers: headers));
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 }
 

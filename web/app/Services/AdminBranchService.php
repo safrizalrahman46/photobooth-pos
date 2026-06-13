@@ -241,7 +241,27 @@ class AdminBranchService
 
         $path = $file->store('qr', 'public');
 
-        return Storage::disk('public')->url($path);
+        // Smart URL generation: gunakan fallback route untuk reliability
+        // Terutama untuk Windows environment di mana symlink mungkin bermasalah
+        return $this->generateQrUrl($path);
+    }
+
+    /**
+     * Generate QR URL dengan fallback mechanism untuk compatibility
+     */
+    private function generateQrUrl(string $storagePath): string
+    {
+        // Extract filename dari path storage
+        $filename = basename($storagePath);
+        
+        try {
+            // Coba gunakan media route jika available (setelah server restart)
+            return route('media.qr', $filename);
+        } catch (\Exception $e) {
+            // Fallback ke Storage URL jika route belum terdaftar
+            // APP_URL sudah diperbaiki ke 127.0.0.1:8000
+            return Storage::disk('public')->url($storagePath);
+        }
     }
 
     private function deleteStoredQr(string $url): void

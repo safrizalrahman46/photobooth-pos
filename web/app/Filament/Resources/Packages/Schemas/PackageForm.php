@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Packages\Schemas;
 
 use App\Models\Branch;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -56,6 +57,27 @@ class PackageForm
                     ->label('Deskripsi')
                     ->rows(4)
                     ->columnSpanFull(),
+                Repeater::make('sample_photos')
+                    ->label('Foto contoh')
+                    ->addActionLabel('Tambah foto')
+                    ->columnSpanFull()
+                    ->dehydrateStateUsing(fn (?array $state): array => collect($state)
+                        ->pluck('url')
+                        ->filter()
+                        ->values()
+                        ->all()
+                    )
+                    ->hydrateStateUsing(fn (?array $state): array => collect($state ?? [])
+                        ->map(fn (string $url): array => ['url' => $url])
+                        ->all()
+                    )
+                    ->schema([
+                        TextInput::make('url')
+                            ->label('URL foto')
+                            ->url()
+                            ->maxLength(255)
+                            ->required(),
+                    ]),
             ]);
     }
 }
