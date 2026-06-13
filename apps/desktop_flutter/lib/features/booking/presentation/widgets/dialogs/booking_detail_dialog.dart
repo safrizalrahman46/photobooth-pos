@@ -202,6 +202,70 @@ class _BookingDetailDialogState extends State<BookingDetailDialog> {
                         _infoRow('Waktu', _booking.time),
                         const SizedBox(height: 8),
                         _infoRow('Total', _formatPrice(_booking.totalAmount)),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Tipe Bayar',
+                              style: AppTextStyles.bodySmall.copyWith(fontSize: 12),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _booking.paymentType == 'dp50'
+                                    ? const Color(0xFFFFF7ED)
+                                    : const Color(0xFFF0FDF4),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: _booking.paymentType == 'dp50'
+                                      ? const Color(0xFFF97316).withValues(alpha: 0.3)
+                                      : const Color(0xFF22C55E).withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Text(
+                                _booking.paymentType == 'dp50' ? 'DP 50%' : 'Full Lunas',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: _booking.paymentType == 'dp50'
+                                      ? const Color(0xFFF97316)
+                                      : const Color(0xFF16A34A),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_booking.paymentType == 'dp50') ...[
+                          const SizedBox(height: 8),
+                          _infoRow('Deposit (DP)', _formatPrice(_booking.depositAmount)),
+                        ],
+                        if (_detail != null) ...[
+                          const SizedBox(height: 8),
+                          _infoRow('Sudah Dibayar', _formatPrice(_detail!.paidAmount)),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Sisa Bayar',
+                                style: AppTextStyles.bodySmall.copyWith(fontSize: 12),
+                              ),
+                              Text(
+                                _formatPrice(_detail!.remainingAmount),
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: _detail!.remainingAmount > 0
+                                      ? const Color(0xFFEF4444)
+                                      : AppColors.success,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
