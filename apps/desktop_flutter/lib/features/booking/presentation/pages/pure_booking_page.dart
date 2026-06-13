@@ -174,6 +174,7 @@ class _BookingTable extends StatelessWidget {
           _ColHeader(label: 'NAMA PELANGGAN', flex: 3),
           _ColHeader(label: 'NOMOR TELEPON', flex: 3),
           _ColHeader(label: 'TOTAL', flex: 2),
+          _ColHeader(label: 'TIPE BAYAR', flex: 2),
           _ColHeader(label: 'STATUS', flex: 2),
           _ColHeader(label: 'AKSI', flex: 3),
         ],
@@ -246,6 +247,40 @@ class _BookingRow extends StatelessWidget {
               _formatPrice(booking.totalAmount),
               style: AppTextStyles.bodyMedium.copyWith(
                 fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: booking.paymentType == 'dp50'
+                      ? const Color(0xFFFFF7ED)
+                      : const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: booking.paymentType == 'dp50'
+                        ? const Color(0xFFF97316).withValues(alpha: 0.3)
+                        : const Color(0xFF22C55E).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Text(
+                  booking.paymentType == 'dp50' ? 'DP 50%' : 'FULL LUNAS',
+                  style: AppTextStyles.caption.copyWith(
+                    color: booking.paymentType == 'dp50'
+                        ? const Color(0xFFF97316)
+                        : const Color(0xFF16A34A),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
             ),
           ),
