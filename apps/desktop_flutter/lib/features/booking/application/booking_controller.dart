@@ -102,9 +102,16 @@ class BookingController extends ChangeNotifier {
     safeNotify();
 
     try {
+      final session = await client.fetchCurrentCashierSession();
+      if (_disposed) return;
+
       final branches = await client.fetchBranches();
       if (_disposed) return;
-      if (branches.isNotEmpty) {
+
+      if (session != null && session.isOpen) {
+        selectedBranchId = session.branchId;
+        selectedBranchName = session.branchName;
+      } else if (branches.isNotEmpty) {
         final branch = branches.first;
         selectedBranchId = branch.id;
         selectedBranchName = branch.name;
