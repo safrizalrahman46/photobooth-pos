@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_text_styles.dart';
 import '../../../../../shared/widgets/base_dialog.dart';
-import '../../../../../shared/widgets/dialog_action_button.dart';
 import '../../../application/booking_controller.dart';
 
 class PaymentCalculationDialog extends StatefulWidget {
@@ -55,6 +54,7 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
         _paidAmountString += val;
       }
     });
+    _focusNode.requestFocus();
   }
 
   void _onBackspace() {
@@ -68,6 +68,7 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
         );
       }
     });
+    _focusNode.requestFocus();
   }
 
   void _handleKeyEvent(KeyEvent event) {
@@ -119,240 +120,621 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
     }
   }
 
+  List<double> _getQuickCashSuggestions(double total) {
+    final List<double> suggestions = [total];
+    
+    // Find next clean increments
+    final List<double> increments = [10000, 20000, 50000, 100000, 200000, 500000];
+    for (var inc in increments) {
+      if (inc > total && suggestions.length < 4) {
+        suggestions.add(inc);
+      }
+    }
+    
+    // If we still need more suggestions or the total is very large
+    if (suggestions.length < 3) {
+      final double next50k = ((total / 50000).ceil() * 50000).toDouble();
+      if (!suggestions.contains(next50k)) {
+        suggestions.add(next50k);
+      }
+      final double next100k = ((total / 100000).ceil() * 100000).toDouble();
+      if (!suggestions.contains(next100k)) {
+        suggestions.add(next100k);
+      }
+    }
+    
+    final unique = suggestions.toSet().toList()..sort();
+    return unique.take(4).toList();
+  }
+
+  void _onQuickCashTap(double val) {
+    setState(() {
+      _paidAmountString = val.toInt().toString();
+    });
+    _focusNode.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isQris = widget.controller.selectedPayment == 'QRIS';
     final canConfirm = isQris || _paidAmount >= widget.controller.grandTotal;
 
-    return KeyboardListener(
-      focusNode: _focusNode,
-      onKeyEvent: _handleKeyEvent,
-      child: BaseDialog(
-        padding: EdgeInsets.zero,
-        child: Row(
-          children: [
-            // Left: Order Summary Info
-            Expanded(
-              flex: 2,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(28),
-                    bottomLeft: Radius.circular(28),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back),
-                        ),
-                        const SizedBox(width: 8),
-                        Text('Detail Pembayaran', style: AppTextStyles.h2),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _InfoRow(
-                      label: 'Pelanggan',
-                      value: widget.controller.customerName,
-                    ),
-                    _InfoRow(
-                      label: 'Paket',
-                      value:
-                          '${widget.controller.selectedPackage.name} (${widget.controller.selectedPackage.duration})',
-                    ),
-                    _InfoRow(
-                      label: 'Metode',
-                      value: widget.controller.selectedPayment,
-                    ),
-
-                    if (widget.controller.selectedAddons.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        'Add-ons:',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
+    return GestureDetector(
+      onTap: () {
+        _focusNode.requestFocus();
+      },
+      child: KeyboardListener(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: BaseDialog(
+          padding: EdgeInsets.zero,
+          width: 860,
+          maxHeight: 560,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Left: Order Summary Info
+                Expanded(
+                  flex: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      border: Border(
+                        right: BorderSide(
+                          color: AppColors.cardBorder.withValues(alpha: 0.6),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: widget.controller.selectedAddons.length,
-                          itemBuilder: (context, index) {
-                            final addon =
-                                widget.controller.selectedAddons[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Material(
+                              color: Colors.white,
+                              shape: const CircleBorder(),
+                              elevation: 2,
+                              shadowColor: Colors.black.withValues(alpha: 0.1),
+                              child: IconButton(
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(
+                                  Icons.arrow_back_rounded,
+                                  color: AppColors.textPrimary,
+                                  size: 20,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 40,
+                                ),
+                                padding: EdgeInsets.zero,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const Text('Detail Pembayaran', style: AppTextStyles.h2),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        _InfoRow(
+                          label: 'Pelanggan',
+                          value: widget.controller.customerName,
+                          icon: Icons.person_rounded,
+                        ),
+                        _InfoRow(
+                          label: 'Paket',
+                          value:
+                              '${widget.controller.selectedPackage.name} (${widget.controller.selectedPackage.duration})',
+                          icon: Icons.inventory_2_rounded,
+                        ),
+                        _InfoRow(
+                          label: 'Metode',
+                          value: widget.controller.selectedPayment,
+                          icon: Icons.payments_rounded,
+                        ),
+
+                        if (widget.controller.selectedAddons.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.cardBorder.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      addon.name,
-                                      style: AppTextStyles.bodySmall.copyWith(
-                                        fontSize: 12,
-                                        color: AppColors.textPrimary
-                                            .withValues(alpha: 0.8),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.add_box_rounded,
+                                        size: 14,
+                                        color: AppColors.primary,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'ADD-ON TAMBAHAN',
+                                        style: AppTextStyles.caption.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'x${addon.quantity}',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary,
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: ListView.builder(
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: widget.controller.selectedAddons.length,
+                                      itemBuilder: (context, index) {
+                                        final addon =
+                                            widget.controller.selectedAddons[index];
+                                        return Container(
+                                          margin: const EdgeInsets.only(bottom: 6),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.background
+                                                .withValues(alpha: 0.5),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  addon.name,
+                                                  style: AppTextStyles.bodyMedium.copyWith(
+                                                    fontSize: 12,
+                                                    color: AppColors.textPrimary,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primaryLight,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  'x${addon.quantity}',
+                                                  style: AppTextStyles.bodySmall.copyWith(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppColors.primaryDark,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                 ],
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ] else
-                      const Spacer(),
+                            ),
+                          ),
+                        ] else
+                          const Spacer(),
 
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.cardBorder),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Total Tagihan',
-                                style: AppTextStyles.bodyMedium,
-                              ),
-                              Text(
-                                _formatPrice(widget.controller.grandTotal),
-                                style: AppTextStyles.h3.copyWith(
-                                  color: AppColors.primary,
-                                ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppColors.primary,
+                                AppColors.primaryDark,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                          if (!isQris) ...[
-                            const SizedBox(height: 16),
-                            const Divider(),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Kembalian',
-                                  style: AppTextStyles.bodyMedium,
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Total Tagihan',
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatPrice(widget.controller.grandTotal),
+                                    style: AppTextStyles.h2White.copyWith(
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (!isQris) ...[
+                                const SizedBox(height: 12),
+                                Divider(
+                                  height: 1,
+                                  color: Colors.white.withValues(alpha: 0.2),
                                 ),
-                                Text(
-                                  _formatPrice(
-                                    _changeAmount < 0 ? 0 : _changeAmount,
-                                  ),
-                                  style: AppTextStyles.h3.copyWith(
-                                    color: _changeAmount >= 0
-                                        ? AppColors.success
-                                        : Colors.grey,
-                                  ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Kembalian',
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: Colors.white.withValues(alpha: 0.9),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Text(
+                                      _formatPrice(
+                                        _changeAmount < 0 ? 0 : _changeAmount,
+                                      ),
+                                      style: AppTextStyles.h2White.copyWith(
+                                        fontSize: 20,
+                                        color: _changeAmount >= 0
+                                            ? const Color(0xFF4ADE80)
+                                            : Colors.white.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
-                            ),
-                          ],
-                        ],
-                      ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
 
-            // Right: Numpad & Input
-            Expanded(
-              flex: 3,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Text('Uang Pembayaran', style: AppTextStyles.h3),
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppColors.primary,
-                          width: 2,
-                        ),
-                      ),
-                      child: Text(
-                        _formatPrice(_paidAmount),
-                        style: AppTextStyles.h2.copyWith(
-                          color: AppColors.primary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                // Right: Numpad & Input (or QRIS Info Panel)
+                Expanded(
+                  flex: 5,
+                  child: Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: isQris
+                          ? _buildQrisInfoPanel(context)
+                          : _buildCashNumpadPanel(context, canConfirm),
                     ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: GridView.count(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
-                        childAspectRatio: 2.8,
-                        children: [
-                          for (var i = 1; i <= 9; i++)
-                            _NumButton(
-                              val: '$i',
-                              onTap: () => _onNumberPress('$i'),
-                            ),
-                          _NumButton(
-                            val: '000',
-                            onTap: () => _onNumberPress('000'),
-                          ),
-                          _NumButton(
-                            val: '0',
-                            onTap: () => _onNumberPress('0'),
-                          ),
-                          _NumButton(
-                            val: 'X',
-                            onTap: _onBackspace,
-                            isAction: true,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DialogActionButton(
-                      label: 'KONFIRMASI & CETAK',
-                      primary: true,
-                      color: AppColors.primary,
-                      onPressed: canConfirm ? () => widget.onConfirm(isQris ? widget.controller.grandTotal : _paidAmount) : null,
-                    ),
-                  ],
+                  ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQrisInfoPanel(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.qr_code_rounded, color: AppColors.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'PEMBAYARAN QRIS',
+              style: AppTextStyles.caption.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textSecondary,
+                letterSpacing: 0.8,
               ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 20),
+        // QRIS Icon with border glow look
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.2),
+              width: 6,
+            ),
+          ),
+          child: const Icon(
+            Icons.qr_code_scanner_rounded,
+            color: AppColors.primaryDark,
+            size: 56,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Tunjukkan QRIS pada Layar Pelanggan',
+          style: AppTextStyles.h3.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Minta pelanggan memindai kode QRIS dinamis yang muncul di layar monitor luar.',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+            height: 1.4,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 20),
+        // Amount card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                'TOTAL PEMBAYARAN',
+                style: AppTextStyles.caption.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryDark,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _formatPrice(widget.controller.grandTotal),
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            onPressed: () => widget.onConfirm(widget.controller.grandTotal),
+            focusNode: FocusNode(canRequestFocus: false),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              shadowColor: AppColors.success.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.check_circle_outline_rounded, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'KONFIRMASI PEMBAYARAN SUKSES',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCashNumpadPanel(BuildContext context, bool canConfirm) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.calculate_rounded, color: AppColors.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'INPUT PEMBAYARAN TUNAI',
+              style: AppTextStyles.caption.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textSecondary,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Amount display box
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.8),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                'NOMINAL DITERIMA',
+                style: AppTextStyles.caption.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _formatPrice(_paidAmount),
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: _paidAmount > 0 ? AppColors.primaryDark : AppColors.textMuted,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Quick Cash Shortcuts
+        SizedBox(
+          height: 38,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            shrinkWrap: true,
+            children: _getQuickCashSuggestions(widget.controller.grandTotal).map((val) {
+              final isExact = val == widget.controller.grandTotal;
+              final label = isExact ? 'Uang Pas' : _formatPrice(val);
+              final isSelected = _paidAmount == val;
+              return Container(
+                margin: const EdgeInsets.only(right: 8),
+                child: Material(
+                  color: isSelected ? AppColors.primary : AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(20),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => _onQuickCashTap(val),
+                    canRequestFocus: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Center(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : AppColors.primaryDark,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 10),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 3,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 3.2,
+          children: [
+            for (var i = 1; i <= 9; i++)
+              _NumButton(
+                val: '$i',
+                onTap: () => _onNumberPress('$i'),
+              ),
+            _NumButton(
+              val: '000',
+              onTap: () => _onNumberPress('000'),
+            ),
+            _NumButton(
+              val: '0',
+              onTap: () => _onNumberPress('0'),
+            ),
+            _NumButton(
+              val: 'X',
+              onTap: _onBackspace,
+              isAction: true,
+              child: const Icon(
+                Icons.backspace_outlined,
+                color: AppColors.primaryDark,
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: canConfirm ? () => widget.onConfirm(_paidAmount) : null,
+            focusNode: FocusNode(canRequestFocus: false),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryDark,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade200,
+              disabledForegroundColor: Colors.grey.shade400,
+              elevation: canConfirm ? 4 : 0,
+              shadowColor: AppColors.primaryDark.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.print_rounded, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'KONFIRMASI & CETAK NOTA',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -360,26 +742,67 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
+  final IconData icon;
 
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 16,
+              color: AppColors.primaryDark,
             ),
           ),
-          Text(
-            value,
-            style: AppTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.bold,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],
@@ -392,27 +815,51 @@ class _NumButton extends StatelessWidget {
   final String val;
   final VoidCallback onTap;
   final bool isAction;
+  final Widget? child;
 
   const _NumButton({
     required this.val,
     required this.onTap,
     this.isAction = false,
+    this.child,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: isAction ? Colors.orange : Colors.grey.shade100,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Center(
-          child: Text(
-            val,
-            style: AppTextStyles.h3.copyWith(
-              color: isAction ? Colors.white : AppColors.textPrimary,
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: isAction ? AppColors.primaryLight : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isAction
+              ? AppColors.primary.withValues(alpha: 0.3)
+              : AppColors.cardBorder.withValues(alpha: 0.7),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          canRequestFocus: false,
+          borderRadius: BorderRadius.circular(14),
+          child: Center(
+            child: child ??
+                Text(
+                  val,
+                  style: AppTextStyles.h3.copyWith(
+                    color: isAction ? AppColors.primaryDark : AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
           ),
         ),
       ),
