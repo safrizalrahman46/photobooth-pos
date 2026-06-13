@@ -39,7 +39,7 @@ class QueueService
             $queueNumber = $this->nextQueueNumber((int) $booking->branch_id, $date->toDateString());
 
             $ticket = QueueTicket::query()->create([
-                'queue_code' => $this->codeGenerator->generateQueueCode($date, $queueNumber),
+                'queue_code' => $this->codeGenerator->generateQueueCode($date, $queueNumber, $booking->branch_id),
                 'branch_id' => $booking->branch_id,
                 'queue_date' => $date->toDateString(),
                 'queue_number' => $queueNumber,
@@ -86,7 +86,7 @@ class QueueService
             $queueNumber = $this->nextQueueNumber((int) $payload['branch_id'], $date->toDateString());
 
             $ticket = QueueTicket::query()->create([
-                'queue_code' => $this->codeGenerator->generateQueueCode($date, $queueNumber),
+                'queue_code' => $this->codeGenerator->generateQueueCode($date, $queueNumber, $payload['branch_id']),
                 'branch_id' => $payload['branch_id'],
                 'queue_date' => $date->toDateString(),
                 'queue_number' => $queueNumber,

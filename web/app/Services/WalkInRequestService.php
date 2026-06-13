@@ -106,7 +106,7 @@ class WalkInRequestService
         $this->expirePendingRequests();
 
         $query = WalkInRequest::query()
-            ->with(['branch', 'transaction', 'queueTicket'])
+            ->with(['branch', 'transaction.payments', 'queueTicket'])
             ->orderByDesc('created_at');
 
         if (! empty($filters['branch_id'])) {
@@ -203,10 +203,10 @@ class WalkInRequestService
             ], $cashierId);
 
             $transaction = $this->transactionService->addPayment($transaction, [
-                'method' => 'cash',
+                'method' => $payload['payment_method'] ?? 'cash',
                 'amount' => (float) $lockedRequest->total_amount,
                 'reference_no' => $payload['reference_no'] ?? null,
-                'notes' => 'Self walk-in QR cash payment.',
+                'notes' => sprintf('Self walk-in QR %s payment.', $payload['payment_method'] ?? 'cash'),
                 'meta' => [
                     'type' => 'self_walk_in_qr',
                     'walk_in_request_id' => (int) $lockedRequest->id,
