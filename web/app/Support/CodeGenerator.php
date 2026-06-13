@@ -36,8 +36,11 @@ class CodeGenerator
         return $this->generateDailyCode('WLK', $date, WalkInRequest::query(), 'request_code');
     }
 
-    public function generateQueueCode(Carbon $date, int $queueNumber): string
+    public function generateQueueCode(Carbon $date, int $queueNumber, int|string|null $branchId = null): string
     {
+        if ($branchId !== null) {
+            return sprintf('Q-%s-%s-%03d', (string) $branchId, $date->format('Ymd'), $queueNumber);
+        }
         return sprintf('Q-%s-%03d', $date->format('Ymd'), $queueNumber);
     }
 

@@ -17,7 +17,7 @@ class ConfirmWalkInRequestPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'payment_method' => ['nullable', Rule::in(['cash'])],
+            'payment_method' => ['nullable', Rule::in(['cash', 'qris'])],
             'reference_no' => ['nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];

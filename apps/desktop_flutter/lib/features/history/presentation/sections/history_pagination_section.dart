@@ -152,20 +152,27 @@ class _NavButton extends StatelessWidget {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: AppColors.cardBorder),
-          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.bold,
             color: isDisabled
-                ? AppColors.textMuted
-                : AppColors.textPrimary,
+                ? const Color(0xFF94A3B8)
+                : const Color(0xFF1E293B),
           ),
         ),
       ),
@@ -189,23 +196,36 @@ class _PageButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36,
-        height: 36,
-        margin: const EdgeInsets.symmetric(horizontal: 2),
+        width: 40,
+        height: 40,
+        margin: const EdgeInsets.symmetric(horizontal: 3),
         decoration: BoxDecoration(
-          // Warna aktif biru sesuai desain
-          // Ganti Color(0xFF3B82F6) dengan AppColors.primary jika tersedia
-          color: isActive ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: isActive ? null : Border.all(color: AppColors.cardBorder),
+          color: isActive ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: isActive ? null : Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.01),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         alignment: Alignment.center,
         child: Text(
           '$page',
           style: TextStyle(
             fontSize: 13,
-            fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-            color: isActive ? Colors.white : AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+            color: isActive ? Colors.white : const Color(0xFF1E293B),
           ),
         ),
       ),
@@ -218,9 +238,16 @@ class _Ellipsis extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text('…', style: TextStyle(color: AppColors.textMuted)),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 6),
+      child: Text(
+        '…',
+        style: TextStyle(
+          color: Color(0xFF94A3B8),
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }

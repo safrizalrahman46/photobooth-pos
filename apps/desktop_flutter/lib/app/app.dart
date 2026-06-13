@@ -117,10 +117,10 @@ class _ReadyToPictDesktopAppState extends State<ReadyToPictDesktopApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFB5672A),
+          seedColor: const Color(0xFF4AB3F4),
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF6F1E8),
+        scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
         fontFamily: 'Segoe UI',
       ),

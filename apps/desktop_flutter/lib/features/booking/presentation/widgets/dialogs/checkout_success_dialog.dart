@@ -202,14 +202,6 @@ class CheckoutSuccessDialog extends StatelessWidget {
               children: [
                 Expanded(
                   child: DialogActionButton(
-                    label: 'CETAK STRUK',
-                    icon: Icons.print_outlined,
-                    onPressed: onPrint,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DialogActionButton(
                     label: 'SELESAI',
                     primary: true,
                     color: AppColors.primaryDark,
@@ -219,7 +211,25 @@ class CheckoutSuccessDialog extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // Subtle fallback Print Button
+            TextButton.icon(
+              onPressed: onPrint,
+              icon: const Icon(
+                Icons.print_outlined,
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+              label: Text(
+                'Cetak Ulang Nota (Cadangan jika gagal)',
+                style: AppTextStyles.captionMedium.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
 
             // Footer Link
             TextButton(

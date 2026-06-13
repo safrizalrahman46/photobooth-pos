@@ -49,11 +49,11 @@ class WalkInRequestController extends Controller
                 (int) $request->user()->id
             );
         } catch (ValidationException $exception) {
-            return $this->responder->error(
-                $exception->validator->errors()->first() ?: 'Konfirmasi self walk-in gagal.',
-                422,
-                $exception->errors()
-            );
+            $message = $exception->validator
+                ? ($exception->validator->errors()->first() ?: 'Konfirmasi self walk-in gagal.')
+                : ($exception->getMessage() ?: 'Konfirmasi self walk-in gagal.');
+
+            return $this->responder->error($message, 422, $exception->errors());
         } catch (RuntimeException $exception) {
             return $this->responder->error($exception->getMessage() ?: 'Konfirmasi self walk-in gagal.', 422);
         }

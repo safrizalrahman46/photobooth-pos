@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:desktop_flutter/shared/models/desktop_session.dart';
 import '../../../shared/layout/sidebar/sidebar.dart';
-import '../../../shared/layout/header/app_header.dart';
 import 'widgets/dialogs/logout_dialog.dart';
 import 'widgets/dialogs/session_active_warning_dialog.dart';
 import 'package:desktop_flutter/shared/widgets/session_guard.dart';
@@ -219,13 +218,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
 
           // ── Content ─────────────────────────────
           Expanded(
-            child: Column(
-              children: [
-                const AppHeader(),
-
-                Expanded(child: activeDestination.builder()),
-              ],
-            ),
+            child: activeDestination.builder(),
           ),
         ],
       ),

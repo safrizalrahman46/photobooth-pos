@@ -1,7 +1,6 @@
 // features/history/presentation/widgets/history/history_table.dart
 
 import 'package:flutter/material.dart';
-import 'package:desktop_flutter/app/theme/app_colors.dart';
 import '../../../domain/entities/transaction.dart';
 import 'history_row.dart';
 import 'history_empty.dart';
@@ -29,7 +28,7 @@ class HistoryTable extends StatelessWidget {
   // Lebar kolom — harus sinkron dengan HistoryRow
   // Flex factors untuk masing-masing kolom agar proporsional
   static const int _flexId = 2;
-  static const int _flexWaktu = 2;
+  static const int _flexWaktu = 3;
   static const int _flexNama = 3;
   static const int _flexPaket = 4;
   static const int _flexTotal = 2;
@@ -47,44 +46,43 @@ class HistoryTable extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        // Jika menggunakan AppCard global, ganti Container ini dengan AppCard
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          _buildHeader(),
-          if (transactions.isEmpty)
-            const HistoryEmpty()
-          else
-            ...transactions.map(
-              (tx) => HistoryRow(
-                transaction: tx,
-                onActionPressed: () => onRowAction(tx),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Column(
+          children: [
+            _buildHeader(),
+            if (transactions.isEmpty)
+              const HistoryEmpty()
+            else
+              ...transactions.map(
+                (tx) => HistoryRow(
+                  transaction: tx,
+                  onActionPressed: () => onRowAction(tx),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader() {
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-        border: Border(bottom: BorderSide(color: AppColors.cardBorder)),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF8FAFC), // Cool gray/slate
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
       child: Row(
         children: [
           _headerCell('ID TRANSAKSI', _flexId),
@@ -102,13 +100,16 @@ class HistoryTable extends StatelessWidget {
   Widget _headerCell(String label, int flex) {
     return Expanded(
       flex: flex,
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textSecondary,
-          letterSpacing: 0.5,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 16),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF64748B), // Slate 500
+            letterSpacing: 0.75,
+          ),
         ),
       ),
     );

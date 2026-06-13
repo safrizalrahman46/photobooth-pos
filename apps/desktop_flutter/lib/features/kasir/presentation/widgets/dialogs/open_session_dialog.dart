@@ -40,18 +40,47 @@ class _OpenSessionDialogState extends State<OpenSessionDialog> {
   @override
   Widget build(BuildContext context) {
     return BaseDialog(
-      width: 420,
+      width: 440,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Buka Sesi Kasir', style: AppTextStyles.h2),
-          const SizedBox(height: 20),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.lock_open_rounded, color: AppColors.primary, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Text('Buka Sesi Kasir', style: AppTextStyles.h2),
+            ],
+          ),
+          const SizedBox(height: 24),
           DropdownButtonFormField<int>(
             initialValue: _branchId,
-            decoration: const InputDecoration(
+            style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
+            decoration: InputDecoration(
               labelText: 'Cabang',
-              border: OutlineInputBorder(),
+              labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+              filled: true,
+              fillColor: AppColors.inputBg,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.inputBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.inputBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.inputFocus, width: 2),
+              ),
             ),
             items: widget.branches
                 .map((branch) =>
@@ -61,39 +90,73 @@ class _OpenSessionDialogState extends State<OpenSessionDialog> {
               if (value != null) setState(() => _branchId = value);
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           TextField(
             controller: _cashController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
+            style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
+            decoration: InputDecoration(
               labelText: 'Uang laci awal',
-              border: OutlineInputBorder(),
+              labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+              filled: true,
+              fillColor: AppColors.inputBg,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.inputBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.inputBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.inputFocus, width: 2),
+              ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           TextField(
             controller: _notesController,
-            decoration: const InputDecoration(
+            style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
+            decoration: InputDecoration(
               labelText: 'Catatan (opsional)',
-              border: OutlineInputBorder(),
+              labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+              filled: true,
+              fillColor: AppColors.inputBg,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.inputBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.inputBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.inputFocus, width: 2),
+              ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               OutlinedButton(
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  side: const BorderSide(color: AppColors.inputBorder, width: 1.5),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 14,
+                    horizontal: 22,
+                    vertical: 16,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text('Batal'),
+                child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600)),
               ),
               const SizedBox(width: 12),
               ElevatedButton(
@@ -115,14 +178,14 @@ class _OpenSessionDialogState extends State<OpenSessionDialog> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 14,
+                    horizontal: 26,
+                    vertical: 16,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text('Buka Sesi'),
+                child: const Text('Buka Sesi', style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
           ),

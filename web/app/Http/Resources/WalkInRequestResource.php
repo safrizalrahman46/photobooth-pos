@@ -23,6 +23,7 @@ class WalkInRequestResource extends JsonResource
             'subtotal_amount' => (float) $this->subtotal_amount,
             'total_amount' => (float) $this->total_amount,
             'status' => (string) $this->status,
+            'payment_method' => $this->transaction?->payments?->first()?->method?->value,
             'expires_at' => $this->expires_at?->toIso8601String(),
             'paid_at' => $this->paid_at?->toIso8601String(),
             'confirmed_by' => $this->confirmed_by ? (int) $this->confirmed_by : null,

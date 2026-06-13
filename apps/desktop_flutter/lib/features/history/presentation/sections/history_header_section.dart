@@ -6,25 +6,7 @@ import '../widgets/filters/filter_button.dart';
 import '../widgets/filters/export_button.dart';
 import '../../domain/entities/transaction.dart';
 
-// ─── Referensi global ──────────────────────────────────────────────────────────
-// Gunakan SearchField dari shared/widgets/inputs/search_field.dart
-// sebagai pengganti TextField di bawah agar konsisten di seluruh aplikasi.
-// Contoh: import '../../../../shared/widgets/inputs/search_field.dart';
-//
-// Gunakan AppTextStyles dari app/theme/app_text_styles.dart untuk teks judul.
-
 /// Section header halaman History: search bar + tombol Filter & Export.
-///
-/// Contoh penggunaan:
-/// ```dart
-/// HistoryHeaderSection(
-///   searchQuery: controller.searchQuery,
-///   onSearchChanged: controller.onSearchChanged,
-///   selectedStatus: controller.statusFilter,
-///   onStatusFilterChanged: controller.onStatusFilterChanged,
-///   onExport: controller.onExport,
-/// )
-/// ```
 class HistoryHeaderSection extends StatelessWidget {
   final String searchQuery;
   final ValueChanged<String> onSearchChanged;
@@ -46,48 +28,51 @@ class HistoryHeaderSection extends StatelessWidget {
     return Row(
       children: [
         // ── Search field ──────────────────────────────────────────────────
-        // Ganti dengan SearchField dari shared/widgets/inputs/search_field.dart
         Expanded(
-          child: SizedBox(
-            height: 42,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: TextField(
               controller: TextEditingController(text: searchQuery)
                 ..selection = TextSelection.collapsed(
                   offset: searchQuery.length,
                 ),
               onChanged: onSearchChanged,
-              style: const TextStyle(fontSize: 14),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Cari No. Transaksi atau Nama...',
-                hintStyle: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 14,
-                ),
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  size: 18,
-                  color: AppColors.textMuted,
-                ),
+                hintStyle: const TextStyle(color: Colors.grey, fontWeight: FontWeight.normal),
+                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
                 filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                fillColor: Colors.transparent,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: AppColors.cardBorder),
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                    color: AppColors.primary,
-                    width: 1.5,
-                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 2),
                 ),
               ),
             ),
           ),
         ),
 
-        const SizedBox(width: 12),
+        const SizedBox(width: 14),
 
         // ── Filter button ─────────────────────────────────────────────────
         FilterButton(
@@ -95,7 +80,7 @@ class HistoryHeaderSection extends StatelessWidget {
           onChanged: onStatusFilterChanged,
         ),
 
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
 
         // ── Export button ─────────────────────────────────────────────────
         ExportButton(onPressed: onExport),

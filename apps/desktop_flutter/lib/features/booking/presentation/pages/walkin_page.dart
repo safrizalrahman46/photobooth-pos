@@ -152,6 +152,72 @@ class _WalkinPageState extends State<WalkinPage> {
 
       final session = ApiSession.current;
 
+      // Show print buffering dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                    strokeWidth: 3,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Sedang Mencetak Struk...',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Harap tunggu sebentar, printer sedang memproses nota.',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Trigger automatic printing in background/foreground
+      try {
+        await ReceiptPrinter.printTransactionReceipt(
+          transaction: result.transaction,
+          brandName: 'Ready To Pict',
+          branchName: _controller.selectedBranchName,
+          cashierName: session?.user.name ?? '-',
+          queueCode: result.queueTicket.queueCode,
+          paperWidthMm: 80,
+        ).timeout(const Duration(seconds: 8));
+      } catch (e) {
+        debugPrint('Auto print failed: $e');
+      }
+
+      if (!context.mounted) return;
+
+      // Close print buffering dialog
+      Navigator.pop(context);
+
       showDialog(
         context: context,
         barrierDismissible: false,
