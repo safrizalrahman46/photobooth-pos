@@ -17,6 +17,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $permissions = [
             'booking.view',
             'booking.manage',
+            'booking.delete',
             'queue.view',
             'queue.manage',
             'transaction.view',
@@ -45,6 +46,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $admin->syncPermissions([
             'booking.view',
             'booking.manage',
+            'booking.delete',
             'queue.view',
             'queue.manage',
             'transaction.view',

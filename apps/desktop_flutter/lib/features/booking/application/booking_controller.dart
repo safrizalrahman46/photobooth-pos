@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/shared/models/booking_item.dart';
@@ -411,6 +413,13 @@ class BookingController extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<Uint8List?> downloadProofImage(int bookingId) async {
+    final client = ApiSession.client;
+    if (client == null) return null;
+
+    return client.downloadRaw('/bookings/$bookingId/transfer-proof');
   }
 
   Future<PosWalkInCheckoutResult?> checkoutWalkIn() async {

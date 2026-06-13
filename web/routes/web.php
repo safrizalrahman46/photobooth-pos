@@ -23,6 +23,7 @@ use App\Http\Controllers\Web\AdminUserController;
 use App\Http\Controllers\Web\BookingController;
 use App\Http\Controllers\Web\LandingController;
 use App\Http\Controllers\Web\PackageSamplePhotoController;
+use App\Http\Controllers\Web\QrMediaController;
 use App\Http\Controllers\Web\QueueBoardController;
 use App\Http\Controllers\Web\WalkInRequestController;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,9 @@ Route::prefix('walk-in')->name('walk-in.')->group(function () {
 Route::get('/media/package-samples/{path}', PackageSamplePhotoController::class)
     ->where('path', '.*')
     ->name('media.package-samples');
+Route::get('/media/qr/{path}', QrMediaController::class)
+    ->where('path', '.*')
+    ->name('media.qr');
 
 Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/customer', [BookingController::class, 'customer'])->name('customer');
@@ -167,7 +171,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::post('/bookings', [AdminBookingController::class, 'store'])->middleware('admin.permission:booking.manage')->name('bookings.store');
         Route::put('/bookings/{booking}', [AdminBookingController::class, 'update'])->middleware('admin.permission:booking.manage');
-        Route::delete('/bookings/{booking}', [AdminBookingController::class, 'destroy'])->middleware('admin.permission:booking.manage');
+        Route::delete('/bookings/{booking}', [AdminBookingController::class, 'destroy'])->middleware('admin.permission:booking.delete');
         Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm'])->middleware('admin.permission:booking.manage');
         Route::post('/bookings/{booking}/confirm-payment', [AdminBookingController::class, 'confirmPayment'])->middleware('admin.permission:booking.manage,payment.manage');
         Route::post('/bookings/{booking}/decline', [AdminBookingController::class, 'decline'])->middleware('admin.permission:booking.manage');

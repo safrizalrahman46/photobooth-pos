@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:desktop_flutter/app/theme/app_colors.dart';
 import 'package:desktop_flutter/app/theme/app_text_styles.dart';
 import 'package:desktop_flutter/features/booking/application/booking_controller.dart';
@@ -21,6 +23,9 @@ class _BookingDetailDialogState extends State<BookingDetailDialog> {
   bool _loadingDetail = true;
   bool _isProcessing = false;
   String? _error;
+  Uint8List? _proofImageBytes;
+  bool _loadingProof = false;
+  bool _proofError = false;
 
   Booking get _booking => widget.controller.selectedBooking;
 
@@ -48,6 +53,9 @@ class _BookingDetailDialogState extends State<BookingDetailDialog> {
         _detail = detail;
         _loadingDetail = false;
       });
+      if (detail != null && detail.transferProofUrl.isNotEmpty) {
+        _loadProofImage(recordId);
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -55,6 +63,20 @@ class _BookingDetailDialogState extends State<BookingDetailDialog> {
         _error = 'Detail booking gagal dimuat.';
       });
     }
+  }
+
+  Future<void> _loadProofImage(int bookingId) async {
+    _loadingProof = true;
+    setState(() {});
+
+    final bytes = await widget.controller.downloadProofImage(bookingId);
+
+    if (!mounted) return;
+    setState(() {
+      _proofImageBytes = bytes;
+      _loadingProof = false;
+      _proofError = bytes == null;
+    });
   }
 
   Future<void> _handleVerify() async {
@@ -272,7 +294,7 @@ class _BookingDetailDialogState extends State<BookingDetailDialog> {
   }
 
   Widget _buildPaymentProof() {
-    if (_loadingDetail) {
+    if (_loadingDetail || _loadingProof) {
       return const SizedBox(
         height: 48,
         child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -295,46 +317,35 @@ class _BookingDetailDialogState extends State<BookingDetailDialog> {
       );
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Image.network(
-        proofUrl,
-        height: 160,
-        width: double.infinity,
-        fit: BoxFit.contain,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          final total = loadingProgress.expectedTotalBytes;
-          final progress = total != null
-              ? loadingProgress.cumulativeBytesLoaded / total
-              : null;
-          return SizedBox(
-            height: 160,
-            child: Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                value: progress,
-              ),
-            ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.error.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(
-              child: Text(
-                'Gagal memuat bukti pembayaran.',
-                style: TextStyle(fontSize: 11, color: AppColors.error),
-              ),
-            ),
-          );
-        },
-      ),
-    );
+    if (_proofError) {
+      return Container(
+        height: 80,
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Center(
+          child: Text(
+            'Gagal memuat bukti pembayaran.',
+            style: TextStyle(fontSize: 11, color: AppColors.error),
+          ),
+        ),
+      );
+    }
+
+    if (_proofImageBytes != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.memory(
+          _proofImageBytes!,
+          height: 160,
+          width: double.infinity,
+          fit: BoxFit.contain,
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildAddOns() {

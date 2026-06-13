@@ -29,31 +29,31 @@ class BookingPolicy
 
     public function delete(User $user, Booking $booking): bool
     {
-        return $user->can('booking.manage');
+        return $user->can('booking.delete');
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('booking.manage');
+        return $user->can('booking.delete');
     }
 
     public function restore(User $user, Booking $booking): bool
     {
-        return $user->can('booking.manage');
+        return $user->can('booking.delete');
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('booking.manage');
+        return $user->can('booking.delete');
     }
 
     public function forceDelete(User $user, Booking $booking): bool
     {
-        return $user->can('booking.manage');
+        return $user->can('booking.delete');
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('booking.manage');
+        return $user->can('booking.delete');
     }
 }

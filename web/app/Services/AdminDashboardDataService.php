@@ -102,7 +102,7 @@ class AdminDashboardDataService
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'branch_id', 'name', 'duration_minutes', 'base_price', 'sample_photos'])
+                ->get(['id', 'branch_id', 'name', 'duration_minutes', 'base_price', 'sample_photos', 'code'])
                 ->map(function (Package $package): array {
                     $price = (float) $package->base_price;
 
@@ -110,6 +110,7 @@ class AdminDashboardDataService
                         'id' => (int) $package->id,
                         'branch_id' => $package->branch_id ? (int) $package->branch_id : null,
                         'name' => (string) $package->name,
+                        'code' => (string) $package->code,
                         'duration_minutes' => (int) $package->duration_minutes,
                         'base_price' => $price,
                         'base_price_text' => $this->formatRupiah($price),
@@ -122,11 +123,12 @@ class AdminDashboardDataService
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'package_id', 'name'])
+                ->get(['id', 'package_id', 'name', 'preview_url'])
                 ->map(fn (DesignCatalog $design): array => [
                     'id' => (int) $design->id,
                     'package_id' => $design->package_id ? (int) $design->package_id : null,
                     'name' => (string) $design->name,
+                    'preview_url' => (string) ($design->preview_url ?? ''),
                 ])
                 ->values()
                 ->all(),
