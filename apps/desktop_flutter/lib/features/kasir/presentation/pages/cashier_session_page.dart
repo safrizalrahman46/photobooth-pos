@@ -362,8 +362,9 @@ class _CashierSessionPageState extends State<CashierSessionPage> {
                                   child: ElevatedButton.icon(
                                     onPressed: _busy ? null : _addExpense,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary,
-                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: AppColors.primary,
+                                      side: const BorderSide(color: AppColors.primary, width: 1.5),
                                       elevation: 0,
                                       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
                                       shape: RoundedRectangleBorder(

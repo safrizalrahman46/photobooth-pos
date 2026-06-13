@@ -106,10 +106,10 @@ class HistoryRow extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 16),
                 child: Text(
                   _formatRupiah(transaction.totalBayar),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
