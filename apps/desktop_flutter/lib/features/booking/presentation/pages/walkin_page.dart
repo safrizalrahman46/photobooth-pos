@@ -107,15 +107,15 @@ class _WalkinPageState extends State<WalkinPage> {
       barrierDismissible: true,
       builder: (dialogContext) => PaymentCalculationDialog(
         controller: _controller,
-        onConfirm: () {
+        onConfirm: (paidAmount) {
           Navigator.pop(dialogContext); // Close payment dialog
-          _performCheckout(context); // Proceed with page context
+          _performCheckout(context, paidAmount); // Proceed with page context
         },
       ),
     );
   }
 
-  Future<void> _performCheckout(BuildContext context) async {
+  Future<void> _performCheckout(BuildContext context, double paidAmount) async {
     // Show loading dialog
     showDialog(
       context: context,
@@ -126,7 +126,7 @@ class _WalkinPageState extends State<WalkinPage> {
 
     try {
       // Add a timeout to the checkout process just in case
-      final result = await _controller.checkoutWalkIn().timeout(
+      final result = await _controller.checkoutWalkIn(paidAmount).timeout(
         const Duration(seconds: 20),
         onTimeout: () => throw Exception(
           'Waktu proses habis (Timeout). Silakan cek koneksi internet.',
@@ -258,6 +258,33 @@ class _CustomerInfoRow extends StatelessWidget {
                 value: controller.note,
                 onChanged: controller.updateNote,
               ),
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'IZIN SHARE FOTO',
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: controller.allowSharePhotos,
+                      onChanged: controller.updateAllowSharePhotos,
+                      activeColor: AppColors.primary,
+                    ),
+                    Text(
+                      'Boleh Share Foto',
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

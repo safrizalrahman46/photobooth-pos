@@ -8,7 +8,7 @@ import '../../../application/booking_controller.dart';
 
 class PaymentCalculationDialog extends StatefulWidget {
   final BookingController controller;
-  final VoidCallback onConfirm;
+  final void Function(double paidAmount) onConfirm;
 
   const PaymentCalculationDialog({
     super.key,
@@ -113,7 +113,7 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
         final canConfirm =
             isQris || _paidAmount >= widget.controller.grandTotal;
         if (canConfirm) {
-          widget.onConfirm();
+          widget.onConfirm(isQris ? widget.controller.grandTotal : _paidAmount);
         }
       }
     }
@@ -344,7 +344,7 @@ class _PaymentCalculationDialogState extends State<PaymentCalculationDialog> {
                       label: 'KONFIRMASI & CETAK',
                       primary: true,
                       color: AppColors.primary,
-                      onPressed: canConfirm ? widget.onConfirm : null,
+                      onPressed: canConfirm ? () => widget.onConfirm(isQris ? widget.controller.grandTotal : _paidAmount) : null,
                     ),
                   ],
                 ),

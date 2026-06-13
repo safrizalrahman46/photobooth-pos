@@ -207,6 +207,35 @@ class _BookingDetailDialogState extends State<BookingDetailDialog> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Photo Sharing Consent Checkbox
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBg,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.cardBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: widget.controller.allowSharePhotos,
+                          onChanged: (val) {
+                            setState(() {
+                              widget.controller.toggleAllowSharePhotos(val);
+                            });
+                          },
+                          activeColor: AppColors.primary,
+                        ),
+                        Text(
+                          'Izin Share Foto',
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Payment Proof
                   Container(
                     width: double.infinity,

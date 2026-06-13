@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
+import 'package:desktop_flutter/core/utils/date_util.dart';
 import 'package:desktop_flutter/shared/models/booking_item.dart';
 import 'package:desktop_flutter/shared/models/pos_walk_in_checkout_result.dart';
 import 'package:desktop_flutter/shared/models/referral_preview.dart';
@@ -28,6 +29,7 @@ class BookingController extends ChangeNotifier {
   String email = '';
   String note = '';
   int jumlahOrang = 1;
+  bool allowSharePhotos = true;
 
   // Queue list
   List<Booking> queues = [];
@@ -179,6 +181,7 @@ class BookingController extends ChangeNotifier {
   // Methods
   void selectQueue(int index) {
     selectedQueueIndex = index;
+    allowSharePhotos = true;
     safeNotify();
   }
 
@@ -264,6 +267,16 @@ class BookingController extends ChangeNotifier {
     safeNotify();
   }
 
+  void updateAllowSharePhotos(bool? val) {
+    allowSharePhotos = val ?? false;
+    safeNotify();
+  }
+
+  void toggleAllowSharePhotos(bool? val) {
+    allowSharePhotos = val ?? false;
+    safeNotify();
+  }
+
   void updateReferralCode(String val) {
     referralCode = val.toUpperCase();
     _clearReferralPreview(keepMessage: false);
@@ -345,17 +358,25 @@ class BookingController extends ChangeNotifier {
                   : booking.totalAmount * 0.5
             : booking.totalAmount;
 
+        final consentNote = allowSharePhotos
+            ? '[Izin Share: YA]'
+            : '[Izin Share: TIDAK]';
+
         await client.confirmBookingPayment(
           bookingId: booking.recordId!,
           method: 'transfer',
           amount: paymentAmount,
-          notes: 'Diverifikasi dari aplikasi desktop.',
+          notes: 'Diverifikasi dari aplikasi desktop. $consentNote',
         );
         if (_disposed) return;
       } else if (booking.canConfirmBooking) {
+        final consentNote = allowSharePhotos
+            ? '[Izin Share: YA]'
+            : '[Izin Share: TIDAK]';
+
         await client.confirmBooking(
           bookingId: booking.recordId!,
-          reason: 'Diverifikasi dari aplikasi desktop.',
+          reason: 'Diverifikasi dari aplikasi desktop. $consentNote',
         );
       }
 
@@ -422,7 +443,7 @@ class BookingController extends ChangeNotifier {
     return client.downloadRaw('/bookings/$bookingId/transfer-proof');
   }
 
-  Future<PosWalkInCheckoutResult?> checkoutWalkIn() async {
+  Future<PosWalkInCheckoutResult?> checkoutWalkIn(double paidAmount) async {
     final client = ApiSession.client;
     final branchId = selectedBranchId;
 
@@ -443,15 +464,18 @@ class BookingController extends ChangeNotifier {
     safeNotify();
 
     try {
+      final consentSuffix = allowSharePhotos ? '[Izin Share: YA]' : '[Izin Share: TIDAK]';
+      final finalNote = note.trim().isEmpty ? consentSuffix : '${note.trim()} $consentSuffix';
+
       final result = await client.checkoutWalkIn(
         branchId: branchId,
         packageId: int.parse(selectedPackage.id),
         customerName: customerName.trim(),
         customerPhone: whatsapp.trim(),
         paymentMethod: selectedPayment == 'QRIS' ? 'qris' : 'cash',
-        paidAmount: grandTotal,
+        paidAmount: paidAmount,
         referralCode: referralPreview == null ? null : referralCode.trim(),
-        notes: note.trim().isEmpty ? null : note.trim(),
+        notes: finalNote.trim().isEmpty ? null : finalNote.trim(),
         addons: selectedAddons
             .map(
               (addon) => {
@@ -530,18 +554,7 @@ class BookingController extends ChangeNotifier {
   }
 
   String _formatBookingTime(String? value) {
-    if (value == null || value.isEmpty) {
-      return '-';
-    }
-
-    final parsed = DateTime.tryParse(value);
-
-    if (parsed == null) {
-      return value;
-    }
-
-    final local = parsed.toLocal();
-    return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    return DateUtil.formatBookingTime(value);
   }
 
   @override

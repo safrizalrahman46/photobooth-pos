@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:desktop_flutter/core/utils/date_util.dart';
 import 'package:desktop_flutter/shared/models/cashier_settlement_item.dart';
 import 'package:desktop_flutter/shared/models/transaction_record.dart';
 import 'package:pdf/pdf.dart';
@@ -196,7 +197,7 @@ class ReceiptPrinter {
     doc.addPage(
       pw.MultiPage(
         pageFormat: pageFormat,
-        margin: const pw.EdgeInsets.all(14),
+        margin: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         build: (context) => <pw.Widget>[
           pw.Center(
             child: pw.Text(
@@ -212,7 +213,7 @@ class ReceiptPrinter {
               textAlign: pw.TextAlign.center,
             ),
           ),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 6),
           if (receiptTitle != null && receiptTitle.isNotEmpty) ...[
             pw.Center(
               child: pw.Text(
@@ -231,14 +232,13 @@ class ReceiptPrinter {
           _labelValue('Tanggal', createdAt),
           _labelValue('Kasir', cashierName),
           _labelValue('Status', transaction.status.toUpperCase()),
-          pw.SizedBox(height: 8),
-          pw.Divider(thickness: 0.7),
-          pw.SizedBox(height: 4),
+          _labelValue('Pelanggan', transaction.customerName.isEmpty ? '-' : transaction.customerName),
+          pw.Divider(thickness: 0.5, height: 6),
           pw.Text(
             'Items',
-            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
           ),
-          pw.SizedBox(height: 4),
+          pw.SizedBox(height: 2),
           ...transaction.items.map((item) {
             final highlighted = highlightedItemIds.contains(item.id);
             final itemStyle = pw.TextStyle(
@@ -251,7 +251,7 @@ class ReceiptPrinter {
             );
 
             return pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 4),
+              padding: const pw.EdgeInsets.only(bottom: 2),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: <pw.Widget>[
@@ -276,7 +276,7 @@ class ReceiptPrinter {
               ),
             );
           }),
-          pw.Divider(thickness: 0.7),
+          pw.Divider(thickness: 0.5, height: 6),
           if (transaction.discountAmount > 0) ...[
             _labelValue('Subtotal', _currency(transaction.subtotalAmount)),
             if (transaction.referralCode.isNotEmpty)
@@ -286,12 +286,12 @@ class ReceiptPrinter {
           _labelValue('Total', _currency(transaction.totalAmount), bold: true),
           _labelValue('Dibayar', _currency(transaction.paidAmount)),
           _labelValue('Kembalian', _currency(transaction.changeAmount)),
-          pw.SizedBox(height: 8),
+          pw.SizedBox(height: 4),
           pw.Text(
             'Pembayaran',
-            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
           ),
-          pw.SizedBox(height: 4),
+          pw.SizedBox(height: 2),
           if (transaction.payments.isEmpty)
             pw.Text('-', style: const pw.TextStyle(fontSize: 9))
           else
@@ -306,18 +306,18 @@ class ReceiptPrinter {
                 '${_currency(payment.amount)}$ref',
               );
             }),
-          pw.SizedBox(height: 10),
-          pw.Divider(thickness: 0.7),
+          pw.SizedBox(height: 4),
+          pw.Divider(thickness: 0.5, height: 6),
           pw.Center(
             child: pw.Text(
               'Terima kasih',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
             ),
           ),
           pw.Center(
             child: pw.Text(
               'Simpan struk ini sebagai bukti pembayaran.',
-              style: const pw.TextStyle(fontSize: 8),
+              style: const pw.TextStyle(fontSize: 7),
               textAlign: pw.TextAlign.center,
             ),
           ),
@@ -401,24 +401,7 @@ class ReceiptPrinter {
   }
 
   static String _formatDateTime(String? value) {
-    if (value == null || value.isEmpty) {
-      return '-';
-    }
-
-    final parsed = DateTime.tryParse(value);
-
-    if (parsed == null) {
-      return value;
-    }
-
-    final local = parsed.toLocal();
-    final year = local.year.toString().padLeft(4, '0');
-    final month = local.month.toString().padLeft(2, '0');
-    final day = local.day.toString().padLeft(2, '0');
-    final hour = local.hour.toString().padLeft(2, '0');
-    final minute = local.minute.toString().padLeft(2, '0');
-
-    return '$year-$month-$day $hour:$minute';
+    return DateUtil.formatDateTime(value);
   }
 
   static Map<String, dynamic> _mapAt(Map<String, dynamic> source, String key) {

@@ -32,6 +32,7 @@ class _AntrianPageState extends State<AntrianPage> {
   Timer? _refreshTimer;
   List<BranchOption> _branches = const <BranchOption>[];
   int? _selectedBranchId;
+  String _selectedStudio = 'ALL'; // 'ALL', 'A', 'B'
   bool _loading = false;
   bool _refreshing = false;
   bool _branchesLoading = false;
@@ -39,6 +40,78 @@ class _AntrianPageState extends State<AntrianPage> {
   int? _processingTicketId;
   String? _error;
   String _lastUpdated = '-';
+
+  QueueLivePayload get _filteredPayload {
+    if (_selectedStudio == 'ALL') {
+      return _payload;
+    }
+
+    final isStudioB = _selectedStudio == 'B';
+
+    // Filter tickets
+    final filteredTickets = _payload.tickets.where((ticket) {
+      final isSofa = ticket.packageName.toLowerCase().contains('sofa');
+      return isStudioB ? isSofa : !isSofa;
+    }).toList();
+
+    // Filter current
+    QueueLiveTicket? filteredCurrent = _payload.current;
+    if (filteredCurrent != null) {
+      final isSofa = filteredCurrent.packageName.toLowerCase().contains('sofa');
+      final belongsToSelectedStudio = isStudioB ? isSofa : !isSofa;
+      if (!belongsToSelectedStudio) {
+        filteredCurrent = null;
+      }
+    }
+
+    // Recalculate stats based on filtered tickets
+    int inQueueCount = 0;
+    int inSessionCount = 0;
+    int waitingCount = 0;
+    int completedCount = 0;
+
+    for (final ticket in filteredTickets) {
+      if (ticket.status == QueueTicketStatus.waiting) {
+        waitingCount++;
+      } else if (ticket.status == QueueTicketStatus.inSession) {
+        inSessionCount++;
+      } else if (ticket.status == QueueTicketStatus.finished) {
+        completedCount++;
+      }
+
+      if (ticket.status == QueueTicketStatus.waiting ||
+          ticket.status == QueueTicketStatus.called ||
+          ticket.status == QueueTicketStatus.checkedIn ||
+          ticket.status == QueueTicketStatus.inSession) {
+        inQueueCount++;
+      }
+    }
+
+    if (filteredCurrent != null) {
+      if (filteredCurrent.status == QueueTicketStatus.inSession) {
+        inSessionCount++;
+      }
+      if (filteredCurrent.status == QueueTicketStatus.waiting ||
+          filteredCurrent.status == QueueTicketStatus.called ||
+          filteredCurrent.status == QueueTicketStatus.checkedIn ||
+          filteredCurrent.status == QueueTicketStatus.inSession) {
+        inQueueCount++;
+      }
+    }
+
+    final filteredStats = QueueLiveStats(
+      inQueue: inQueueCount,
+      inSession: inSessionCount,
+      waiting: waitingCount,
+      completedToday: completedCount,
+    );
+
+    return QueueLivePayload(
+      stats: filteredStats,
+      current: filteredCurrent,
+      tickets: filteredTickets,
+    );
+  }
 
   @override
   void initState() {
@@ -174,13 +247,23 @@ class _AntrianPageState extends State<AntrianPage> {
       return;
     }
 
-    await _runQueueAction(
-      ticket: ticket,
-      action: () => ApiSession.client!.callNext(
-        branchId: branchId,
-        queueDate: _todayIso(),
-      ),
-    );
+    if (_selectedStudio != 'ALL') {
+      await _runQueueAction(
+        ticket: ticket,
+        action: () => ApiSession.client!.transitionQueueTicket(
+          ticketId: ticket.id,
+          status: QueueTicketStatus.called.value,
+        ),
+      );
+    } else {
+      await _runQueueAction(
+        ticket: ticket,
+        action: () => ApiSession.client!.callNext(
+          branchId: branchId,
+          queueDate: _todayIso(),
+        ),
+      );
+    }
   }
 
   Future<void> _changeBranch(int? branchId) async {
@@ -262,7 +345,7 @@ class _AntrianPageState extends State<AntrianPage> {
   }
 
   QueueLiveTicket? get _nextWaitingTicket {
-    for (final ticket in _payload.waitingTickets) {
+    for (final ticket in _filteredPayload.waitingTickets) {
       if (ticket.status == QueueTicketStatus.waiting) {
         return ticket;
       }
@@ -285,6 +368,7 @@ class _AntrianPageState extends State<AntrianPage> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredPayload = _filteredPayload;
     final nextWaitingTicket = _nextWaitingTicket;
 
     return Scaffold(
@@ -306,13 +390,21 @@ class _AntrianPageState extends State<AntrianPage> {
                   branchesLoading: _branchesLoading,
                   onBranchChanged: _actionLoading ? null : _changeBranch,
                   onRefresh: _actionLoading ? null : () => _loadQueue(),
+                  selectedStudio: _selectedStudio,
+                  onStudioChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _selectedStudio = val;
+                      });
+                    }
+                  },
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   _ErrorBanner(message: _error!),
                 ],
                 const SizedBox(height: 18),
-                _StatsGrid(stats: _payload.stats, isCompact: isCompact),
+                _StatsGrid(stats: filteredPayload.stats, isCompact: isCompact),
                 const SizedBox(height: 18),
                 if (_loading)
                   const _LoadingState()
@@ -320,7 +412,7 @@ class _AntrianPageState extends State<AntrianPage> {
                   Column(
                     children: [
                       _CurrentQueuePanel(
-                        current: _payload.current,
+                        current: filteredPayload.current,
                         nextWaitingTicket: nextWaitingTicket,
                         actionLoading: _actionLoading,
                         processingTicketId: _processingTicketId,
@@ -332,8 +424,8 @@ class _AntrianPageState extends State<AntrianPage> {
                       ),
                       const SizedBox(height: 18),
                       _QueueListPanel(
-                        waitingTickets: _payload.waitingTickets,
-                        processingTickets: _payload.processingTickets,
+                        waitingTickets: filteredPayload.waitingTickets,
+                        processingTickets: filteredPayload.processingTickets,
                         actionLoading: _actionLoading,
                         processingTicketId: _processingTicketId,
                         onPromote: _promoteTicket,
@@ -347,7 +439,7 @@ class _AntrianPageState extends State<AntrianPage> {
                       Expanded(
                         flex: 5,
                         child: _CurrentQueuePanel(
-                          current: _payload.current,
+                          current: filteredPayload.current,
                           nextWaitingTicket: nextWaitingTicket,
                           actionLoading: _actionLoading,
                           processingTicketId: _processingTicketId,
@@ -362,8 +454,8 @@ class _AntrianPageState extends State<AntrianPage> {
                       Expanded(
                         flex: 7,
                         child: _QueueListPanel(
-                          waitingTickets: _payload.waitingTickets,
-                          processingTickets: _payload.processingTickets,
+                          waitingTickets: filteredPayload.waitingTickets,
+                          processingTickets: filteredPayload.processingTickets,
                           actionLoading: _actionLoading,
                           processingTicketId: _processingTicketId,
                           onPromote: _promoteTicket,
@@ -389,6 +481,8 @@ class _Header extends StatelessWidget {
     required this.branchesLoading,
     required this.onBranchChanged,
     required this.onRefresh,
+    required this.selectedStudio,
+    required this.onStudioChanged,
   });
 
   final String lastUpdated;
@@ -398,6 +492,8 @@ class _Header extends StatelessWidget {
   final bool branchesLoading;
   final ValueChanged<int?>? onBranchChanged;
   final VoidCallback? onRefresh;
+  final String selectedStudio;
+  final ValueChanged<String?> onStudioChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -460,6 +556,47 @@ class _Header extends StatelessWidget {
                 ),
             ],
             onChanged: branchesLoading ? null : onBranchChanged,
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 230,
+          child: DropdownButtonFormField<String>(
+            key: ValueKey<String>(selectedStudio),
+            initialValue: selectedStudio,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: 'Studio / Ruang Tunggu',
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.primaryLight),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.primaryLight),
+              ),
+            ),
+            items: const [
+              DropdownMenuItem<String>(
+                value: 'ALL',
+                child: Text('Semua Studio'),
+              ),
+              DropdownMenuItem<String>(
+                value: 'A',
+                child: Text('Studio A (Semua paket kec. Sofa)'),
+              ),
+              DropdownMenuItem<String>(
+                value: 'B',
+                child: Text('Studio B (Khusus Sofa)'),
+              ),
+            ],
+            onChanged: onStudioChanged,
           ),
         ),
         const SizedBox(width: 10),
