@@ -5,6 +5,7 @@ import 'package:desktop_flutter/shared/models/add_on_catalog_item.dart';
 import 'package:desktop_flutter/shared/models/transaction_record.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/core/session/api_session.dart';
+import 'package:desktop_flutter/core/utils/date_util.dart';
 import '../domain/entities/transaction.dart';
 
 /// Controller untuk mengelola state halaman History Transaksi.
@@ -96,7 +97,7 @@ class HistoryController extends ChangeNotifier {
         return Transaction(
           backendId: row.id,
           id: row.transactionCode,
-          waktu: DateTime.tryParse(row.createdAt ?? '') ?? DateTime.now(),
+          waktu: DateUtil.parseUtcToLocal(row.createdAt ?? ''),
           namaPelanggan: row.customerName.isEmpty ? '-' : row.customerName,
           branchName: row.branchName,
           packageId: packageItems.isNotEmpty
