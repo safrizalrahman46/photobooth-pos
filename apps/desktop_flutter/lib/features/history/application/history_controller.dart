@@ -109,7 +109,9 @@ class HistoryController extends ChangeNotifier {
               : addOnItems.map((item) => item.itemName).join(', '),
           items: row.items,
           totalBayar: row.totalAmount.round(),
+          paidAmount: row.paidAmount,
           status: _mapTransactionStatus(row.status),
+          bookingId: row.bookingId,
         );
       }).toList();
     } catch (error) {

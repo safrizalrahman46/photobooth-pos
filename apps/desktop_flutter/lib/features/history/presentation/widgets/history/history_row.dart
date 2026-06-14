@@ -127,36 +127,43 @@ class HistoryRow extends StatelessWidget {
               ),
             ),
 
-            // Action: Tambah Cetak
+            // Action: Pelunasan or Tambah Cetak
             SizedBox(
               width: _colAction,
               child: Align(
                 alignment: Alignment.centerRight,
-                child: OutlinedButton.icon(
-                  onPressed: onActionPressed,
-                  icon: const Icon(Icons.print_rounded, size: 14),
-                  label: const Text('Tambah Cetak'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: BorderSide(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      width: 1.5,
+                child: () {
+                  final isPending = transaction.status == TransactionStatus.pending;
+                  final color = isPending ? AppColors.warning : AppColors.primary;
+                  final icon = isPending ? Icons.payments_rounded : Icons.print_rounded;
+                  final label = isPending ? 'Pelunasan' : 'Tambah Cetak';
+                  
+                  return OutlinedButton.icon(
+                    onPressed: onActionPressed,
+                    icon: Icon(icon, size: 14),
+                    label: Text(label),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: color,
+                      side: BorderSide(
+                        color: color.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
+                      backgroundColor: color.withValues(alpha: 0.04),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.04),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                    textStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                  );
+                }(),
               ),
             ),
           ],

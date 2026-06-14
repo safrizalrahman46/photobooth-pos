@@ -31,7 +31,9 @@ class Transaction {
   final String? addOns; // nullable, bisa tidak ada add-on
   final List<TransactionItemLine> items;
   final int totalBayar; // dalam rupiah, tanpa desimal
+  final double paidAmount; // total paid amount including DP
   final TransactionStatus status;
+  final int? bookingId;
 
   const Transaction({
     this.backendId = 0,
@@ -44,7 +46,9 @@ class Transaction {
     this.addOns,
     this.items = const <TransactionItemLine>[],
     required this.totalBayar,
+    required this.paidAmount,
     required this.status,
+    this.bookingId,
   });
 
   /// Gabungan paket & add-ons untuk ditampilkan di tabel
@@ -54,4 +58,7 @@ class Transaction {
     }
     return paket;
   }
+
+  /// Remaining payoff balance
+  int get sisaBayar => (totalBayar - paidAmount.round()).clamp(0, totalBayar);
 }
