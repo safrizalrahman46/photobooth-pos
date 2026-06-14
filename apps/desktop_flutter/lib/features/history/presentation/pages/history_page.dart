@@ -6,6 +6,7 @@ import 'package:desktop_flutter/features/kasir/services/receipt_printer.dart';
 import 'package:desktop_flutter/shared/models/add_on_catalog_item.dart';
 import '../widgets/dialogs/busy_dialog.dart';
 import '../widgets/dialogs/extra_print_dialog.dart';
+import '../widgets/dialogs/booking_payoff_dialog.dart';
 import '../../application/history_controller.dart';
 import '../../domain/entities/transaction.dart' as history_domain;
 import '../sections/history_header_section.dart';
@@ -128,7 +129,11 @@ class _HistoryPageState extends State<HistoryPage> {
               HistoryTableSection(
                 transactions: _controller.pagedTransactions,
                 onRowAction: (transaction) {
-                  _handleExtraPrint(transaction);
+                  if (transaction.status == history_domain.TransactionStatus.pending) {
+                    _handleBookingPayoff(transaction);
+                  } else {
+                    _handleExtraPrint(transaction);
+                  }
                 },
               ),
 
@@ -276,6 +281,95 @@ class _HistoryPageState extends State<HistoryPage> {
         resolveRequestErrorMessage(
           error,
           fallback: 'Tambah cetak belum dapat diproses.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleBookingPayoff(history_domain.Transaction transaction) async {
+    if (transaction.bookingId == null) {
+      _showSnack('Transaksi pending ini tidak terhubung dengan data booking.');
+      return;
+    }
+
+    final client = ApiSession.client;
+
+    if (client == null) {
+      _showSnack('Sesi kasir tidak aktif. Silakan login ulang.');
+      return;
+    }
+
+    final result = await showDialog<BookingPayoffResult>(
+      context: context,
+      builder: (context) => BookingPayoffDialog(transaction: transaction),
+    );
+
+    if (result == null) {
+      return;
+    }
+
+    var busyOpen = false;
+
+    void openBusy(String message) {
+      busyOpen = true;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => BusyDialog(message: message),
+      );
+    }
+
+    void closeBusy() {
+      if (busyOpen && mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      busyOpen = false;
+    }
+
+    openBusy('Memproses pelunasan booking...');
+
+    try {
+      final updatedBooking = await client.confirmBookingPayment(
+        bookingId: transaction.bookingId!,
+        amount: transaction.sisaBayar.toDouble(),
+        method: result.paymentMethod,
+        referenceNo: result.paymentMethod == 'cash' ? null : '',
+      );
+
+      final updatedTransaction = await client.fetchTransactionDetail(
+        transactionId: transaction.backendId,
+      );
+
+      if (!mounted) return;
+      closeBusy();
+
+      // Print final receipt
+      try {
+        await ReceiptPrinter.printTransactionReceipt(
+          transaction: updatedTransaction,
+          brandName: 'Ready To Pict',
+          branchName: updatedTransaction.branchName.isNotEmpty
+              ? updatedTransaction.branchName
+              : transaction.branchName,
+          cashierName: ApiSession.current?.user.name ?? '-',
+          receiptTitle: 'STRUK PELUNASAN BOOKING',
+          paperWidthMm: 80,
+        );
+      } catch (error) {
+        _showSnack(
+          'Pelunasan berhasil, tetapi struk belum tercetak: ${resolveRequestErrorMessage(error, fallback: 'Periksa printer.')}',
+        );
+      }
+
+      _showSnack('Pelunasan booking ${updatedBooking.bookingCode} berhasil dikonfirmasi.');
+      await _controller.loadTransactions();
+    } catch (error) {
+      if (!mounted) return;
+      closeBusy();
+      _showSnack(
+        resolveRequestErrorMessage(
+          error,
+          fallback: 'Konfirmasi pelunasan belum dapat diproses.',
         ),
       );
     }
