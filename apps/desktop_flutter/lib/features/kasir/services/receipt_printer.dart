@@ -197,7 +197,7 @@ class ReceiptPrinter {
     doc.addPage(
       pw.MultiPage(
         pageFormat: pageFormat,
-        margin: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        margin: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         build: (context) => <pw.Widget>[
           pw.Center(
             child: pw.Text(

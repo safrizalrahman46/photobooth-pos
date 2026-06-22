@@ -6,21 +6,24 @@ import '../common/transaction_status_badge.dart';
 
 class HistoryRow extends StatelessWidget {
   final Transaction transaction;
-  final VoidCallback onActionPressed;
+  final VoidCallback? onLunasi;
+  final VoidCallback? onReprint;
+  final VoidCallback? onExtraPrint;
 
-  // Flex factors - harus sama persis dengan HistoryTable
   static const int _flexId = 2;
   static const int _flexWaktu = 3;
   static const int _flexNama = 3;
-  static const int _flexPaket = 4;
+  static const int _flexPaket = 3;
   static const int _flexTotal = 2;
-  static const int _flexStatus = 2;
-  static const double _colAction = 150;
+  static const int _flexStatus = 3;
+  static const double _colAction = 300;
 
   const HistoryRow({
     super.key,
     required this.transaction,
-    required this.onActionPressed,
+    this.onLunasi,
+    this.onReprint,
+    this.onExtraPrint,
   });
 
   @override
@@ -35,139 +38,76 @@ class HistoryRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
         child: Row(
           children: [
-            // ID Transaksi
-            Expanded(
-              flex: _flexId,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Text(
-                  transaction.id,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-              ),
-            ),
-
-            // Waktu
-            Expanded(
-              flex: _flexWaktu,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Text(
-                  _formatWaktu(transaction.waktu),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF64748B),
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ),
-
-            // Nama Pelanggan
-            Expanded(
-              flex: _flexNama,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Text(
-                  transaction.namaPelanggan,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-              ),
-            ),
-
-            // Paket & Add-ons
-            Expanded(
-              flex: _flexPaket,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Text(
-                  transaction.paketDanAddOns,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF64748B),
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ),
-
-            // Total Bayar
-            Expanded(
-              flex: _flexTotal,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Text(
-                  _formatRupiah(transaction.totalBayar),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-
-            // Status
-            Expanded(
-              flex: _flexStatus,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: TransactionStatusBadge(status: transaction.status),
-                ),
-              ),
-            ),
-
-            // Action: Pelunasan or Tambah Cetak
+            Expanded(flex: _flexId, child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(transaction.id, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+            )),
+            Expanded(flex: _flexWaktu, child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(_formatWaktu(transaction.waktu), style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5)),
+            )),
+            Expanded(flex: _flexNama, child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(transaction.namaPelanggan, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+            )),
+            Expanded(flex: _flexPaket, child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(transaction.paketDanAddOns, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5)),
+            )),
+            Expanded(flex: _flexTotal, child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(_formatRupiah(transaction.totalAmount), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+            )),
+            Expanded(flex: _flexStatus, child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Align(alignment: Alignment.centerLeft, child: TransactionStatusBadge(status: transaction.status)),
+            )),
             SizedBox(
               width: _colAction,
               child: Align(
                 alignment: Alignment.centerRight,
-                child: () {
-                  final isPending = transaction.status == TransactionStatus.pending;
-                  final color = isPending ? AppColors.warning : AppColors.primary;
-                  final icon = isPending ? Icons.payments_rounded : Icons.print_rounded;
-                  final label = isPending ? 'Pelunasan' : 'Tambah Cetak';
-                  
-                  return OutlinedButton.icon(
-                    onPressed: onActionPressed,
-                    icon: Icon(icon, size: 14),
-                    label: Text(label),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: color,
-                      side: BorderSide(
-                        color: color.withValues(alpha: 0.3),
-                        width: 1.5,
-                      ),
-                      backgroundColor: color.withValues(alpha: 0.04),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                      textStyle: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  );
-                }(),
+                child: _buildActionButtons(),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return switch (transaction.status) {
+      TransactionStatus.dp => _actionButton(label: 'Lunasi', icon: Icons.check_circle_rounded, onPressed: onLunasi, color: const Color(0xFFEA580C)),
+      TransactionStatus.lunas => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _actionButton(label: 'Cetak Ulang', icon: Icons.replay_rounded, onPressed: onReprint, color: AppColors.primary),
+            const SizedBox(width: 8),
+            _actionButton(label: 'Tambah Cetak', icon: Icons.print_rounded, onPressed: onExtraPrint, color: AppColors.primary),
+          ],
+        ),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
+  Widget _actionButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback? onPressed,
+    required Color color,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 14),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color.withValues(alpha: 0.3), width: 1.5),
+        backgroundColor: color.withValues(alpha: 0.04),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0,
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -179,7 +119,7 @@ class HistoryRow extends StatelessWidget {
     return '$day $month, $time';
   }
 
-  String _formatRupiah(int amount) {
+  String _formatRupiah(double amount) {
     final formatted = NumberFormat('#,###', 'id_ID').format(amount);
     return 'Rp $formatted';
   }

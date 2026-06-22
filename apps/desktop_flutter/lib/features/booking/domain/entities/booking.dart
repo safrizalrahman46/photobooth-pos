@@ -62,6 +62,7 @@ class Package {
   final String prints;
   final double price;
   final String? iconPath;
+  final List<String> samplePhotos;
 
   const Package({
     required this.id,
@@ -70,6 +71,7 @@ class Package {
     required this.prints,
     required this.price,
     this.iconPath,
+    this.samplePhotos = const [],
   });
 }
 

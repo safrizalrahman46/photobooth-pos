@@ -1,5 +1,3 @@
-// features/history/application/history_controller.dart
-
 import 'package:flutter/foundation.dart';
 import 'package:desktop_flutter/shared/models/add_on_catalog_item.dart';
 import 'package:desktop_flutter/shared/models/transaction_record.dart';
@@ -8,11 +6,6 @@ import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/core/utils/date_util.dart';
 import '../domain/entities/transaction.dart';
 
-/// Controller untuk mengelola state halaman History Transaksi.
-/// Menggunakan [ChangeNotifier] agar bisa dipakai dengan Provider / ValueListenableBuilder.
-///
-/// Untuk integrasi state management lain (Riverpod, Bloc, GetX),
-/// logika filtering & pagination di sini bisa dipindahkan ke notifier / cubit masing-masing.
 class HistoryController extends ChangeNotifier {
   HistoryController() {
     loadTransactions();
@@ -22,25 +15,20 @@ class HistoryController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  // ─── State ─────────────────────────────────────────────────────────────────
   String _searchQuery = '';
   TransactionStatus? _statusFilter;
   int _currentPage = 1;
   final int _perPage = 10;
 
-  // ─── Getters ───────────────────────────────────────────────────────────────
   String get searchQuery => _searchQuery;
   TransactionStatus? get statusFilter => _statusFilter;
   int get currentPage => _currentPage;
   int get perPage => _perPage;
 
-  /// Total transaksi setelah filter (untuk label "Menampilkan X-Y dari Z transaksi")
   int get totalFiltered => _filtered.length;
 
-  /// Total halaman
   int get totalPages => (totalFiltered / _perPage).ceil().clamp(1, 9999);
 
-  /// Transaksi yang ditampilkan di halaman saat ini
   List<Transaction> get pagedTransactions {
     final start = (_currentPage - 1) * _perPage;
     final end = (start + _perPage).clamp(0, _filtered.length);
@@ -48,7 +36,6 @@ class HistoryController extends ChangeNotifier {
     return _filtered.sublist(start, end);
   }
 
-  /// Label "Menampilkan X-Y dari Z transaksi"
   String get paginationLabel {
     if (totalFiltered == 0) return 'Tidak ada transaksi';
     final start = (_currentPage - 1) * _perPage + 1;
@@ -56,7 +43,6 @@ class HistoryController extends ChangeNotifier {
     return 'Menampilkan $start-$end dari $totalFiltered transaksi';
   }
 
-  // ─── Private helpers ───────────────────────────────────────────────────────
   List<Transaction> get _filtered {
     return _allTransactions.where((t) {
       final matchSearch =
@@ -68,7 +54,6 @@ class HistoryController extends ChangeNotifier {
     }).toList();
   }
 
-  // ─── Actions ───────────────────────────────────────────────────────────────
   Future<void> loadTransactions() async {
     final client = ApiSession.client;
 
@@ -108,10 +93,10 @@ class HistoryController extends ChangeNotifier {
               ? null
               : addOnItems.map((item) => item.itemName).join(', '),
           items: row.items,
-          totalBayar: row.totalAmount.round(),
+          totalAmount: row.totalAmount,
           paidAmount: row.paidAmount,
           status: _mapTransactionStatus(row.status),
-          bookingId: row.bookingId,
+          rawRecord: row,
         );
       }).toList();
     } catch (error) {
@@ -146,15 +131,51 @@ class HistoryController extends ChangeNotifier {
   void nextPage() => goToPage(_currentPage + 1);
   void prevPage() => goToPage(_currentPage - 1);
 
-  /// Placeholder aksi export — hubungkan ke service di production
   void onExport() {
     debugPrint('Export triggered');
   }
 
-  /// Placeholder aksi per-baris (edit / hapus / detail)
-  void onRowAction(Transaction transaction) {
-    debugPrint('Row action: ${transaction.id}');
+  // ── Pelunasan DP ─────────────────────────────────────────────────────
+
+  Future<TransactionRecord?> pelunasanPayment({
+    required int transactionId,
+    required String method,
+    required double amount,
+    String? referenceNo,
+  }) async {
+    final client = ApiSession.client;
+    if (client == null) return null;
+
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await client.addTransactionPayment(
+        transactionId: transactionId,
+        method: method,
+        amount: amount,
+        referenceNo: referenceNo,
+      );
+
+      if (result == null) {
+        errorMessage = 'Pembayaran gagal diproses.';
+        notifyListeners();
+        return null;
+      }
+
+      await loadTransactions();
+      return result.transaction;
+    } catch (error) {
+      errorMessage = resolveRequestErrorMessage(
+        error,
+        fallback: 'Pelunasan belum berhasil.',
+      );
+      notifyListeners();
+      return null;
+    }
   }
+
+  // ── Extra Print (Single) ─────────────────────────────────────────────
 
   Future<TransactionRecord?> addExtraPrint({
     required Transaction transaction,
@@ -198,15 +219,69 @@ class HistoryController extends ChangeNotifier {
     }
   }
 
-  /// Aksi Cetak Ulang
-  void onReprint(Transaction transaction) {
-    debugPrint('Cetak ulang: ${transaction.id}');
-    // Logic untuk integrasi ke printer thermal / ESC/POS
+  // ── Extra Print Bulk (multi add-on) ──────────────────────────────────
+
+  Future<TransactionRecord?> addExtraPrintBulk({
+    required int transactionId,
+    required List<Map<String, dynamic>> items,
+    required String paymentMethod,
+    String? referenceNo,
+  }) async {
+    final client = ApiSession.client;
+    if (client == null) return null;
+
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final idempotencyKey =
+          '$transactionId-bulk-${DateTime.now().millisecondsSinceEpoch}';
+
+      final updated = await client.addTransactionExtraPrintBulk(
+        transactionId: transactionId,
+        items: items,
+        paymentMethod: paymentMethod,
+        referenceNo: referenceNo,
+        idempotencyKey: idempotencyKey,
+      );
+
+      if (updated == null) {
+        errorMessage = 'Tambah cetak belum berhasil.';
+        notifyListeners();
+        return null;
+      }
+
+      await loadTransactions();
+      return updated;
+    } catch (error) {
+      errorMessage = resolveRequestErrorMessage(
+        error,
+        fallback: 'Tambah cetak belum berhasil.',
+      );
+      notifyListeners();
+      return null;
+    }
   }
+
+  // ── Cetak Ulang ──────────────────────────────────────────────────────
+
+  Future<TransactionRecord?> reprintTransaction(Transaction transaction) async {
+    final client = ApiSession.client;
+    if (client == null) return null;
+
+    try {
+      return await client.fetchTransaction(transaction.backendId);
+    } catch (_) {
+      return transaction.rawRecord;
+    }
+  }
+
+  // ── Status Mapping ───────────────────────────────────────────────────
 
   TransactionStatus _mapTransactionStatus(String status) {
     return switch (status) {
       'paid' => TransactionStatus.lunas,
+      'partial' => TransactionStatus.dp,
       'void' => TransactionStatus.batal,
       _ => TransactionStatus.pending,
     };

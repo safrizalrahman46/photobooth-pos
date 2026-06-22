@@ -129,6 +129,7 @@ class BookingController extends ChangeNotifier {
           duration: '${row.durationMinutes} Menit',
           prints: 'Paket',
           price: row.basePrice,
+          samplePhotos: row.samplePhotos ?? [],
         );
       }).toList();
 
@@ -342,7 +343,12 @@ class BookingController extends ChangeNotifier {
     }
   }
 
-  Future<void> accBooking() async {
+  Future<void> accBooking({
+    String? paymentMethod,
+    double? paymentAmount,
+    String? referenceNo,
+    String? notes,
+  }) async {
     final client = ApiSession.client;
 
     if (client == null ||
@@ -359,21 +365,26 @@ class BookingController extends ChangeNotifier {
 
     try {
       if (booking.canConfirmPayment) {
-        final paymentAmount = booking.paymentType == 'dp50'
+        final amount = paymentAmount ?? (booking.paymentType == 'dp50'
             ? booking.depositAmount > 0
                   ? booking.depositAmount
                   : booking.totalAmount * 0.5
-            : booking.totalAmount;
+            : booking.totalAmount);
 
         final consentNote = allowSharePhotos
             ? '[Izin Share: YA]'
             : '[Izin Share: TIDAK]';
 
+        final finalNotes = notes != null && notes.isNotEmpty
+            ? '$notes $consentNote'
+            : 'Diverifikasi dari aplikasi desktop. $consentNote';
+
         await client.confirmBookingPayment(
           bookingId: booking.recordId!,
-          method: 'transfer',
-          amount: paymentAmount,
-          notes: 'Diverifikasi dari aplikasi desktop. $consentNote',
+          method: paymentMethod ?? 'transfer',
+          amount: amount,
+          referenceNo: referenceNo,
+          notes: finalNotes,
         );
         if (_disposed) return;
       } else if (booking.canConfirmBooking) {

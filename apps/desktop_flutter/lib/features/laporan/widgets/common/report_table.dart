@@ -153,7 +153,7 @@ class _ReportRow extends StatelessWidget {
                 locale: 'id',
                 symbol: 'Rp ',
                 decimalDigits: 0,
-              ).format(transaction.totalBayar),
+              ).format(transaction.totalAmount),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
           ),

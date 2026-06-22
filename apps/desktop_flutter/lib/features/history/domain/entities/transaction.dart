@@ -1,39 +1,35 @@
-// features/history/domain/entities/transaction.dart
-
 import 'package:desktop_flutter/shared/models/transaction_item_line.dart';
+import 'package:desktop_flutter/shared/models/transaction_record.dart';
 
-/// Enum untuk status transaksi
-enum TransactionStatus { lunas, pending, batal }
+enum TransactionStatus { lunas, pending, dp, batal }
 
-/// Extension untuk label & warna status
 extension TransactionStatusX on TransactionStatus {
   String get label {
-    switch (this) {
-      case TransactionStatus.lunas:
-        return 'Lunas';
-      case TransactionStatus.pending:
-        return 'Pending';
-      case TransactionStatus.batal:
-        return 'Batal';
-    }
+    return switch (this) {
+      TransactionStatus.lunas => 'Lunas',
+      TransactionStatus.pending => 'Belum Dibayar',
+      TransactionStatus.dp => 'DP / Belum Lunas',
+      TransactionStatus.batal => 'Batal',
+    };
   }
 }
 
-/// Entity utama transaksi
 class Transaction {
   final int backendId;
-  final String id; // e.g. "TRX-9402"
+  final String id;
   final DateTime waktu;
   final String namaPelanggan;
   final String branchName;
   final int? packageId;
   final String paket;
-  final String? addOns; // nullable, bisa tidak ada add-on
+  final String? addOns;
   final List<TransactionItemLine> items;
-  final int totalBayar; // dalam rupiah, tanpa desimal
-  final double paidAmount; // total paid amount including DP
+  final double totalAmount;
+  final double paidAmount;
   final TransactionStatus status;
-  final int? bookingId;
+  final TransactionRecord? rawRecord;
+
+  double get remainingAmount => totalAmount - paidAmount;
 
   const Transaction({
     this.backendId = 0,
@@ -44,14 +40,13 @@ class Transaction {
     this.packageId,
     required this.paket,
     this.addOns,
-    this.items = const <TransactionItemLine>[],
-    required this.totalBayar,
-    required this.paidAmount,
+    this.items = const [],
+    required this.totalAmount,
+    this.paidAmount = 0,
     required this.status,
-    this.bookingId,
+    this.rawRecord,
   });
 
-  /// Gabungan paket & add-ons untuk ditampilkan di tabel
   String get paketDanAddOns {
     if (addOns != null && addOns!.isNotEmpty) {
       return '$paket + $addOns';

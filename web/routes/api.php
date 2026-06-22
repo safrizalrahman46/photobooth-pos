@@ -99,6 +99,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/transactions/{transaction}', [TransactionController::class, 'show']);
         Route::post('/transactions/{transaction}/extra-print', [TransactionController::class, 'extraPrint']);
         Route::post('/transactions/{transaction}/payments', [PaymentController::class, 'store']);
+        Route::post('/transactions/{transaction}/extra-print-bulk', [TransactionController::class, 'extraPrintBulk']);
+        Route::patch('/payments/{payment}', [PaymentController::class, 'updateMethod']);
 
         Route::get('/reports/summary', [ReportController::class, 'summary']);
     });

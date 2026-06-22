@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AddExtraPrintRequest;
+use App\Http\Requests\ExtraPrintBulkRequest;
 use App\Http\Requests\StoreTransactionRequest;
 use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
@@ -108,6 +109,28 @@ class TransactionController extends Controller
     {
         try {
             $updatedTransaction = $this->transactionService->addExtraPrint(
+                $transaction,
+                $request->validated(),
+                (int) $request->user()->id
+            );
+        } catch (ValidationException $exception) {
+            return $this->responder->error(
+                $exception->validator->errors()->first() ?: 'Tambah cetak gagal ditambahkan.',
+                422,
+                $exception->errors(),
+            );
+        }
+
+        return $this->responder->success(
+            new TransactionResource($updatedTransaction->load('branch', 'booking', 'queueTicket', 'items', 'payments')),
+            'Tambah cetak berhasil ditambahkan.'
+        );
+    }
+
+    public function extraPrintBulk(ExtraPrintBulkRequest $request, Transaction $transaction): JsonResponse
+    {
+        try {
+            $updatedTransaction = $this->transactionService->addExtraPrintBulk(
                 $transaction,
                 $request->validated(),
                 (int) $request->user()->id

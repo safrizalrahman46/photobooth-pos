@@ -1,44 +1,28 @@
-// features/history/presentation/widgets/history/history_table.dart
-
 import 'package:flutter/material.dart';
 import '../../../domain/entities/transaction.dart';
 import 'history_row.dart';
 import 'history_empty.dart';
 
-// ─── Referensi global ──────────────────────────────────────────────────────────
-// Gunakan AppCard dari shared/widgets/common/app_card.dart sebagai container
-// agar shadow & border radius konsisten di seluruh aplikasi.
-// Contoh: import '../../../../../shared/widgets/common/app_card.dart';
-
-/// Tabel lengkap dengan header kolom + baris-baris data transaksi.
-///
-/// Menampilkan [HistoryEmpty] otomatis ketika [transactions] kosong.
-///
-/// Contoh penggunaan:
-/// ```dart
-/// HistoryTable(
-///   transactions: controller.pagedTransactions,
-///   onRowAction: controller.onRowAction,
-/// )
-/// ```
 class HistoryTable extends StatelessWidget {
   final List<Transaction> transactions;
-  final void Function(Transaction) onRowAction;
+  final void Function(Transaction)? onLunasi;
+  final void Function(Transaction)? onReprint;
+  final void Function(Transaction)? onExtraPrint;
 
-  // Lebar kolom — harus sinkron dengan HistoryRow
-  // Flex factors untuk masing-masing kolom agar proporsional
   static const int _flexId = 2;
   static const int _flexWaktu = 3;
   static const int _flexNama = 3;
-  static const int _flexPaket = 4;
+  static const int _flexPaket = 3;
   static const int _flexTotal = 2;
-  static const int _flexStatus = 2;
-  static const double _colAction = 150; // Action column width
+  static const int _flexStatus = 3;
+  static const double _colAction = 300;
 
   const HistoryTable({
     super.key,
     required this.transactions,
-    required this.onRowAction,
+    this.onLunasi,
+    this.onReprint,
+    this.onExtraPrint,
   });
 
   @override
@@ -67,7 +51,9 @@ class HistoryTable extends StatelessWidget {
               ...transactions.map(
                 (tx) => HistoryRow(
                   transaction: tx,
-                  onActionPressed: () => onRowAction(tx),
+                  onLunasi: onLunasi != null ? () => onLunasi!(tx) : null,
+                  onReprint: onReprint != null ? () => onReprint!(tx) : null,
+                  onExtraPrint: onExtraPrint != null ? () => onExtraPrint!(tx) : null,
                 ),
               ),
           ],
@@ -79,7 +65,7 @@ class HistoryTable extends StatelessWidget {
   Widget _buildHeader() {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFF8FAFC), // Cool gray/slate
+        color: Color(0xFFF8FAFC),
         border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
       ),
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
@@ -91,7 +77,7 @@ class HistoryTable extends StatelessWidget {
           _headerCell('PAKET & ADD-ONS', _flexPaket),
           _headerCell('TOTAL BAYAR', _flexTotal),
           _headerCell('STATUS', _flexStatus),
-          const SizedBox(width: _colAction), // spacer untuk kolom action
+          const SizedBox(width: _colAction),
         ],
       ),
     );
@@ -107,7 +93,7 @@ class HistoryTable extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF64748B), // Slate 500
+            color: Color(0xFF64748B),
             letterSpacing: 0.75,
           ),
         ),
