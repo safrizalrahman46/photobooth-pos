@@ -14,6 +14,15 @@ class ConfirmWalkInRequestPaymentRequest extends FormRequest
             && ($this->user()?->can('queue.manage') ?? false);
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('payment_method')) {
+            $this->merge([
+                'payment_method' => strtolower((string) $this->input('payment_method')),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [

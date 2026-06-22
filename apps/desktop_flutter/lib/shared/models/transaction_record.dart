@@ -20,6 +20,7 @@ class TransactionRecord {
     required this.createdAt,
     required this.items,
     required this.payments,
+    this.bookingId,
   });
 
   final int id;
@@ -39,6 +40,7 @@ class TransactionRecord {
   final String? createdAt;
   final List<TransactionItemLine> items;
   final List<PaymentRecord> payments;
+  final int? bookingId;
 
   factory TransactionRecord.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'];
@@ -61,6 +63,7 @@ class TransactionRecord {
       paidAmount: (json['paid_amount'] as num?)?.toDouble() ?? 0,
       changeAmount: (json['change_amount'] as num?)?.toDouble() ?? 0,
       createdAt: json['created_at']?.toString(),
+      bookingId: (json['booking_id'] as num?)?.toInt(),
       items: rawItems is List
           ? rawItems
                 .whereType<Map<String, dynamic>>()
