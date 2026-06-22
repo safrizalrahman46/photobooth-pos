@@ -7,6 +7,7 @@ import 'package:desktop_flutter/features/booking/domain/entities/booking.dart';
 import 'package:desktop_flutter/shared/models/booking_item.dart';
 import 'package:desktop_flutter/shared/widgets/base_dialog.dart';
 import 'package:desktop_flutter/shared/widgets/dialog_action_button.dart';
+import 'package:desktop_flutter/features/booking/presentation/widgets/dialogs/confirm_payment_dialog.dart';
 import 'package:flutter/material.dart';
 
 class BookingDetailDialog extends StatefulWidget {
@@ -81,9 +82,27 @@ class _BookingDetailDialogState extends State<BookingDetailDialog> {
 
   Future<void> _handleVerify() async {
     if (_isProcessing) return;
-    setState(() => _isProcessing = true);
 
-    await widget.controller.accBooking();
+    if (_booking.canConfirmPayment) {
+      final result = await showDialog<ConfirmPaymentDialogResult>(
+        context: context,
+        builder: (ctx) => ConfirmPaymentDialog(booking: _booking),
+      );
+
+      if (result == null) return;
+
+      setState(() => _isProcessing = true);
+      await widget.controller.accBooking(
+        paymentMethod: result.method,
+        paymentAmount: result.amount,
+        referenceNo: result.referenceNo,
+        notes: result.notes,
+      );
+    } else {
+      setState(() => _isProcessing = true);
+      await widget.controller.accBooking();
+    }
+
     if (!mounted) return;
 
     if (widget.controller.errorMessage == null) {
@@ -239,7 +258,7 @@ class _BookingDetailDialogState extends State<BookingDetailDialog> {
                         ),
                         if (_booking.paymentType == 'dp50') ...[
                           const SizedBox(height: 8),
-                          _infoRow('Deposit (DP)', _formatPrice(_booking.depositAmount)),
+                          _infoRow('Deposit (DP)', _formatPrice(_booking.depositAmount > 0 ? _booking.depositAmount : _booking.totalAmount * 0.5)),
                         ],
                         if (_detail != null) ...[
                           const SizedBox(height: 8),

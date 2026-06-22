@@ -265,7 +265,8 @@ class LaporanPage extends StatelessWidget {
         addOns: addOnItems.isEmpty
             ? null
             : addOnItems.map((item) => item.itemName).join(', '),
-        totalBayar: row.totalAmount.round(),
+        totalAmount: row.totalAmount,
+        paidAmount: row.paidAmount,
         status: _mapTransactionStatus(row.status),
       );
     }).toList();
@@ -274,6 +275,7 @@ class LaporanPage extends StatelessWidget {
   TransactionStatus _mapTransactionStatus(String status) {
     return switch (status) {
       'paid' => TransactionStatus.lunas,
+      'partial' => TransactionStatus.dp,
       'void' => TransactionStatus.batal,
       _ => TransactionStatus.pending,
     };

@@ -69,6 +69,11 @@ class TransactionStatusBadge extends StatelessWidget {
           backgroundColor: AppColors.warning.withValues(alpha: 0.1),
           textColor: AppColors.warning,
         );
+      case TransactionStatus.dp:
+        return _BadgeConfig(
+          backgroundColor: const Color(0xFFEA580C).withValues(alpha: 0.1),
+          textColor: const Color(0xFFEA580C),
+        );
       case TransactionStatus.batal:
         return _BadgeConfig(
           backgroundColor: AppColors.error.withValues(alpha: 0.1),

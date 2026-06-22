@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:desktop_flutter/core/config/app_config.dart';
 import 'package:desktop_flutter/core/network/request_error_message.dart';
 import 'package:desktop_flutter/shared/models/app_settings_payload.dart';
@@ -27,12 +27,32 @@ import 'package:desktop_flutter/shared/models/time_slot_management_item.dart';
 import 'package:desktop_flutter/shared/models/walk_in_request_item.dart';
 import 'package:http/http.dart' as http;
 
+class PaymentResult {
+  final PaymentRecord payment;
+  final TransactionRecord transaction;
+  const PaymentResult({required this.payment, required this.transaction});
+}
+
 class ApiClient {
   ApiClient({required String baseUrl, this.token})
-    : baseUrl = AppConfig.normalizeApiBaseUrl(baseUrl);
+    : baseUrl = AppConfig.normalizeApiBaseUrl(baseUrl),
+      serverOrigin = _extractOrigin(baseUrl);
 
   final String baseUrl;
   final String? token;
+  final String serverOrigin;
+
+  static String _extractOrigin(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final port = (uri.scheme == 'https' && uri.port == 443) ||
+                   (uri.scheme == 'http' && uri.port == 80)
+          ? '' : ':${uri.port}';
+      return '${uri.scheme}://${uri.host}$port';
+    } catch (_) {
+      return url;
+    }
+  }
 
   Future<DesktopSession> login({
     required String email,
@@ -1205,6 +1225,56 @@ class ApiClient {
     return TransactionRecord.fromJson(data);
   }
 
+  Future<TransactionRecord?> addTransactionExtraPrintBulk({
+    required int transactionId,
+    required List<Map<String, dynamic>> items,
+    required String paymentMethod,
+    String? referenceNo,
+    String? idempotencyKey,
+    String? notes,
+  }) async {
+    final payload = await _send(
+      method: 'POST',
+      path: '/transactions/$transactionId/extra-print-bulk',
+      authenticated: true,
+      body: {
+        'items': items,
+        'payment_method': paymentMethod,
+        if (referenceNo != null && referenceNo.isNotEmpty)
+          'reference_no': referenceNo,
+        if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+          'idempotency_key': idempotencyKey,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      },
+    );
+
+    final data = payload['data'];
+    if (data is! Map<String, dynamic>) return null;
+
+    return TransactionRecord.fromJson(data);
+  }
+
+  Future<bool> updatePaymentMethod({
+    required int paymentId,
+    required String method,
+    String? reason,
+  }) async {
+    try {
+      await _send(
+        method: 'PATCH',
+        path: '/payments/$paymentId',
+        authenticated: true,
+        body: {
+          'method': method,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<List<WalkInRequestItem>> fetchWalkInRequests({
     int? branchId,
     String? status,
@@ -1342,7 +1412,7 @@ class ApiClient {
     return ReferralPreview.fromJson(data);
   }
 
-  Future<PaymentRecord?> addTransactionPayment({
+  Future<PaymentResult?> addTransactionPayment({
     required int transactionId,
     required String method,
     required double amount,
@@ -1368,13 +1438,28 @@ class ApiClient {
       return null;
     }
 
-    final payment = data['payment'];
+    final paymentData = data['payment'];
+    final transactionData = data['transaction'];
 
-    if (payment is! Map<String, dynamic>) {
+    if (paymentData is! Map<String, dynamic> || transactionData is! Map<String, dynamic>) {
       return null;
     }
 
-    return PaymentRecord.fromJson(payment);
+    return PaymentResult(
+      payment: PaymentRecord.fromJson(paymentData),
+      transaction: TransactionRecord.fromJson(transactionData),
+    );
+  }
+
+  Future<TransactionRecord?> fetchTransaction(int id) async {
+    final payload = await _send(
+      method: 'GET',
+      path: '/transactions/$id',
+      authenticated: true,
+    );
+    final data = payload['data'];
+    if (data is! Map<String, dynamic>) return null;
+    return TransactionRecord.fromJson(data);
   }
 
   Future<AppSettingsPayload> fetchAppSettings() async {
@@ -1521,14 +1606,17 @@ class ApiClient {
     try {
       final uri = Uri.parse('$baseUrl$path');
       final headers = _headers(authenticated: true);
+      headers['Accept'] = 'image/*,*/*';
       final response = await _sendHttp(() => http.get(uri, headers: headers));
 
       if (response.statusCode == 200) {
         return response.bodyBytes;
       }
 
+      debugPrint('[downloadRaw] $path → ${response.statusCode} ${response.reasonPhrase}');
       return null;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[downloadRaw] $path → exception: $e');
       return null;
     }
   }
