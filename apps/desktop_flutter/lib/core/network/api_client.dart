@@ -1305,6 +1305,36 @@ class ApiClient {
         .toList();
   }
 
+  Future<WalkInRequestItem?> updateWalkInRequest({
+    required int requestId,
+    String? customerName,
+    String? customerPhone,
+    int? packageId,
+    List<Map<String, dynamic>>? addons,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (customerName != null) body['customer_name'] = customerName;
+      if (customerPhone != null) body['customer_phone'] = customerPhone;
+      if (packageId != null) body['package_id'] = packageId;
+      if (addons != null) body['addons'] = addons;
+
+      final payload = await _send(
+        method: 'PUT',
+        path: '/walk-in-requests/$requestId',
+        authenticated: true,
+        body: body,
+      );
+
+      final data = payload['data'];
+      if (data is! Map<String, dynamic>) return null;
+
+      return WalkInRequestItem.fromJson(data);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<WalkInConfirmResult> confirmWalkInRequestPayment({
     required int requestId,
     String paymentMethod = 'cash',

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:desktop_flutter/core/utils/date_util.dart';
 import 'package:desktop_flutter/shared/models/cashier_settlement_item.dart';
+import 'package:desktop_flutter/shared/models/transaction_item_line.dart';
 import 'package:desktop_flutter/shared/models/transaction_record.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -239,43 +240,32 @@ class ReceiptPrinter {
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
           ),
           pw.SizedBox(height: 2),
-          ...transaction.items.map((item) {
-            final highlighted = highlightedItemIds.contains(item.id);
-            final itemStyle = pw.TextStyle(
-              fontSize: 10,
-              fontWeight: highlighted ? pw.FontWeight.bold : null,
-            );
-            final detailStyle = pw.TextStyle(
-              fontSize: 9,
-              fontWeight: highlighted ? pw.FontWeight.bold : null,
-            );
 
-            return pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 2),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: <pw.Widget>[
-                  pw.Text(
-                    highlighted ? '${item.itemName} (ADD-ON BARU)' : item.itemName,
-                    style: itemStyle,
-                  ),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: <pw.Widget>[
-                      pw.Text(
-                        '${_formatQty(item.qty)} x ${_currency(item.unitPrice)}',
-                        style: detailStyle,
-                      ),
-                      pw.Text(
-                        _currency(item.lineTotal),
-                        style: detailStyle,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          }),
+          // PAKET section
+          if (transaction.items.where((i) => i.itemType == 'package').isNotEmpty) ...[
+            pw.Text(
+              'PAKET',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8, color: const PdfColor.fromInt(0xFF64748B)),
+            ),
+            pw.SizedBox(height: 1),
+            ...transaction.items
+                .where((item) => item.itemType == 'package')
+                .map((item) => _buildReceiptItem(item, highlightedItemIds)),
+            pw.SizedBox(height: 3),
+          ],
+
+          // ADD-ON section
+          if (transaction.items.where((i) => i.itemType == 'add_on').isNotEmpty) ...[
+            pw.Text(
+              'ADD-ON',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8, color: const PdfColor.fromInt(0xFF64748B)),
+            ),
+            pw.SizedBox(height: 1),
+            ...transaction.items
+                .where((item) => item.itemType == 'add_on')
+                .map((item) => _buildReceiptItem(item, highlightedItemIds)),
+          ],
+
           pw.Divider(thickness: 0.5, height: 6),
           if (transaction.discountAmount > 0) ...[
             _labelValue('Subtotal', _currency(transaction.subtotalAmount)),
@@ -373,6 +363,44 @@ class ReceiptPrinter {
       child: pw.Text(
         title,
         style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+      ),
+    );
+  }
+
+  static pw.Widget _buildReceiptItem(TransactionItemLine item, Set<int> highlighted) {
+    final highlightedItem = highlighted.contains(item.id);
+    final itemStyle = pw.TextStyle(
+      fontSize: 10,
+      fontWeight: highlightedItem ? pw.FontWeight.bold : null,
+    );
+    final detailStyle = pw.TextStyle(
+      fontSize: 9,
+      fontWeight: highlightedItem ? pw.FontWeight.bold : null,
+    );
+
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 2),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: <pw.Widget>[
+          pw.Text(
+            highlightedItem ? '${item.itemName} (ADD-ON BARU)' : item.itemName,
+            style: itemStyle,
+          ),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: <pw.Widget>[
+              pw.Text(
+                '${_formatQty(item.qty)} x ${_currency(item.unitPrice)}',
+                style: detailStyle,
+              ),
+              pw.Text(
+                _currency(item.lineTotal),
+                style: detailStyle,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

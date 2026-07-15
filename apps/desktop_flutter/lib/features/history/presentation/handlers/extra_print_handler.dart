@@ -117,8 +117,10 @@ Future<void> handleExtraPrint({
         highlightedItemIds: highlightedItemIds,
         paperWidthMm: 80,
       );
+      if (!context.mounted) return;
       _snack(context, 'Tambah add-on berhasil dan struk gabungan siap dicetak.');
     } catch (error) {
+      if (!context.mounted) return;
       _snack(
         context,
         'Tambah add-on berhasil, tetapi struk belum tercetak: ${resolveRequestErrorMessage(error, fallback: 'Periksa printer.')}',
@@ -126,6 +128,7 @@ Future<void> handleExtraPrint({
     }
   } catch (error) {
     if (context.mounted) closeBusy();
+    if (!context.mounted) return;
     _snack(
       context,
       resolveRequestErrorMessage(error, fallback: 'Tambah cetak belum dapat diproses.'),

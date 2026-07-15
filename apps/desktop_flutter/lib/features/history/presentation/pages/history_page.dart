@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/app/theme/app_colors.dart';
 import '../../application/history_controller.dart';
 import '../sections/history_header_section.dart';
 import '../sections/history_table_section.dart';
@@ -6,6 +7,7 @@ import '../sections/history_pagination_section.dart';
 import '../handlers/pelunasan_handler.dart';
 import '../handlers/cetak_ulang_handler.dart';
 import '../handlers/extra_print_handler.dart';
+import '../handlers/ubah_metode_handler.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -37,10 +39,10 @@ class _HistoryPageState extends State<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFFF8FAFC),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(60, 64, 60, 60),
+    return Scaffold(
+      backgroundColor: AppColors.pageBg,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(60, 28, 60, 60),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -104,6 +106,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 onLunasi: (tx) => handlePelunasan(context: context, controller: _controller, transaction: tx),
                 onReprint: (tx) => handleCetakUlang(context: context, controller: _controller, transaction: tx),
                 onExtraPrint: (tx) => handleExtraPrint(context: context, controller: _controller, transaction: tx),
+                onUbahMetode: (tx) => handleUbahMetode(context: context, controller: _controller, transaction: tx),
               ),
             const SizedBox(height: 32),
             HistoryPaginationSection(

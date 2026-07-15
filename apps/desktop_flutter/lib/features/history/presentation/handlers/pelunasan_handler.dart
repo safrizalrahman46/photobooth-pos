@@ -72,12 +72,15 @@ Future<void> handlePelunasan({
         receiptTitle: 'STRUK PELUNASAN',
         paperWidthMm: 80,
       );
+      if (!context.mounted) return;
       _snack(context, 'Pelunasan berhasil dan struk siap dicetak.');
     } catch (_) {
+      if (!context.mounted) return;
       _snack(context, 'Pelunasan berhasil, tetapi struk gagal dicetak.');
     }
   } catch (error) {
     if (context.mounted) closeBusy();
+    if (!context.mounted) return;
     _snack(context, 'Pelunasan gagal diproses.');
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:desktop_flutter/app/theme/app_colors.dart';
+import 'package:desktop_flutter/core/session/api_session.dart';
 import '../../../domain/entities/transaction.dart';
 import '../common/transaction_status_badge.dart';
 
@@ -9,6 +10,7 @@ class HistoryRow extends StatelessWidget {
   final VoidCallback? onLunasi;
   final VoidCallback? onReprint;
   final VoidCallback? onExtraPrint;
+  final VoidCallback? onUbahMetode;
 
   static const int _flexId = 2;
   static const int _flexWaktu = 3;
@@ -16,7 +18,7 @@ class HistoryRow extends StatelessWidget {
   static const int _flexPaket = 3;
   static const int _flexTotal = 2;
   static const int _flexStatus = 3;
-  static const double _colAction = 300;
+
 
   const HistoryRow({
     super.key,
@@ -24,6 +26,7 @@ class HistoryRow extends StatelessWidget {
     this.onLunasi,
     this.onReprint,
     this.onExtraPrint,
+    this.onUbahMetode,
   });
 
   @override
@@ -40,30 +43,30 @@ class HistoryRow extends StatelessWidget {
           children: [
             Expanded(flex: _flexId, child: Padding(
               padding: const EdgeInsets.only(right: 16),
-              child: Text(transaction.id, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+              child: Text(transaction.id, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
             )),
             Expanded(flex: _flexWaktu, child: Padding(
               padding: const EdgeInsets.only(right: 16),
-              child: Text(_formatWaktu(transaction.waktu), style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5)),
+              child: Text(_formatWaktu(transaction.waktu), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5)),
             )),
             Expanded(flex: _flexNama, child: Padding(
               padding: const EdgeInsets.only(right: 16),
-              child: Text(transaction.namaPelanggan, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+              child: Text(transaction.namaPelanggan, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
             )),
             Expanded(flex: _flexPaket, child: Padding(
               padding: const EdgeInsets.only(right: 16),
-              child: Text(transaction.paketDanAddOns, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5)),
+              child: Text(transaction.paketDanAddOns, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5)),
             )),
             Expanded(flex: _flexTotal, child: Padding(
               padding: const EdgeInsets.only(right: 16),
-              child: Text(_formatRupiah(transaction.totalAmount), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+              child: Text(_formatRupiah(transaction.totalAmount), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             )),
             Expanded(flex: _flexStatus, child: Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Align(alignment: Alignment.centerLeft, child: TransactionStatusBadge(status: transaction.status)),
             )),
-            SizedBox(
-              width: _colAction,
+            Expanded(
+              flex: 3,
               child: Align(
                 alignment: Alignment.centerRight,
                 child: _buildActionButtons(),
@@ -76,13 +79,18 @@ class HistoryRow extends StatelessWidget {
   }
 
   Widget _buildActionButtons() {
+    final isOwner = ApiSession.current?.user.hasRole('owner') ?? false;
+
     return switch (transaction.status) {
       TransactionStatus.dp => _actionButton(label: 'Lunasi', icon: Icons.check_circle_rounded, onPressed: onLunasi, color: const Color(0xFFEA580C)),
-      TransactionStatus.lunas => Row(
-          mainAxisSize: MainAxisSize.min,
+      TransactionStatus.lunas => Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          alignment: WrapAlignment.end,
           children: [
+            if (isOwner && onUbahMetode != null)
+              _actionButton(label: 'Ubah Metode', icon: Icons.swap_horiz_rounded, onPressed: onUbahMetode, color: const Color(0xFF7C3AED)),
             _actionButton(label: 'Cetak Ulang', icon: Icons.replay_rounded, onPressed: onReprint, color: AppColors.primary),
-            const SizedBox(width: 8),
             _actionButton(label: 'Tambah Cetak', icon: Icons.print_rounded, onPressed: onExtraPrint, color: AppColors.primary),
           ],
         ),

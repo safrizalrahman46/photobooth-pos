@@ -1,11 +1,11 @@
 class AppConfig {
   static const String appName = 'Ready To Pict Desktop';
-  // static const String localApiBaseUrl = 'http://127.0.0.1:8000/api/v1';
-  static const String productionApiBaseUrl = 'http://readytopict.com/api/v1';
+  static const String localApiBaseUrl = 'http://127.0.0.1:8000/api/v1';
+  // static const String productionApiBaseUrl = 'http://readytopict.com/api/v1';
   static const String defaultApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: productionApiBaseUrl,
-    // defaultValue: localApiBaseUrl,
+    // defaultValue: productionApiBaseUrl,
+    defaultValue: localApiBaseUrl,
   );
   static const int apiTimeoutSeconds = int.fromEnvironment(
     'API_TIMEOUT_SECONDS',

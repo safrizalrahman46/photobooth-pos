@@ -44,12 +44,15 @@ class TransactionStatusBadge extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            status.label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: config.textColor,
+          Flexible(
+            child: Text(
+              status.label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: config.textColor,
+              ),
             ),
           ),
         ],

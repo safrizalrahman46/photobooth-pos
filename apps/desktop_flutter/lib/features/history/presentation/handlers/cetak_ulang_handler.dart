@@ -59,9 +59,11 @@ Future<void> handleCetakUlang({
       receiptTitle: 'STRUK',
       paperWidthMm: 80,
     );
+    if (!context.mounted) return;
     _snack(context, 'Cetak ulang berhasil.');
   } catch (error) {
     if (context.mounted) closeBusy();
+    if (!context.mounted) return;
     _snack(context, 'Cetak ulang gagal: Periksa printer.');
   }
 }

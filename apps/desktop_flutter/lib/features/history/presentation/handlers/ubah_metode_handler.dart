@@ -80,10 +80,12 @@ Future<void> handleUbahMetode({
             'Metode pembayaran ${transaction.id} diubah ke ${_methodLabel(result.method)}.');
       }
     } else {
+      if (!context.mounted) return;
       _snack(context, 'Gagal mengubah metode pembayaran.');
     }
   } catch (_) {
     if (context.mounted) closeBusy();
+    if (!context.mounted) return;
     _snack(context, 'Terjadi kesalahan saat mengubah metode.');
   }
 }

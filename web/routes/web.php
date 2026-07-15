@@ -29,7 +29,7 @@ use App\Http\Controllers\Web\WalkInRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
-Route::get('/queue-board', [QueueBoardController::class, 'index'])->name('queue.board');
+Route::match(['get', 'post'], '/queue-board', [QueueBoardController::class, 'index'])->name('queue.board');
 Route::prefix('walk-in')->name('walk-in.')->group(function () {
     Route::get('/', [WalkInRequestController::class, 'create'])->name('create');
     Route::post('/', [WalkInRequestController::class, 'store'])->middleware('throttle:walk-in')->name('store');

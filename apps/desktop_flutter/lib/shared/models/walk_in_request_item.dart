@@ -1,15 +1,45 @@
 import 'package:desktop_flutter/shared/models/queue_ticket_item.dart';
 import 'package:desktop_flutter/shared/models/transaction_record.dart';
 
+class WalkInRequestAddOn {
+  final int addOnId;
+  final String name;
+  final int qty;
+  final double unitPrice;
+  final double lineTotal;
+
+  const WalkInRequestAddOn({
+    required this.addOnId,
+    required this.name,
+    required this.qty,
+    required this.unitPrice,
+    required this.lineTotal,
+  });
+
+  factory WalkInRequestAddOn.fromJson(Map<String, dynamic> json) {
+    return WalkInRequestAddOn(
+      addOnId: (json['add_on_id'] as num?)?.toInt() ?? 0,
+      name: (json['name'] ?? json['label'] ?? '').toString(),
+      qty: (json['qty'] as num?)?.toInt() ?? 0,
+      unitPrice: (json['unit_price'] ?? json['price'] as num?)?.toDouble() ?? 0,
+      lineTotal: (json['line_total'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
 class WalkInRequestItem {
   const WalkInRequestItem({
     required this.id,
     required this.requestCode,
     required this.branchName,
+    required this.packageId,
     required this.packageName,
+    required this.packagePrice,
     required this.customerName,
     required this.customerPhone,
     required this.totalAmount,
+    required this.subtotalAmount,
+    required this.addOns,
     required this.status,
     this.paymentMethod,
     required this.expiresAt,
@@ -20,10 +50,14 @@ class WalkInRequestItem {
   final int id;
   final String requestCode;
   final String branchName;
+  final int packageId;
   final String packageName;
+  final double packagePrice;
   final String customerName;
   final String customerPhone;
   final double totalAmount;
+  final double subtotalAmount;
+  final List<WalkInRequestAddOn> addOns;
   final String status;
   final String? paymentMethod;
   final String? expiresAt;
@@ -32,15 +66,23 @@ class WalkInRequestItem {
 
   bool get isPendingPayment => status == 'pending_payment';
 
+  double get addOnsTotal => addOns.fold(0, (sum, a) => sum + a.lineTotal);
+
   factory WalkInRequestItem.fromJson(Map<String, dynamic> json) {
     return WalkInRequestItem(
       id: (json['id'] as num?)?.toInt() ?? 0,
       requestCode: json['request_code']?.toString() ?? '-',
       branchName: json['branch_name']?.toString() ?? '-',
+      packageId: (json['package_id'] as num?)?.toInt() ?? 0,
       packageName: json['package_name']?.toString() ?? '-',
+      packagePrice: (json['package_price'] as num?)?.toDouble() ?? 0,
       customerName: json['customer_name']?.toString() ?? '-',
       customerPhone: json['customer_phone']?.toString() ?? '-',
       totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
+      subtotalAmount: (json['subtotal_amount'] as num?)?.toDouble() ?? 0,
+      addOns: (json['add_ons'] as List?)
+          ?.map((e) => WalkInRequestAddOn.fromJson(e as Map<String, dynamic>))
+          .toList() ?? [],
       status: json['status']?.toString() ?? 'pending_payment',
       paymentMethod: json['payment_method']?.toString(),
       expiresAt: json['expires_at']?.toString(),
