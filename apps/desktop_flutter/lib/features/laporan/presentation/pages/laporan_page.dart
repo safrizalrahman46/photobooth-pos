@@ -242,7 +242,7 @@ class LaporanPage extends StatelessWidget {
 
     final rows = await client.fetchTransactions(perPage: 50);
 
-    return rows.map((row) {
+    return rows.map<Transaction>((row) {
       final packageItems = row.items
           .where(
             (item) => item.itemType == 'package' || item.itemType == 'booking',
@@ -268,6 +268,7 @@ class LaporanPage extends StatelessWidget {
         totalAmount: row.totalAmount,
         paidAmount: row.paidAmount,
         status: _mapTransactionStatus(row.status),
+        bookingId: row.bookingId,
       );
     }).toList();
   }

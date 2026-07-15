@@ -53,4 +53,7 @@ class Transaction {
     }
     return paket;
   }
+
+  /// Remaining payoff balance
+  int get sisaBayar => (totalBayar - paidAmount.round()).clamp(0, totalBayar);
 }
