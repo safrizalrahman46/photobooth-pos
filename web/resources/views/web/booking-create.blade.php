@@ -14,6 +14,7 @@
         'customer_email' => old('customer_email', $sessionCustomer['customer_email'] ?? null),
         'notes' => old('notes', $sessionCustomer['notes'] ?? null),
         'referral_code' => old('referral_code'),
+        'social_media_consent' => old('social_media_consent', $sessionCustomer['social_media_consent'] ?? null),
     ];
 
     $bootstrap = [

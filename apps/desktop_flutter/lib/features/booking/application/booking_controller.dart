@@ -371,13 +371,9 @@ class BookingController extends ChangeNotifier {
                   : booking.totalAmount * 0.5
             : booking.totalAmount);
 
-        final consentNote = allowSharePhotos
-            ? '[Izin Share: YA]'
-            : '[Izin Share: TIDAK]';
-
         final finalNotes = notes != null && notes.isNotEmpty
-            ? '$notes $consentNote'
-            : 'Diverifikasi dari aplikasi desktop. $consentNote';
+            ? notes
+            : null;
 
         await client.confirmBookingPayment(
           bookingId: booking.recordId!,
@@ -385,16 +381,14 @@ class BookingController extends ChangeNotifier {
           amount: amount,
           referenceNo: referenceNo,
           notes: finalNotes,
+          socialMediaConsent: allowSharePhotos,
         );
         if (_disposed) return;
       } else if (booking.canConfirmBooking) {
-        final consentNote = allowSharePhotos
-            ? '[Izin Share: YA]'
-            : '[Izin Share: TIDAK]';
-
         await client.confirmBooking(
           bookingId: booking.recordId!,
-          reason: 'Diverifikasi dari aplikasi desktop. $consentNote',
+          reason: notes != null && notes.isNotEmpty ? notes : null,
+          socialMediaConsent: allowSharePhotos,
         );
       }
 
@@ -482,18 +476,18 @@ class BookingController extends ChangeNotifier {
     safeNotify();
 
     try {
-      final consentSuffix = allowSharePhotos ? '[Izin Share: YA]' : '[Izin Share: TIDAK]';
-      final finalNote = note.trim().isEmpty ? consentSuffix : '${note.trim()} $consentSuffix';
-
       final result = await client.checkoutWalkIn(
         branchId: branchId,
         packageId: int.parse(selectedPackage.id),
         customerName: customerName.trim(),
         customerPhone: whatsapp.trim(),
+        customerEmail: email.trim().isEmpty ? null : email.trim(),
+        jumlahOrang: jumlahOrang,
         paymentMethod: selectedPayment == 'QRIS' ? 'qris' : 'cash',
         paidAmount: paidAmount,
         referralCode: referralPreview == null ? null : referralCode.trim(),
-        notes: finalNote.trim().isEmpty ? null : finalNote.trim(),
+        notes: note.trim().isEmpty ? null : note.trim(),
+        socialMediaConsent: allowSharePhotos,
         addons: selectedAddons
             .map(
               (addon) => {

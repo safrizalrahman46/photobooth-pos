@@ -71,6 +71,8 @@ class WalkInRequestService
                 'package_price' => $packagePrice,
                 'customer_name' => trim((string) $payload['customer_name']),
                 'customer_phone' => preg_replace('/\s+/', '', (string) $payload['customer_phone']),
+                'customer_email' => isset($payload['customer_email']) ? trim((string) $payload['customer_email']) : null,
+                'social_media_consent' => filter_var($payload['social_media_consent'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'add_ons_json' => $selectedAddOns,
                 'subtotal_amount' => $subtotal,
                 'total_amount' => $subtotal,
@@ -199,6 +201,7 @@ class WalkInRequestService
                 'discount_amount' => 0,
                 'tax_amount' => 0,
                 'notes' => $payload['notes'] ?? sprintf('Self walk-in QR %s.', (string) $lockedRequest->request_code),
+                'social_media_consent' => (bool) ($lockedRequest->social_media_consent ?? filter_var($payload['social_media_consent'] ?? false, FILTER_VALIDATE_BOOLEAN)),
                 'items' => $this->transactionItemsFromRequest($lockedRequest),
             ], $cashierId);
 

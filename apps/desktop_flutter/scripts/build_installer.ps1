@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 $installerScript = Join-Path $PSScriptRoot "desktop_flutter_installer.iss"
-$exePath = Join-Path $root "build/windows/x64/runner/Release/desktop_flutter.exe"
+$exePath = Join-Path $root "build/windows/x64/runner/Release/ReadyTopictPOS.exe"
 
 if (-not (Test-Path $exePath)) {
     throw "Executable belum ada di $exePath. Jalankan 'flutter build windows' dulu."

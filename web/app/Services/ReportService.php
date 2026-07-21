@@ -371,6 +371,39 @@ class ReportService
             ->values()
             ->all();
 
+        $leadMarketing = Transaction::query()
+            ->where('social_media_consent', true)
+            ->whereBetween('created_at', [$start, $end])
+            ->whereIn('status', $revenueStatuses)
+            ->with([
+                'booking:id,package_id,booking_date,customer_name,customer_phone,customer_email',
+                'booking.package:id,name',
+                'walkInRequest:transaction_id,customer_name,customer_phone,customer_email',
+                'branch:id,name',
+            ])
+            ->select(['id', 'booking_id', 'branch_id', 'total_amount', 'paid_amount', 'created_at'])
+            ->orderByDesc('created_at')
+            ->limit(200)
+            ->get()
+            ->map(function (Transaction $tx): array {
+                return [
+                    'id' => $tx->id,
+                    'customer_name' => $tx->booking?->customer_name ?? $tx->walkInRequest?->customer_name ?? '-',
+                    'customer_phone' => $tx->booking?->customer_phone ?? $tx->walkInRequest?->customer_phone ?? '-',
+                    'customer_email' => $tx->booking?->customer_email ?? $tx->walkInRequest?->customer_email ?? '-',
+                    'branch_name' => $tx->branch?->name ?? '-',
+                    'package_name' => $tx->booking?->package?->name ?? '-',
+                    'booking_date' => $tx->booking?->booking_date?->toDateString() ?? '-',
+                    'total_amount' => (float) $tx->total_amount,
+                    'total_amount_text' => $this->formatRupiah((float) $tx->total_amount),
+                    'paid_amount' => (float) $tx->paid_amount,
+                    'paid_amount_text' => $this->formatRupiah((float) $tx->paid_amount),
+                    'created_at' => $tx->created_at?->toDateTimeString() ?? '-',
+                ];
+            })
+            ->values()
+            ->all();
+
         $addOnPerformance = AddOn::query()
             ->join('booking_add_ons as booking_add_on', 'booking_add_on.add_on_id', '=', 'add_ons.id')
             ->join('bookings as booking', 'booking.id', '=', 'booking_add_on.booking_id')
@@ -525,6 +558,8 @@ class ReportService
                 array_column($cashierPerformance, 'cashier_id'),
             ),
             'add_on_performance' => $addOnPerformance,
+            'lead_marketing' => $leadMarketing,
+            'lead_marketing_count' => count($leadMarketing),
             'daily_summary' => $dailySummary,
             'chart_modes' => $this->buildReportChartModes(
                 $dailySummary,

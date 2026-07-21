@@ -52,6 +52,7 @@ class TransactionService
                 'change_amount' => 0,
                 'status' => TransactionStatus::Unpaid,
                 'notes' => $payload['notes'] ?? null,
+                'social_media_consent' => filter_var($payload['social_media_consent'] ?? false, FILTER_VALIDATE_BOOLEAN),
             ]);
 
             foreach ($items as $item) {

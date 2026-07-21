@@ -54,6 +54,7 @@ class BookingService
                 'customer_name' => $payload['customer_name'],
                 'customer_phone' => $payload['customer_phone'],
                 'customer_email' => $payload['customer_email'] ?? null,
+                'social_media_consent' => filter_var($payload['social_media_consent'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'booking_date' => $startAt->toDateString(),
                 'start_at' => $startAt,
                 'end_at' => $endAt,

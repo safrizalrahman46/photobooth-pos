@@ -26,6 +26,8 @@ class WalkInRequest extends Model
         'package_price',
         'customer_name',
         'customer_phone',
+        'customer_email',
+        'social_media_consent',
         'add_ons_json',
         'subtotal_amount',
         'total_amount',
@@ -49,6 +51,7 @@ class WalkInRequest extends Model
             'total_amount' => 'decimal:2',
             'expires_at' => 'datetime',
             'paid_at' => 'datetime',
+            'social_media_consent' => 'boolean',
         ];
     }
 

@@ -20,6 +20,7 @@ use App\Http\Controllers\Web\AdminReferralController;
 use App\Http\Controllers\Web\AdminSettingsController;
 use App\Http\Controllers\Web\AdminTimeSlotController;
 use App\Http\Controllers\Web\AdminUserController;
+use App\Http\Controllers\Web\AdminTransactionController;
 use App\Http\Controllers\Web\BookingController;
 use App\Http\Controllers\Web\LandingController;
 use App\Http\Controllers\Web\PackageSamplePhotoController;
@@ -155,6 +156,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/payments-data', [AdminPaymentController::class, 'index'])->middleware('admin.permission:transaction.view,payment.manage')->name('payments.data');
         Route::post('/payments/{transaction}/store', [AdminPaymentController::class, 'store'])->middleware('admin.permission:payment.manage')->name('payments.store');
+        Route::put('/payments/{payment}', [AdminPaymentController::class, 'update'])->middleware('admin.permission:transaction.manage');
+        Route::put('/transactions/{transaction}', [AdminTransactionController::class, 'update'])->middleware('admin.permission:transaction.manage');
 
         Route::get('/cashier-settlements-data', [AdminCashierSettlementController::class, 'index'])->middleware('admin.permission:report.view')->name('cashier-settlements.data');
         Route::get('/cashier-settlements/{cashierSettlement}', [AdminCashierSettlementController::class, 'show'])->middleware('admin.permission:report.view');

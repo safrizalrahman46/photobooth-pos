@@ -77,6 +77,7 @@ const bookingForm = reactive({
     booking_time: '',
     referral_code: '',
     notes: '',
+    social_media_consent: false,
 });
 
 const paymentForm = reactive({
@@ -372,6 +373,7 @@ const resetBookingForm = () => {
     bookingForm.booking_time = '';
     bookingForm.referral_code = '';
     bookingForm.notes = '';
+    bookingForm.social_media_consent = false;
 
     editingBookingId.value = null;
     localError.value = '';
@@ -494,6 +496,7 @@ const submitBookingForm = async () => {
         booking_time: String(bookingForm.booking_time || ''),
         referral_code: String(bookingForm.referral_code || '').trim(),
         notes: String(bookingForm.notes || '').trim(),
+        social_media_consent: Boolean(bookingForm.social_media_consent),
     };
 
     try {
@@ -1022,6 +1025,11 @@ watch(
                         <input v-model="bookingForm.customer_email" type="email" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
                     </label>
 
+                    <label class="flex items-start gap-3 text-sm text-[#475569]">
+                        <input v-model="bookingForm.social_media_consent" type="checkbox" class="mt-1 h-4 w-4 rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB]">
+                        <span>Boleh Share Foto</span>
+                    </label>
+
                     <label class="text-sm text-[#475569]">
                         Booking Date
                         <input v-model="bookingForm.booking_date" type="date" class="mt-1 w-full rounded-lg border px-3 py-2" style="border-color: #E2E8F0;" >
@@ -1144,6 +1152,7 @@ watch(
                 <div class="rtp-admin-form-grid text-sm text-[#334155]">
                     <p><span class="font-semibold text-[#0F172A]">Customer:</span> {{ bookingDetail?.name || '-' }}</p>
                     <p><span class="font-semibold text-[#0F172A]">Phone:</span> {{ bookingDetail?.customer_phone || '-' }}</p>
+                    <p><span class="font-semibold text-[#0F172A]">Izin Share Foto:</span> <span :class="bookingDetail?.social_media_consent ? 'font-semibold text-[#059669]' : 'text-[#94A3B8]'">{{ bookingDetail?.social_media_consent ? 'Ya' : 'Tidak' }}</span></p>
                     <p><span class="font-semibold text-[#0F172A]">Package:</span> {{ bookingDetail?.pkg || '-' }}</p>
                     <p><span class="font-semibold text-[#0F172A]">Design:</span> {{ bookingDetail?.design_name || '-' }}</p>
                     <p><span class="font-semibold text-[#0F172A]">Date:</span> {{ bookingDetail?.date || '-' }}</p>

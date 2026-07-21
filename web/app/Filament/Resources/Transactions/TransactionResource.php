@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Transactions;
 
+use App\Filament\Resources\Transactions\Pages\EditTransaction;
 use App\Filament\Resources\Transactions\Pages\ListTransactions;
 use App\Filament\Resources\Transactions\Pages\ViewTransaction;
 use App\Filament\Resources\Transactions\Schemas\TransactionForm;
@@ -52,7 +53,13 @@ class TransactionResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return false;
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        return $user->hasRole('owner');
     }
 
     public static function canDelete(Model $record): bool
@@ -90,6 +97,7 @@ class TransactionResource extends Resource
         return [
             'index' => ListTransactions::route('/'),
             'view' => ViewTransaction::route('/{record}'),
+            'edit' => EditTransaction::route('/{record}/edit'),
         ];
     }
 

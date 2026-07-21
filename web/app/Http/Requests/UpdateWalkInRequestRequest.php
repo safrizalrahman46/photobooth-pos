@@ -17,6 +17,8 @@ class UpdateWalkInRequestRequest extends FormRequest
         return [
             'customer_name' => ['sometimes', 'string', 'max:120'],
             'customer_phone' => ['sometimes', 'string', 'max:30', 'regex:/^[0-9]+$/'],
+            'customer_email' => ['sometimes', 'email', 'max:255'],
+            'social_media_consent' => ['sometimes', 'boolean'],
             'package_id' => ['sometimes', 'integer', 'exists:packages,id'],
             'addons' => ['sometimes', 'array', 'max:20'],
             'addons.*.add_on_id' => ['required_with:addons', 'integer', 'exists:add_ons,id'],

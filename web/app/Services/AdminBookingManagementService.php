@@ -471,6 +471,7 @@ class AdminBookingManagementService
             'referral_discount_amount' => (float) $booking->referral_discount_amount,
             'tax_amount' => 0,
             'notes' => 'Dibuat otomatis dari konfirmasi pembayaran booking.',
+            'social_media_consent' => (bool) ($booking->social_media_consent ?? false),
             'items' => $items,
         ], $cashierId);
 

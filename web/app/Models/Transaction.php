@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Transaction extends Model
 {
@@ -30,6 +31,7 @@ class Transaction extends Model
         'status',
         'notes',
         'paid_at',
+        'social_media_consent',
     ];
 
     protected function casts(): array
@@ -44,6 +46,7 @@ class Transaction extends Model
             'change_amount' => 'decimal:2',
             'paid_at' => 'datetime',
             'status' => TransactionStatus::class,
+            'social_media_consent' => 'boolean',
         ];
     }
 
@@ -55,6 +58,11 @@ class Transaction extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function walkInRequest(): HasOne
+    {
+        return $this->hasOne(WalkInRequest::class, 'transaction_id');
     }
 
     public function queueTicket(): BelongsTo

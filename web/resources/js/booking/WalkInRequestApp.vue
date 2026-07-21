@@ -64,6 +64,7 @@ const packageId = ref(asString(props.oldValues.package_id));
 const customerName = ref(asString(props.oldValues.customer_name));
 const customerPhone = ref(digitsOnly(props.oldValues.customer_phone));
 const termsAccepted = ref(Boolean(props.oldValues.terms_accepted));
+const socialMediaConsent = ref(props.oldValues.social_media_consent ? Boolean(props.oldValues.social_media_consent) : true);
 const addonQty = ref(oldAddonQty);
 const isSubmitting = ref(false);
 
@@ -329,6 +330,14 @@ const onSubmit = () => {
                         <input v-model="termsAccepted" name="terms_accepted" type="checkbox" value="1" class="mt-1 h-4 w-4 rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB]">
                         <span>Saya berada di lokasi dan akan membayar tunai di kasir hari ini.</span>
                     </label>
+
+                    <div class="mt-4 border-t border-dashed border-slate-200 pt-4">
+                        <p class="text-xs font-bold uppercase tracking-[0.1em] text-[#64748B]">IZIN SHARE FOTO</p>
+                        <label class="mt-2 flex items-start gap-3 text-sm text-[#1F2937]">
+                            <input v-model="socialMediaConsent" name="social_media_consent" type="checkbox" value="1" class="mt-1 h-4 w-4 rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB]">
+                            <span>Boleh Share Foto</span>
+                        </label>
+                    </div>
 
                     <button type="submit" :disabled="!canSubmit" class="mt-5 h-12 w-full rounded-xl bg-[#2563EB] text-sm text-white transition disabled:cursor-not-allowed disabled:bg-slate-300" style="font-weight: 800;">
                         {{ isSubmitting ? 'Mengirim...' : 'Dapatkan Kode Walk-in' }}

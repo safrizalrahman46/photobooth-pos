@@ -928,6 +928,7 @@ class ApiClient {
     double? amount,
     String? referenceNo,
     String? notes,
+    bool? socialMediaConsent,
   }) async {
     final payload = await _send(
       method: 'POST',
@@ -939,6 +940,7 @@ class ApiClient {
         if (referenceNo != null && referenceNo.isNotEmpty)
           'reference_no': referenceNo,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
+        if (socialMediaConsent != null) 'social_media_consent': socialMediaConsent,
       },
     );
 
@@ -958,12 +960,16 @@ class ApiClient {
   Future<BookingItem> confirmBooking({
     required int bookingId,
     String? reason,
+    bool? socialMediaConsent,
   }) async {
     final payload = await _send(
       method: 'POST',
       path: '/bookings/$bookingId/confirm',
       authenticated: true,
-      body: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+      body: {
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+        if (socialMediaConsent != null) 'social_media_consent': socialMediaConsent,
+      },
     );
 
     final data = payload['data'];
@@ -1000,6 +1006,8 @@ class ApiClient {
     required int packageId,
     required String customerName,
     String? customerPhone,
+    String? customerEmail,
+    int? jumlahOrang,
     String? queueDate,
     required String paymentMethod,
     double? paidAmount,
@@ -1008,6 +1016,7 @@ class ApiClient {
     String? referralCode,
     double taxAmount = 0,
     String? notes,
+    bool? socialMediaConsent,
     List<Map<String, dynamic>> addons = const <Map<String, dynamic>>[],
   }) async {
     final payload = await _send(
@@ -1020,6 +1029,10 @@ class ApiClient {
         'customer_name': customerName,
         if (customerPhone != null && customerPhone.isNotEmpty)
           'customer_phone': customerPhone,
+        if (customerEmail != null && customerEmail.isNotEmpty)
+          'customer_email': customerEmail,
+        if (jumlahOrang != null && jumlahOrang > 0)
+          'jumlah_orang': jumlahOrang,
         if (queueDate != null && queueDate.isNotEmpty) 'queue_date': queueDate,
         'payment_method': paymentMethod,
         if (paidAmount != null) 'paid_amount': paidAmount,
@@ -1030,6 +1043,7 @@ class ApiClient {
           'referral_code': referralCode,
         'tax_amount': taxAmount,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
+        if (socialMediaConsent != null) 'social_media_consent': socialMediaConsent,
         'addons': addons,
       },
     );
@@ -1344,25 +1358,6 @@ class ApiClient {
       path: '/walk-in-requests/$requestId/confirm-payment',
       authenticated: true,
       body: {'payment_method': paymentMethod},
-    );
-
-    final data = payload['data'];
-
-    if (data is! Map<String, dynamic>) {
-      throw ApiException('Respons konfirmasi QR walk-in tidak valid.');
-    }
-
-    return WalkInConfirmResult.fromJson(data);
-  }
-  
-  Future<WalkInConfirmResult> confirmWalkInRequest({
-    required int requestId,
-  }) async {
-    final payload = await _send(
-      method: 'GET',
-      path: '/walk-in-requests/$requestId',
-      authenticated: true,
-      body: {'payment_method': 'cash'},
     );
 
     final data = payload['data'];

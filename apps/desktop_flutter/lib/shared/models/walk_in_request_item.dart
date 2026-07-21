@@ -37,6 +37,7 @@ class WalkInRequestItem {
     required this.packagePrice,
     required this.customerName,
     required this.customerPhone,
+    this.customerEmail,
     required this.totalAmount,
     required this.subtotalAmount,
     required this.addOns,
@@ -45,6 +46,7 @@ class WalkInRequestItem {
     required this.expiresAt,
     required this.transactionId,
     required this.queueTicketId,
+    this.socialMediaConsent = false,
   });
 
   final int id;
@@ -55,6 +57,7 @@ class WalkInRequestItem {
   final double packagePrice;
   final String customerName;
   final String customerPhone;
+  final String? customerEmail;
   final double totalAmount;
   final double subtotalAmount;
   final List<WalkInRequestAddOn> addOns;
@@ -63,6 +66,7 @@ class WalkInRequestItem {
   final String? expiresAt;
   final int? transactionId;
   final int? queueTicketId;
+  final bool socialMediaConsent;
 
   bool get isPendingPayment => status == 'pending_payment';
 
@@ -80,6 +84,7 @@ class WalkInRequestItem {
       customerPhone: json['customer_phone']?.toString() ?? '-',
       totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
       subtotalAmount: (json['subtotal_amount'] as num?)?.toDouble() ?? 0,
+      customerEmail: json['customer_email']?.toString(),
       addOns: (json['add_ons'] as List?)
           ?.map((e) => WalkInRequestAddOn.fromJson(e as Map<String, dynamic>))
           .toList() ?? [],
@@ -88,6 +93,7 @@ class WalkInRequestItem {
       expiresAt: json['expires_at']?.toString(),
       transactionId: (json['transaction_id'] as num?)?.toInt(),
       queueTicketId: (json['queue_ticket_id'] as num?)?.toInt(),
+      socialMediaConsent: json['social_media_consent'] == true,
     );
   }
 }

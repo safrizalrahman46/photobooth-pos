@@ -446,18 +446,57 @@ class _BookingDetailDialogState extends State<BookingDetailDialog> {
     }
 
     if (_proofImageBytes != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.memory(
-          _proofImageBytes!,
-          height: 160,
-          width: double.infinity,
-          fit: BoxFit.contain,
+      return GestureDetector(
+        onTap: () => _showProofImagePreview(context),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.memory(
+            _proofImageBytes!,
+            height: 160,
+            width: double.infinity,
+            fit: BoxFit.contain,
+          ),
         ),
       );
     }
 
     return const SizedBox.shrink();
+  }
+
+  void _showProofImagePreview(BuildContext context) {
+    if (_proofImageBytes == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(
+                child: Center(
+                  child: Image.memory(
+                    _proofImageBytes!,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 16,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildAddOns() {

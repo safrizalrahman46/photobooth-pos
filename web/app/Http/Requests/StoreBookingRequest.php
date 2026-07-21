@@ -47,6 +47,7 @@ class StoreBookingRequest extends FormRequest
             'addons.*.qty' => ['required_with:addons', 'integer', 'min:1', 'max:99'],
             'referral_code' => ['nullable', 'string', 'max:40'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'social_media_consent' => ['nullable', 'boolean'],
         ];
 
         if ($this->routeIs('booking.store')) {

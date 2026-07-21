@@ -15,6 +15,7 @@ const props = defineProps({
     reportAddOnRows: { type: Array, default: () => [] },
     reportPackageOptions: { type: Array, default: () => [] },
     reportCashierOptions: { type: Array, default: () => [] },
+    reportLeadRows: { type: Array, default: () => [] },
     reportRangeLabel: { type: String, default: '' },
     reportChartModes: { type: Array, default: () => [] },
     reportChartMode: { type: String, default: '' },
@@ -32,7 +33,8 @@ const hasReportData = computed(() => {
         props.reportDailyRows.length
         || props.reportCashierRows.length
         || props.reportPackageRows.length
-        || props.reportAddOnRows.length,
+        || props.reportAddOnRows.length
+        || props.reportLeadRows.length,
     );
 });
 </script>
@@ -198,8 +200,30 @@ const hasReportData = computed(() => {
                         </div>
                         <span class="text-xs font-semibold text-[#0F766E]">{{ addOn.total_revenue_text }}</span>
                     </div>
-                    <p v-if="!reportAddOnRows.length" class="text-xs text-[#94A3B8]">No add-on usage in range.</p>
+                <p v-if="!reportAddOnRows.length" class="text-xs text-[#94A3B8]">No add-on usage in range.</p>
+            </div>
+        </div>
+    </div>
+
+        <div class="rounded-3xl border p-5" style="border-color: #DBEAFE; background: #FFFFFF; box-shadow: 0 1px 3px rgba(37,99,235,0.08), 0 8px 20px rgba(37,99,235,0.08);">
+            <div class="mb-3 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-[#1F2937]">Lead Marketing <span class="text-xs text-[#94A3B8]">({{ reportLeadRows.length }} customer)</span></h3>
+                <span class="rounded-full bg-[#EFF6FF] px-2 py-0.5 text-xs text-[#2563EB]">Izin Share</span>
+            </div>
+            <p class="mb-3 text-xs text-[#64748B]">Customer yang memberikan izin share foto, siap untuk campaign marketing.</p>
+            <div class="max-h-[480px] space-y-2 overflow-y-auto pr-1">
+                <div v-for="lead in reportLeadRows" :key="`lead-${lead.id}`" class="flex items-center justify-between gap-4 rounded-2xl px-4 py-3" style="background: #F8FAFC;">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-[#0F172A]">{{ lead.customer_name }}</p>
+                        <p class="truncate text-xs text-[#64748B]">{{ lead.customer_phone }} · {{ lead.customer_email }}</p>
+                        <p class="mt-0.5 text-xs text-[#94A3B8]">{{ lead.branch_name }} · {{ lead.package_name }} · {{ lead.booking_date }}</p>
+                    </div>
+                    <div class="shrink-0 text-right">
+                        <p class="text-sm font-semibold text-[#059669]">{{ lead.total_amount_text }}</p>
+                        <p class="text-xs text-[#94A3B8]">{{ lead.paid_amount_text }}</p>
+                    </div>
                 </div>
+                <p v-if="!reportLeadRows.length" class="text-xs text-[#94A3B8]">Belum ada data lead marketing pada periode ini.</p>
             </div>
         </div>
 

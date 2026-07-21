@@ -81,6 +81,7 @@ class PosWalkInCheckoutService
                 'referral_discount_amount' => $referralDiscount,
                 'tax_amount' => $tax,
                 'notes' => $payload['notes'] ?? 'POS walk-in checkout.',
+                'social_media_consent' => filter_var($payload['social_media_consent'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'items' => $items,
             ], $cashierId);
 

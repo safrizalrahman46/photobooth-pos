@@ -119,9 +119,18 @@ class AdminBookingController extends Controller
 
         $fileName = basename($normalizedPath);
 
-        return Storage::disk('public')->response($normalizedPath, $fileName, [
+        $response = Storage::disk('public')->response($normalizedPath, $fileName, [
             'Content-Disposition' => 'inline; filename="'.$fileName.'"',
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
+            'ETag' => '"'.md5($normalizedPath.$booking->updated_at?->toIso8601String() ?? '').'"',
         ]);
+
+        // Ensure WebP content type if file is stored as webp
+        if (str_ends_with($fileName, '.webp')) {
+            $response->header('Content-Type', 'image/webp');
+        }
+
+        return $response;
     }
 
     private function normalizePublicDiskPath(string $path): string

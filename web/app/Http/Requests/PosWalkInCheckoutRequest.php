@@ -23,6 +23,9 @@ class PosWalkInCheckoutRequest extends FormRequest
             ],
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
+            'customer_email' => ['nullable', 'email', 'max:255'],
+            'jumlah_orang' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'social_media_consent' => ['nullable', 'boolean'],
             'queue_date' => ['nullable', 'date_format:Y-m-d'],
             'package_id' => [
                 'required',
