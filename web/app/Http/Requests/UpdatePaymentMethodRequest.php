@@ -16,7 +16,7 @@ class UpdatePaymentMethodRequest extends FormRequest
     {
         return [
             'method' => ['required', Rule::in(['cash', 'qris', 'transfer', 'card'])],
-            'reason' => ['nullable', 'string', 'max:500'],
+            'reason' => ['required', 'string', 'max:500'],
         ];
     }
 }

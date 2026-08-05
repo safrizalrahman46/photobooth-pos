@@ -19,6 +19,8 @@ class WalkInRequestResource extends JsonResource
             'package_price' => (float) $this->package_price,
             'customer_name' => (string) $this->customer_name,
             'customer_phone' => (string) $this->customer_phone,
+            'customer_email' => $this->customer_email,
+            'social_media_consent' => (bool) ($this->social_media_consent ?? false),
             'add_ons' => collect($this->add_ons_json ?? [])->values()->all(),
             'subtotal_amount' => (float) $this->subtotal_amount,
             'total_amount' => (float) $this->total_amount,

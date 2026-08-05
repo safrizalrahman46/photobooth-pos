@@ -30,6 +30,7 @@ class TransactionResource extends JsonResource
             'change_amount' => (float) $this->change_amount,
             'status' => $this->status?->value ?? $this->status,
             'notes' => $this->notes,
+            'social_media_consent' => (bool) ($this->social_media_consent ?? false),
             'paid_at' => $this->paid_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

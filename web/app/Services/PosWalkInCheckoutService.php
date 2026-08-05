@@ -40,11 +40,26 @@ class PosWalkInCheckoutService
                 ]);
             }
 
+            $package2 = null;
+            if (!empty($payload['package_id_2'])) {
+                /** @var Package $package2 */
+                $package2 = Package::query()
+                    ->whereKey((int) $payload['package_id_2'])
+                    ->where('is_active', true)
+                    ->firstOrFail();
+
+                if ($package2->branch_id !== null && (int) $package2->branch_id !== (int) $payload['branch_id']) {
+                    throw ValidationException::withMessages([
+                        'package_id_2' => 'Paket kedua tidak tersedia untuk cabang ini.',
+                    ]);
+                }
+            }
+
             $selectedAddOns = $this->bookingService->resolveAddOnsForPackage(
                 (int) $package->id,
                 $payload['addons'] ?? []
             );
-            $items = $this->buildTransactionItems($package, $selectedAddOns);
+            $items = $this->buildTransactionItems($package, $selectedAddOns, $package2);
             $subtotal = (float) collect($items)->sum('line_total');
             $referralPreview = $this->referralService->preview(
                 $payload['referral_code'] ?? null,
@@ -81,6 +96,7 @@ class PosWalkInCheckoutService
                 'referral_discount_amount' => $referralDiscount,
                 'tax_amount' => $tax,
                 'notes' => $payload['notes'] ?? 'POS walk-in checkout.',
+                'social_media_consent' => filter_var($payload['social_media_consent'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'items' => $items,
             ], $cashierId);
 
@@ -115,7 +131,7 @@ class PosWalkInCheckoutService
         });
     }
 
-    private function buildTransactionItems(Package $package, array $selectedAddOns): array
+    private function buildTransactionItems(Package $package, array $selectedAddOns, ?Package $package2 = null): array
     {
         $items = [[
             'item_type' => 'package',
@@ -125,6 +141,17 @@ class PosWalkInCheckoutService
             'unit_price' => (float) $package->base_price,
             'line_total' => (float) $package->base_price,
         ]];
+
+        if ($package2) {
+            $items[] = [
+                'item_type' => 'package',
+                'item_ref_id' => (int) $package2->id,
+                'item_name' => (string) $package2->name,
+                'qty' => 1,
+                'unit_price' => (float) $package2->base_price,
+                'line_total' => (float) $package2->base_price,
+            ];
+        }
 
         foreach ($selectedAddOns as $addOn) {
             $items[] = [

@@ -28,6 +28,7 @@ class BookingItem {
     required this.canDeclineBooking,
     required this.approvedAt,
     required this.addOns,
+    this.socialMediaConsent = false,
   });
 
   final int id;
@@ -58,6 +59,7 @@ class BookingItem {
   final bool canDeclineBooking;
   final String approvedAt;
   final List<BookingAddOnLine> addOns;
+  final bool socialMediaConsent;
 
   factory BookingItem.fromJson(Map<String, dynamic> json) {
     final rawAddOns = json['add_ons'] ?? json['addons'];
@@ -91,6 +93,7 @@ class BookingItem {
       canConfirmPayment: json['can_confirm_payment'] == true,
       canDeclineBooking: json['can_decline_booking'] == true,
       approvedAt: json['approved_at']?.toString() ?? '',
+      socialMediaConsent: json['social_media_consent'] == true,
       addOns: rawAddOns is List
           ? rawAddOns
                 .whereType<Map<String, dynamic>>()

@@ -29,6 +29,7 @@ class ConfirmWalkInRequestPaymentRequest extends FormRequest
             'payment_method' => ['nullable', Rule::in(['cash', 'qris'])],
             'reference_no' => ['nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'social_media_consent' => ['nullable', 'boolean'],
         ];
     }
 }

@@ -4,6 +4,7 @@ import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/features/kasir/services/receipt_printer.dart';
 import 'package:desktop_flutter/shared/models/walk_in_request_item.dart';
 import 'package:desktop_flutter/features/booking/presentation/widgets/dialogs/payment_confirm_dialog.dart';
+import 'package:desktop_flutter/features/booking/presentation/widgets/dialogs/walkin_review_dialog.dart';
 import 'package:flutter/material.dart';
 
 class QrWalkinPage extends StatefulWidget {
@@ -74,6 +75,54 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
       return;
     }
 
+    // Step 1: Review & edit dialog
+    final reviewResult = await showDialog<WalkinReviewResult>(
+      context: context,
+      builder: (context) => WalkinReviewDialog(item: item),
+    );
+
+    if (reviewResult == null) return;
+
+    final origPkg2List = item.addOns.where((a) => a.isPackage).toList();
+    final int? origPkg2Id = origPkg2List.isNotEmpty ? origPkg2List.first.addOnId : null;
+
+    final changed = reviewResult.customerName != item.customerName ||
+        reviewResult.customerPhone != item.customerPhone ||
+        reviewResult.packageId != item.packageId ||
+        reviewResult.packageId2 != origPkg2Id ||
+        reviewResult.addons.any((a) {
+          final orig = item.addOns.where((o) => o.addOnId == (a['add_on_id'] as int) && !o.isPackage).firstOrNull;
+          return orig == null || orig.qty != (a['qty'] as int);
+        }) ||
+        reviewResult.addons.length != item.addOns.where((a) => !a.isPackage).length;
+
+    final client = ApiSession.client;
+
+    if (changed && client != null) {
+      try {
+        final updated = await client.updateWalkInRequest(
+          requestId: item.id,
+          customerName: reviewResult.customerName,
+          customerPhone: reviewResult.customerPhone,
+          packageId: reviewResult.packageId,
+          packageId2: reviewResult.packageId2,
+          clearPackage2: reviewResult.clearPackage2,
+          addons: reviewResult.addons,
+        );
+
+        if (updated != null) {
+          item = updated;
+        }
+      } catch (_) {
+        if (mounted) {
+          _showSnack('Gagal menyimpan perubahan. Coba lagi.');
+        }
+        return;
+      }
+    }
+
+    // Step 2: Payment dialog
+    if (!mounted) return;
     final paymentMethod = await showDialog<String>(
       context: context,
       builder: (context) => PaymentConfirmDialog(item: item),
@@ -82,8 +131,6 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
     if (paymentMethod == null) {
       return;
     }
-
-    final client = ApiSession.client;
 
     if (client == null) {
       _showSnack('Sesi kasir tidak aktif.');

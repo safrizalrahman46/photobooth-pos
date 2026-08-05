@@ -7,6 +7,7 @@ class HistoryTableSection extends StatelessWidget {
   final void Function(Transaction)? onLunasi;
   final void Function(Transaction)? onReprint;
   final void Function(Transaction)? onExtraPrint;
+  final void Function(Transaction)? onUbahMetode;
 
   const HistoryTableSection({
     super.key,
@@ -14,6 +15,7 @@ class HistoryTableSection extends StatelessWidget {
     this.onLunasi,
     this.onReprint,
     this.onExtraPrint,
+    this.onUbahMetode,
   });
 
   @override
@@ -23,6 +25,7 @@ class HistoryTableSection extends StatelessWidget {
       onLunasi: onLunasi,
       onReprint: onReprint,
       onExtraPrint: onExtraPrint,
+      onUbahMetode: onUbahMetode,
     );
   }
 }

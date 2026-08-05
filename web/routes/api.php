@@ -85,6 +85,7 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/pos/walk-in/checkout', [PosController::class, 'walkInCheckout']);
         Route::get('/walk-in-requests', [WalkInRequestController::class, 'index']);
+        Route::put('/walk-in-requests/{walkInRequest}', [WalkInRequestController::class, 'update']);
         Route::post('/walk-in-requests/{walkInRequest}/confirm-payment', [WalkInRequestController::class, 'confirmPayment']);
 
         Route::get('/queue-live', [QueueController::class, 'live']);

@@ -7,6 +7,7 @@ import 'package:desktop_flutter/core/session/api_session.dart';
 import 'package:desktop_flutter/shared/models/branch_option.dart';
 import 'package:desktop_flutter/shared/models/queue_live_payload.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AntrianPage extends StatefulWidget {
   const AntrianPage({super.key});
@@ -30,6 +31,7 @@ class _AntrianPageState extends State<AntrianPage> {
 
   QueueLivePayload _payload = _emptyPayload;
   Timer? _refreshTimer;
+  String _deviceName = 'Device A';
   List<BranchOption> _branches = const <BranchOption>[];
   int? _selectedBranchId;
   String _selectedStudio = 'ALL'; // 'ALL', 'A', 'B'
@@ -116,11 +118,34 @@ class _AntrianPageState extends State<AntrianPage> {
   @override
   void initState() {
     super.initState();
+    _loadDeviceName();
     _loadInitialQueueData();
     _refreshTimer = Timer.periodic(
       _refreshInterval,
       (_) => _loadQueue(silent: true),
     );
+  }
+
+  Future<void> _loadDeviceName() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('local_device_name');
+      if (saved != null && saved.isNotEmpty) {
+        setState(() {
+          _deviceName = saved;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveDeviceName(String value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('local_device_name', value);
+      setState(() {
+        _deviceName = value;
+      });
+    } catch (_) {}
   }
 
   @override
@@ -253,6 +278,7 @@ class _AntrianPageState extends State<AntrianPage> {
         action: () => ApiSession.client!.transitionQueueTicket(
           ticketId: ticket.id,
           status: QueueTicketStatus.called.value,
+          deviceName: _deviceName,
         ),
       );
     } else {
@@ -261,6 +287,7 @@ class _AntrianPageState extends State<AntrianPage> {
         action: () => ApiSession.client!.callNext(
           branchId: branchId,
           queueDate: _todayIso(),
+          deviceName: _deviceName,
         ),
       );
     }
@@ -292,6 +319,7 @@ class _AntrianPageState extends State<AntrianPage> {
       action: () => ApiSession.client!.transitionQueueTicket(
         ticketId: ticket.id,
         status: nextStatus.value,
+        deviceName: nextStatus == QueueTicketStatus.called ? _deviceName : null,
       ),
     );
   }
@@ -398,6 +426,8 @@ class _AntrianPageState extends State<AntrianPage> {
                       });
                     }
                   },
+                  deviceName: _deviceName,
+                  onDeviceNameChanged: _saveDeviceName,
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 16),
@@ -483,6 +513,8 @@ class _Header extends StatelessWidget {
     required this.onRefresh,
     required this.selectedStudio,
     required this.onStudioChanged,
+    required this.deviceName,
+    required this.onDeviceNameChanged,
   });
 
   final String lastUpdated;
@@ -494,6 +526,8 @@ class _Header extends StatelessWidget {
   final VoidCallback? onRefresh;
   final String selectedStudio;
   final ValueChanged<String?> onStudioChanged;
+  final String deviceName;
+  final ValueChanged<String> onDeviceNameChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +556,7 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(width: 16),
         SizedBox(
-          width: 230,
+          width: 200,
           child: DropdownButtonFormField<int>(
             key: ValueKey<int?>(selectedBranchId),
             initialValue: selectedBranchId,
@@ -560,7 +594,7 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         SizedBox(
-          width: 230,
+          width: 200,
           child: DropdownButtonFormField<String>(
             key: ValueKey<String>(selectedStudio),
             initialValue: selectedStudio,
@@ -597,6 +631,32 @@ class _Header extends StatelessWidget {
               ),
             ],
             onChanged: onStudioChanged,
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 160,
+          child: TextFormField(
+            key: ValueKey<String>(deviceName),
+            initialValue: deviceName,
+            decoration: InputDecoration(
+              labelText: 'Nama Device',
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.primaryLight),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.primaryLight),
+              ),
+            ),
+            onChanged: onDeviceNameChanged,
           ),
         ),
         const SizedBox(width: 10),

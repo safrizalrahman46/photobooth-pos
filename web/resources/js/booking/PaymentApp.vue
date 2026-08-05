@@ -525,6 +525,7 @@ onBeforeUnmount(() => {
                     <input type="hidden" name="customer_phone" :value="props.bookingPayload.customer_phone">
                     <input type="hidden" name="customer_email" :value="props.bookingPayload.customer_email || ''">
                     <input type="hidden" name="notes" :value="props.bookingPayload.notes || ''">
+                    <input type="hidden" name="social_media_consent" :value="props.bookingPayload.social_media_consent ? '1' : '0'">
                     <input type="hidden" name="referral_code" :value="referralCode">
                     <input type="hidden" name="payment_type" :value="paymentType">
                     <input type="hidden" name="addons_payload" :value="addonsPayloadJson">

@@ -7,12 +7,14 @@ import '../../../domain/entities/booking.dart';
 class PackageCard extends StatelessWidget {
   final Package package;
   final bool isSelected;
+  final String? selectionLabel;
   final VoidCallback onTap;
 
   const PackageCard({
     super.key,
     required this.package,
     required this.isSelected,
+    this.selectionLabel,
     required this.onTap,
   });
 
@@ -68,9 +70,21 @@ class PackageCard extends StatelessWidget {
             Row(mainAxisAlignment: MainAxisAlignment.end, children: [
               if (isSelected)
                 Container(
-                  width: 18, height: 18,
-                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                  child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+                  padding: selectionLabel != null ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2) : null,
+                  width: selectionLabel != null ? null : 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: selectionLabel != null ? BorderRadius.circular(10) : null,
+                    shape: selectionLabel != null ? BoxShape.rectangle : BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: selectionLabel != null
+                      ? Text(
+                          selectionLabel!,
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        )
+                      : const Icon(Icons.check_rounded, size: 12, color: Colors.white),
                 )
               else
                 const SizedBox(height: 18),

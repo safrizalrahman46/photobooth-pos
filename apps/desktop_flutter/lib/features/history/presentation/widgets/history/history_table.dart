@@ -8,6 +8,7 @@ class HistoryTable extends StatelessWidget {
   final void Function(Transaction)? onLunasi;
   final void Function(Transaction)? onReprint;
   final void Function(Transaction)? onExtraPrint;
+  final void Function(Transaction)? onUbahMetode;
 
   static const int _flexId = 2;
   static const int _flexWaktu = 3;
@@ -15,7 +16,7 @@ class HistoryTable extends StatelessWidget {
   static const int _flexPaket = 3;
   static const int _flexTotal = 2;
   static const int _flexStatus = 3;
-  static const double _colAction = 300;
+
 
   const HistoryTable({
     super.key,
@@ -23,6 +24,7 @@ class HistoryTable extends StatelessWidget {
     this.onLunasi,
     this.onReprint,
     this.onExtraPrint,
+    this.onUbahMetode,
   });
 
   @override
@@ -54,6 +56,7 @@ class HistoryTable extends StatelessWidget {
                   onLunasi: onLunasi != null ? () => onLunasi!(tx) : null,
                   onReprint: onReprint != null ? () => onReprint!(tx) : null,
                   onExtraPrint: onExtraPrint != null ? () => onExtraPrint!(tx) : null,
+                  onUbahMetode: onUbahMetode != null ? () => onUbahMetode!(tx) : null,
                 ),
               ),
           ],
@@ -77,7 +80,7 @@ class HistoryTable extends StatelessWidget {
           _headerCell('PAKET & ADD-ONS', _flexPaket),
           _headerCell('TOTAL BAYAR', _flexTotal),
           _headerCell('STATUS', _flexStatus),
-          const SizedBox(width: _colAction),
+          const Expanded(flex: 3, child: SizedBox.shrink()),
         ],
       ),
     );

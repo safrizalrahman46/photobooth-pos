@@ -36,6 +36,7 @@ const customerName = ref(asString(props.oldValues.customer_name));
 const customerPhone = ref(digitsOnly(props.oldValues.customer_phone));
 const customerEmail = ref(asString(props.oldValues.customer_email));
 const notes = ref(asString(props.oldValues.notes));
+const socialMediaConsent = ref(props.oldValues.social_media_consent ? Boolean(props.oldValues.social_media_consent) : true);
 const termsAccepted = ref(Boolean(props.oldValues.terms_accepted));
 const packageId = ref(asString(props.oldValues.package_id));
 
@@ -144,6 +145,14 @@ const canSubmit = computed(() => {
                                     rows="2"
                                     class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-[#1F2937] outline-none transition focus:border-[#2563EB]"
                                 ></textarea>
+                            </label>
+                        </div>
+
+                        <div class="rounded-xl border border-[#2563EB]/10 bg-[#2563EB]/5 px-4 py-4">
+                            <p class="text-xs font-bold uppercase tracking-[0.1em] text-[#64748B]">IZIN SHARE FOTO</p>
+                            <label class="mt-2 flex items-start gap-3 text-sm text-[#1F2937]">
+                                <input v-model="socialMediaConsent" name="social_media_consent" type="checkbox" value="1" class="mt-1 h-4 w-4 rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB]">
+                                <span>Boleh Share Foto</span>
                             </label>
                         </div>
 

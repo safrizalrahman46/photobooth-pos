@@ -22,6 +22,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Intervention\Image\ImageManager;
 use RuntimeException;
 use Throwable;
 
@@ -49,6 +50,7 @@ class BookingController extends Controller
                 'notes' => old('notes', (string) ($customerPayload['notes'] ?? '')),
                 'terms_accepted' => old('terms_accepted', ($customerPayload['terms_accepted'] ?? false) ? '1' : ''),
                 'package_id' => $prefillPackage > 0 ? $prefillPackage : null,
+                'social_media_consent' => old('social_media_consent', ($customerPayload['social_media_consent'] ?? true) ? '1' : ''),
             ],
         ]);
     }
@@ -62,6 +64,7 @@ class BookingController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
             'terms_accepted' => ['accepted'],
             'package_id' => ['nullable', 'integer'],
+            'social_media_consent' => ['nullable', 'boolean'],
         ]);
 
         $packageId = isset($payload['package_id']) ? (int) $payload['package_id'] : 0;
@@ -84,6 +87,7 @@ class BookingController extends Controller
             'notes' => (string) ($payload['notes'] ?? ''),
             'terms_accepted' => true,
             'package_id' => $packageId > 0 ? $packageId : null,
+            'social_media_consent' => filter_var($payload['social_media_consent'] ?? false, FILTER_VALIDATE_BOOLEAN),
         ]);
 
         return redirect()->route('booking.create', array_filter([
@@ -411,15 +415,34 @@ class BookingController extends Controller
         }
 
         $directory = 'booking-transfer-proofs/'.now()->format('Y/m');
-        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
-        $fileName = Str::slug($bookingCode).'-'.Str::lower(Str::random(10)).'.'.$extension;
+        $baseName = Str::slug($bookingCode).'-'.Str::lower(Str::random(10));
 
-        $storedPath = $file->storeAs($directory, $fileName, 'public');
+        try {
+            $manager = ImageManager::gd();
+            $image = $manager->read($file->getRealPath());
 
-        if ($storedPath === false) {
-            throw new RuntimeException('Gagal menyimpan bukti pembayaran. Coba lagi.');
+            $image->scaleDown(width: 1200, height: 1200);
+
+            $encoded = $image->toWebp(quality: 80)->encode();
+
+            $fileName = $baseName.'.webp';
+            $fullPath = $directory.'/'.$fileName;
+
+            Storage::disk('public')->put($fullPath, $encoded);
+
+            return $fullPath;
+        } catch (Throwable $e) {
+            $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
+            $fileName = $baseName.'.'.$extension;
+            $fullPath = $directory.'/'.$fileName;
+
+            $storedPath = $file->storeAs($directory, $fileName, 'public');
+
+            if ($storedPath === false) {
+                throw new RuntimeException('Gagal menyimpan bukti pembayaran. Coba lagi.');
+            }
+
+            return $storedPath;
         }
-
-        return $storedPath;
     }
 }

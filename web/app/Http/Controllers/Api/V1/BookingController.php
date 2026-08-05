@@ -177,9 +177,19 @@ class BookingController extends Controller
         abort_if($normalizedPath === '', 404, 'Bukti transfer tidak ditemukan.');
         abort_unless(Storage::disk('public')->exists($normalizedPath), 404, 'File bukti transfer tidak tersedia.');
 
-        return Storage::disk('public')->response($normalizedPath, basename($normalizedPath), [
-            'Content-Disposition' => 'inline; filename="'.basename($normalizedPath).'"',
+        $fileName = basename($normalizedPath);
+
+        $response = Storage::disk('public')->response($normalizedPath, $fileName, [
+            'Content-Disposition' => 'inline; filename="'.$fileName.'"',
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
+            'ETag' => '"'.md5($normalizedPath.$booking->updated_at?->toIso8601String() ?? '').'"',
         ]);
+
+        if (str_ends_with($fileName, '.webp')) {
+            $response->header('Content-Type', 'image/webp');
+        }
+
+        return $response;
     }
 
     private function normalizePublicDiskPath(string $path): string

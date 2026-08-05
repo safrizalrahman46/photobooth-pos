@@ -928,6 +928,7 @@ class ApiClient {
     double? amount,
     String? referenceNo,
     String? notes,
+    bool? socialMediaConsent,
   }) async {
     final payload = await _send(
       method: 'POST',
@@ -939,6 +940,7 @@ class ApiClient {
         if (referenceNo != null && referenceNo.isNotEmpty)
           'reference_no': referenceNo,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
+        if (socialMediaConsent != null) 'social_media_consent': socialMediaConsent,
       },
     );
 
@@ -958,12 +960,16 @@ class ApiClient {
   Future<BookingItem> confirmBooking({
     required int bookingId,
     String? reason,
+    bool? socialMediaConsent,
   }) async {
     final payload = await _send(
       method: 'POST',
       path: '/bookings/$bookingId/confirm',
       authenticated: true,
-      body: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+      body: {
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+        if (socialMediaConsent != null) 'social_media_consent': socialMediaConsent,
+      },
     );
 
     final data = payload['data'];
@@ -998,8 +1004,11 @@ class ApiClient {
   Future<PosWalkInCheckoutResult> checkoutWalkIn({
     required int branchId,
     required int packageId,
+    int? packageId2,
     required String customerName,
     String? customerPhone,
+    String? customerEmail,
+    int? jumlahOrang,
     String? queueDate,
     required String paymentMethod,
     double? paidAmount,
@@ -1008,6 +1017,7 @@ class ApiClient {
     String? referralCode,
     double taxAmount = 0,
     String? notes,
+    bool? socialMediaConsent,
     List<Map<String, dynamic>> addons = const <Map<String, dynamic>>[],
   }) async {
     final payload = await _send(
@@ -1017,9 +1027,14 @@ class ApiClient {
       body: {
         'branch_id': branchId,
         'package_id': packageId,
+        if (packageId2 != null) 'package_id_2': packageId2,
         'customer_name': customerName,
         if (customerPhone != null && customerPhone.isNotEmpty)
           'customer_phone': customerPhone,
+        if (customerEmail != null && customerEmail.isNotEmpty)
+          'customer_email': customerEmail,
+        if (jumlahOrang != null && jumlahOrang > 0)
+          'jumlah_orang': jumlahOrang,
         if (queueDate != null && queueDate.isNotEmpty) 'queue_date': queueDate,
         'payment_method': paymentMethod,
         if (paidAmount != null) 'paid_amount': paidAmount,
@@ -1030,6 +1045,7 @@ class ApiClient {
           'referral_code': referralCode,
         'tax_amount': taxAmount,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
+        if (socialMediaConsent != null) 'social_media_consent': socialMediaConsent,
         'addons': addons,
       },
     );
@@ -1046,12 +1062,17 @@ class ApiClient {
   Future<QueueTicketItem?> callNext({
     required int branchId,
     required String queueDate,
+    String? deviceName,
   }) async {
     final payload = await _send(
       method: 'POST',
       path: '/queue-tickets/call-next',
       authenticated: true,
-      body: {'branch_id': branchId, 'queue_date': queueDate},
+      body: {
+        'branch_id': branchId,
+        'queue_date': queueDate,
+        if (deviceName != null && deviceName.isNotEmpty) 'device_name': deviceName,
+      },
     );
 
     final data = payload['data'];
@@ -1066,12 +1087,16 @@ class ApiClient {
   Future<void> transitionQueueTicket({
     required int ticketId,
     required String status,
+    String? deviceName,
   }) async {
     await _send(
       method: 'PATCH',
       path: '/queue-tickets/$ticketId/status',
       authenticated: true,
-      body: {'status': status},
+      body: {
+        'status': status,
+        if (deviceName != null && deviceName.isNotEmpty) 'device_name': deviceName,
+      },
     );
   }
 
@@ -1305,6 +1330,43 @@ class ApiClient {
         .toList();
   }
 
+  Future<WalkInRequestItem?> updateWalkInRequest({
+    required int requestId,
+    String? customerName,
+    String? customerPhone,
+    int? packageId,
+    int? packageId2,
+    bool clearPackage2 = false,
+    List<Map<String, dynamic>>? addons,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (customerName != null) body['customer_name'] = customerName;
+      if (customerPhone != null) body['customer_phone'] = customerPhone;
+      if (packageId != null) body['package_id'] = packageId;
+      if (packageId2 != null) {
+        body['package_id_2'] = packageId2;
+      } else if (clearPackage2) {
+        body['package_id_2'] = null;
+      }
+      if (addons != null) body['addons'] = addons;
+
+      final payload = await _send(
+        method: 'PUT',
+        path: '/walk-in-requests/$requestId',
+        authenticated: true,
+        body: body,
+      );
+
+      final data = payload['data'];
+      if (data is! Map<String, dynamic>) return null;
+
+      return WalkInRequestItem.fromJson(data);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<WalkInConfirmResult> confirmWalkInRequestPayment({
     required int requestId,
     String paymentMethod = 'cash',
@@ -1314,25 +1376,6 @@ class ApiClient {
       path: '/walk-in-requests/$requestId/confirm-payment',
       authenticated: true,
       body: {'payment_method': paymentMethod},
-    );
-
-    final data = payload['data'];
-
-    if (data is! Map<String, dynamic>) {
-      throw ApiException('Respons konfirmasi QR walk-in tidak valid.');
-    }
-
-    return WalkInConfirmResult.fromJson(data);
-  }
-  
-  Future<WalkInConfirmResult> confirmWalkInRequest({
-    required int requestId,
-  }) async {
-    final payload = await _send(
-      method: 'GET',
-      path: '/walk-in-requests/$requestId',
-      authenticated: true,
-      body: {'payment_method': 'cash'},
     );
 
     final data = payload['data'];
@@ -1620,6 +1663,7 @@ class ApiClient {
       return null;
     }
   }
+
 }
 
 class ApiException implements Exception {

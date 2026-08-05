@@ -39,6 +39,7 @@ class BookingResource extends JsonResource
             'customer_name' => $this->customer_name,
             'customer_phone' => $this->customer_phone,
             'customer_email' => $this->customer_email,
+            'social_media_consent' => (bool) ($this->social_media_consent ?? false),
             'booking_date' => $this->booking_date?->toDateString(),
             'start_at' => $this->start_at?->toIso8601String(),
             'end_at' => $this->end_at?->toIso8601String(),

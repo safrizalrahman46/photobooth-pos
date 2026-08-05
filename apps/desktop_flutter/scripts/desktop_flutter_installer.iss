@@ -4,7 +4,7 @@
 
 #define MyAppName "Ready To Pict Desktop"
 #define MyAppPublisher "Ready To Pict"
-#define MyAppExeName "desktop_flutter.exe"
+#define MyAppExeName "ReadyTopictPOS.exe"
 #define MyAppId "{{B53D5236-4A96-49BF-BFA7-D9A1762A7DF5}}"
 
 [Setup]
@@ -30,7 +30,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional icons:"; Flags: unchecked
 
 [Files]
-Source: "..\build\windows\x64\runner\Release\desktop_flutter.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\build\windows\x64\runner\Release\ReadyTopictPOS.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Ready To Pict Desktop"; Filename: "{app}\{#MyAppExeName}"

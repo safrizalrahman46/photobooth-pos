@@ -62,7 +62,9 @@ class PaymentController extends Controller
 
         $session = $transaction->cashierSession ?? $transaction->cashierSettlements()->first()?->cashierSession;
         if ($session && $session->status === 'closed') {
-            return $this->responder->error('Sesi kasir sudah ditutup. Tidak dapat mengubah metode pembayaran.', 422);
+            if (! $user->hasRole('owner')) {
+                return $this->responder->error('Sesi kasir sudah ditutup. Tidak dapat mengubah metode pembayaran.', 422);
+            }
         }
 
         $beforeMethod = $payment->method instanceof \App\Enums\PaymentMethod

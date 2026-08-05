@@ -62,6 +62,7 @@ const customerPhone = ref(asString(props.oldValues.customer_phone));
 const customerEmail = ref(asString(props.oldValues.customer_email));
 const notes = ref(asString(props.oldValues.notes));
 const referralCode = ref(asString(props.oldValues.referral_code));
+const socialMediaConsent = ref(props.oldValues.social_media_consent ? Boolean(props.oldValues.social_media_consent) : true);
 const referralPreview = ref(null);
 const referralLoading = ref(false);
 const referralMessage = ref('');
@@ -727,6 +728,7 @@ onBeforeUnmount(() => {
                 <input type="hidden" name="customer_email" :value="customerEmail">
                 <input type="hidden" name="notes" :value="notes">
                 <input type="hidden" name="referral_code" :value="referralPreview ? referralCode : ''">
+                <input type="hidden" name="social_media_consent" :value="socialMediaConsent ? '1' : '0'">
                 <input type="hidden" name="addons_payload" :value="addonsPayloadJson">
 
                 <div

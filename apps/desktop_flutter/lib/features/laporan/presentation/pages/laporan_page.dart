@@ -268,7 +268,6 @@ class LaporanPage extends StatelessWidget {
         totalAmount: row.totalAmount,
         paidAmount: row.paidAmount,
         status: _mapTransactionStatus(row.status),
-        bookingId: row.bookingId,
       );
     }).toList();
   }

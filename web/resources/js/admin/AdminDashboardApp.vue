@@ -863,6 +863,7 @@ const managePermissionMap = {
     settings: ['settings.manage'],
     users: ['user.manage'],
     bookings: ['booking.manage'],
+    transactions: ['transaction.manage'],
     queue: ['queue.manage'],
     'cashier-settlements': ['report.view'],
 };
@@ -883,6 +884,7 @@ const canManageReferrals = computed(() => canManageModule('referrals'));
 const canManageAppSettings = computed(() => canManageModule('app-settings'));
 const canManageSettings = computed(() => canManageModule('settings'));
 const canManageBookings = computed(() => canManageModule('bookings'));
+const canManageTransactions = computed(() => canManageModule('transactions'));
 const canDeleteBooking = computed(() => {
     const role = String(props.currentUser?.role || '').toLowerCase();
     return role === 'owner' || role === 'admin';
@@ -1178,6 +1180,7 @@ const normalizedRows = computed(() => {
         name: String(row.name || '-'),
         customer_phone: String(row.customer_phone || ''),
         customer_email: String(row.customer_email || ''),
+        social_media_consent: Boolean(row.social_media_consent),
         pkg: String(row.pkg || '-'),
         design_name: String(row.design_name || '-'),
         date: String(row.date || '-'),
@@ -1248,6 +1251,7 @@ const normalizedRecentTransactions = computed(() => {
             id: String(item.code || `TX-${index + 1}`),
             customer,
             customerPhone: String(item.customer_phone || ''),
+            socialMediaConsent: Boolean(item.social_media_consent),
             branchName: String(item.branch_name || '-'),
             cashier: String(item.cashier || '-'),
             method,
@@ -1256,10 +1260,12 @@ const normalizedRecentTransactions = computed(() => {
             status: String(item.status || 'unpaid'),
             time: String(item.time_text || item.time || '-'),
             notes: String(item.notes || ''),
+            lastModified: item.last_modified || null,
             totalAmount: Number(item.total_amount || 0),
             totalText: String(item.total_text || formatRupiah(item.total_amount || 0)),
             paidAmount: Number(item.paid_amount || 0),
             paidText: String(item.paid_text || formatRupiah(item.paid_amount || 0)),
+            discountAmount: Number(item.discount_amount || 0),
             remainingAmount: Number(item.remaining_amount || 0),
             remainingText: String(item.remaining_text || formatRupiah(item.remaining_amount || 0)),
             changeAmount: Number(item.change_amount || 0),
@@ -1277,8 +1283,10 @@ const normalizedRecentTransactions = computed(() => {
                 : [],
             payments: Array.isArray(item.payments)
                 ? item.payments.map((payment) => ({
+                    id: Number(payment.id || 0),
                     paymentCode: String(payment.payment_code || '-'),
                     method: String(payment.method || '-').toUpperCase(),
+                    methodLower: String(payment.method || '-').toLowerCase(),
                     amount: Number(payment.amount || 0),
                     amountText: String(payment.amount_text || formatRupiah(payment.amount || 0)),
                     referenceNo: String(payment.reference_no || ''),
@@ -1846,6 +1854,10 @@ const reportCashierRows = computed(() => {
 
 const reportAddOnRows = computed(() => {
     return Array.isArray(reportData.value?.add_on_performance) ? reportData.value.add_on_performance : [];
+});
+
+const reportLeadRows = computed(() => {
+    return Array.isArray(reportData.value?.lead_marketing) ? reportData.value.lead_marketing : [];
 });
 
 const reportStatusRows = computed(() => {
@@ -4194,6 +4206,7 @@ onBeforeUnmount(() => {
                             :panel-transactions-url="panelTransactionsUrl"
                             :normalized-recent-transactions="normalizedRecentTransactions"
                             :transaction-today-total="transactionTodayTotal" :resolve-method-style="resolveMethodStyle"
+                            :can-manage-transactions="canManageTransactions"
                             :resolve-transaction-status="resolveTransactionStatus" />
 
                         <PaymentsPage v-else-if="activeModuleId === 'payments'" :payment-rows="paymentRows"
@@ -4218,6 +4231,7 @@ onBeforeUnmount(() => {
                             :report-error="reportError" :report-loading="reportLoading"
                             :report-summary-cards="reportSummaryCards" :report-daily-rows="reportDailyRows"
                             :report-package-rows="reportPackageRows" :report-cashier-rows="reportCashierRows" :report-add-on-rows="reportAddOnRows"
+                            :report-lead-rows="reportLeadRows"
                             :report-package-options="reportPackageOptions"
                             :report-cashier-options="reportCashierOptions" :report-range-label="reportRangeLabel"
                             :report-chart-modes="reportChartModes" :report-chart-mode="reportChartMode"

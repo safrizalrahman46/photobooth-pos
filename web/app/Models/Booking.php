@@ -51,6 +51,7 @@ class Booking extends Model
         'notes',
         'approved_by',
         'approved_at',
+        'social_media_consent',
     ];
 
     protected function casts(): array
@@ -74,6 +75,7 @@ class Booking extends Model
             'total_amount' => 'decimal:2',
             'deposit_amount' => 'decimal:2',
             'paid_amount' => 'decimal:2',
+            'social_media_consent' => 'boolean',
         ];
     }
 

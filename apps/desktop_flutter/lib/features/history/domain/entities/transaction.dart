@@ -55,5 +55,5 @@ class Transaction {
   }
 
   /// Remaining payoff balance
-  int get sisaBayar => (totalBayar - paidAmount.round()).clamp(0, totalBayar);
+  int get sisaBayar => ((totalAmount - paidAmount).round()).clamp(0, totalAmount.toInt());
 }

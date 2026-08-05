@@ -5,8 +5,10 @@ import 'package:desktop_flutter/shared/models/pos_walk_in_checkout_result.dart';
 import 'package:desktop_flutter/shared/widgets/base_dialog.dart';
 import 'package:desktop_flutter/shared/widgets/dialog_action_button.dart';
 import 'package:flutter/material.dart';
+import 'package:desktop_flutter/core/session/api_session.dart';
+import 'ubah_metode_dialog.dart';
 
-class CheckoutSuccessDialog extends StatelessWidget {
+class CheckoutSuccessDialog extends StatefulWidget {
   final PosWalkInCheckoutResult result;
   final Package selectedPackage;
   final VoidCallback onPrint;
@@ -20,9 +22,79 @@ class CheckoutSuccessDialog extends StatelessWidget {
     required this.onDone,
   });
 
+  @override
+  State<CheckoutSuccessDialog> createState() => _CheckoutSuccessDialogState();
+}
+
+class _CheckoutSuccessDialogState extends State<CheckoutSuccessDialog> {
+  late String _currentPaymentMethod;
+  bool _updating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final payments = widget.result.transaction.payments;
+    _currentPaymentMethod = payments.isNotEmpty ? payments.first.method : 'TUNAI';
+  }
+
   String _formatPrice(double price) {
     final int p = price.toInt();
     return 'Rp ${p.toString().replaceAllMapped(RegExp(r"\B(?=(\d{3})+(?!\d))"), (m) => ".")}';
+  }
+
+  Future<void> _changePaymentMethod(BuildContext context) async {
+    final payments = widget.result.transaction.payments;
+    if (payments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak ada data pembayaran untuk transaksi ini.')),
+      );
+      return;
+    }
+
+    final payment = payments.first;
+    final res = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => UbahMetodeDialog(currentMethod: _currentPaymentMethod),
+    );
+
+    if (res == null) return;
+
+    final client = ApiSession.client;
+    if (client == null) return;
+
+    setState(() => _updating = true);
+    try {
+      final success = await client.updatePaymentMethod(
+        paymentId: payment.id,
+        method: res['method']!,
+        reason: res['reason']!,
+      );
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Metode pembayaran berhasil diubah.')),
+        );
+        setState(() {
+          _currentPaymentMethod = res['method']!;
+        });
+        // Automatically reprint the receipt
+        widget.onPrint();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal mengubah metode pembayaran.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Terjadi kesalahan saat mengubah metode pembayaran.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _updating = false);
+      }
+    }
   }
 
   @override
@@ -60,7 +132,7 @@ class CheckoutSuccessDialog extends StatelessWidget {
 
             // Transaction ID
             Text(
-              'Transaction ID ${result.transaction.transactionCode}',
+              'Transaction ID ${widget.result.transaction.transactionCode}',
               style: AppTextStyles.bodySmall.copyWith(
                 fontSize: 12,
                 color: AppColors.textSecondary,
@@ -88,7 +160,7 @@ class CheckoutSuccessDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    result.queueTicket.queueCode,
+                    widget.result.queueTicket.queueCode,
                     style: AppTextStyles.priceLarge.copyWith(
                       color: AppColors.primaryDark,
                       fontSize: 40,
@@ -146,14 +218,14 @@ class CheckoutSuccessDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          selectedPackage.name,
+                          widget.selectedPackage.name,
                           style: AppTextStyles.h3.copyWith(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
-                          '${selectedPackage.duration} • Package',
+                          '${widget.selectedPackage.duration} • Package',
                           style: AppTextStyles.caption.copyWith(fontSize: 10),
                         ),
                       ],
@@ -165,7 +237,7 @@ class CheckoutSuccessDialog extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        _formatPrice(result.transaction.totalAmount),
+                        _formatPrice(widget.result.transaction.totalAmount),
                         style: AppTextStyles.priceSmall.copyWith(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
@@ -182,7 +254,7 @@ class CheckoutSuccessDialog extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          'LUNAS',
+                          _currentPaymentMethod.toUpperCase(),
                           style: const TextStyle(
                             fontSize: 8,
                             fontWeight: FontWeight.w700,
@@ -206,16 +278,41 @@ class CheckoutSuccessDialog extends StatelessWidget {
                     primary: true,
                     color: AppColors.primaryDark,
                     icon: Icons.check_rounded,
-                    onPressed: onDone,
+                    onPressed: widget.onDone,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
+            // Owner only Payment Method Modification
+            if (ApiSession.current?.user.hasRole('owner') == true) ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _updating ? null : () => _changePaymentMethod(context),
+                  icon: _updating
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        )
+                      : const Icon(Icons.edit_note_rounded, size: 16),
+                  label: const Text('UBAH METODE PEMBAYARAN'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Subtle fallback Print Button
             TextButton.icon(
-              onPressed: onPrint,
+              onPressed: widget.onPrint,
               icon: const Icon(
                 Icons.print_outlined,
                 size: 14,
@@ -233,7 +330,7 @@ class CheckoutSuccessDialog extends StatelessWidget {
 
             // Footer Link
             TextButton(
-              onPressed: onDone,
+              onPressed: widget.onDone,
               child: Text(
                 'Kembali ke Menu Utama',
                 style: AppTextStyles.captionMedium.copyWith(

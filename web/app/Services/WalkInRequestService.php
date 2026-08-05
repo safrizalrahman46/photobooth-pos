@@ -53,10 +53,33 @@ class WalkInRequestService
 
             $this->assertPackageAvailableForBranch($package, (int) $branch->id);
 
+            $package2 = null;
+            if (!empty($payload['package_id_2'])) {
+                /** @var Package $package2 */
+                $package2 = Package::query()
+                    ->whereKey((int) $payload['package_id_2'])
+                    ->where('is_active', true)
+                    ->firstOrFail();
+
+                $this->assertPackageAvailableForBranch($package2, (int) $branch->id);
+            }
+
             $selectedAddOns = $this->bookingService->resolveAddOnsForPackage(
                 (int) $package->id,
                 $payload['addons'] ?? []
             );
+
+            if ($package2) {
+                $selectedAddOns[] = [
+                    'id' => (int) $package2->id,
+                    'name' => (string) $package2->name,
+                    'price' => (float) $package2->base_price,
+                    'qty' => 1,
+                    'line_total' => (float) $package2->base_price,
+                    'is_package' => true,
+                ];
+            }
+
             $packagePrice = (float) $package->base_price;
             $subtotal = $packagePrice + (float) collect($selectedAddOns)->sum('line_total');
             $now = Carbon::now($this->queueTimezone());
@@ -71,6 +94,8 @@ class WalkInRequestService
                 'package_price' => $packagePrice,
                 'customer_name' => trim((string) $payload['customer_name']),
                 'customer_phone' => preg_replace('/\s+/', '', (string) $payload['customer_phone']),
+                'customer_email' => isset($payload['customer_email']) ? trim((string) $payload['customer_email']) : null,
+                'social_media_consent' => filter_var($payload['social_media_consent'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'add_ons_json' => $selectedAddOns,
                 'subtotal_amount' => $subtotal,
                 'total_amount' => $subtotal,
@@ -199,6 +224,7 @@ class WalkInRequestService
                 'discount_amount' => 0,
                 'tax_amount' => 0,
                 'notes' => $payload['notes'] ?? sprintf('Self walk-in QR %s.', (string) $lockedRequest->request_code),
+                'social_media_consent' => (bool) ($lockedRequest->social_media_consent ?? filter_var($payload['social_media_consent'] ?? false, FILTER_VALIDATE_BOOLEAN)),
                 'items' => $this->transactionItemsFromRequest($lockedRequest),
             ], $cashierId);
 
@@ -277,8 +303,9 @@ class WalkInRequestService
         ]];
 
         foreach ($walkInRequest->add_ons_json ?? [] as $addOn) {
+            $isPackageItem = !empty($addOn['is_package']);
             $items[] = [
-                'item_type' => 'add_on',
+                'item_type' => $isPackageItem ? 'package' : 'add_on',
                 'item_ref_id' => (int) ($addOn['id'] ?? $addOn['add_on_id'] ?? 0),
                 'item_name' => (string) ($addOn['name'] ?? $addOn['label'] ?? 'Add-on'),
                 'qty' => max(1, (int) ($addOn['qty'] ?? 1)),

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Transactions\Tables;
 
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -66,7 +67,8 @@ class TransactionsTable
                     )),
             ])
             ->recordActions([
-                ViewAction::make(),
+                ViewAction::make()->iconButton(),
+                EditAction::make()->iconButton(),
             ])
             ->toolbarActions([]);
     }
