@@ -194,6 +194,8 @@ class ReceiptPrinter {
     final doc = pw.Document();
     final createdAt = _formatDateTime(transaction.createdAt);
     final pageFormat = _pageFormatFromPaperWidth(paperWidthMm);
+    final packageItems = transaction.items.where((i) => i.itemType == 'package' || i.itemType == 'booking').toList();
+    final addOnItems = transaction.items.where((i) => i.itemType != 'package' && i.itemType != 'booking').toList();
 
     doc.addPage(
       pw.MultiPage(
@@ -242,7 +244,6 @@ class ReceiptPrinter {
           pw.SizedBox(height: 2),
 
           // PAKET section
-          final packageItems = transaction.items.where((i) => i.itemType == 'package' || i.itemType == 'booking').toList();
           if (packageItems.isNotEmpty) ...[
             pw.Text(
               'PAKET',
@@ -255,7 +256,6 @@ class ReceiptPrinter {
           ],
 
           // ADD-ON section
-          final addOnItems = transaction.items.where((i) => i.itemType != 'package' && i.itemType != 'booking').toList();
           if (addOnItems.isNotEmpty) ...[
             pw.Text(
               'ADD-ON',

@@ -1664,26 +1664,6 @@ class ApiClient {
     }
   }
 
-  Future<bool> updatePaymentMethod({
-    required int paymentId,
-    required String method,
-    required String reason,
-  }) async {
-    try {
-      await _send(
-        method: 'PATCH',
-        path: '/payments/$paymentId',
-        authenticated: true,
-        body: {
-          'method': method,
-          'reason': reason,
-        },
-      );
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
 }
 
 class ApiException implements Exception {
