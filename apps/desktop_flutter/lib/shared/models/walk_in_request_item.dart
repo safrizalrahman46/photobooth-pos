@@ -7,6 +7,7 @@ class WalkInRequestAddOn {
   final int qty;
   final double unitPrice;
   final double lineTotal;
+  final bool isPackage;
 
   const WalkInRequestAddOn({
     required this.addOnId,
@@ -14,15 +15,17 @@ class WalkInRequestAddOn {
     required this.qty,
     required this.unitPrice,
     required this.lineTotal,
+    this.isPackage = false,
   });
 
   factory WalkInRequestAddOn.fromJson(Map<String, dynamic> json) {
     return WalkInRequestAddOn(
-      addOnId: (json['add_on_id'] as num?)?.toInt() ?? 0,
+      addOnId: (json['add_on_id'] as num?)?.toInt() ?? (json['id'] as num?)?.toInt() ?? 0,
       name: (json['name'] ?? json['label'] ?? '').toString(),
       qty: (json['qty'] as num?)?.toInt() ?? 0,
       unitPrice: (json['unit_price'] ?? json['price'] as num?)?.toDouble() ?? 0,
       lineTotal: (json['line_total'] as num?)?.toDouble() ?? 0,
+      isPackage: json['is_package'] == true,
     );
   }
 }

@@ -50,6 +50,26 @@ class _PaymentConfirmDialogState extends State<PaymentConfirmDialog> {
     return 'Rp ${buffer.toString().split('').reversed.join()}';
   }
 
+  Widget _breakdownRow(String title, String price) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          price,
+          style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
   void _onNumberPress(String val) {
     setState(() {
       if (_paidAmountString == '0') {
@@ -228,20 +248,68 @@ class _PaymentConfirmDialogState extends State<PaymentConfirmDialog> {
                         const SizedBox(height: 20),
 
                         // Info cards
-                        _InfoRow(
-                          label: 'Pelanggan',
-                          value: widget.item.customerName,
-                          icon: Icons.person_rounded,
+                        // Customer Details Info
+                        Row(
+                          children: [
+                            const Icon(Icons.person_rounded, color: AppColors.primary, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${widget.item.customerName} (${widget.item.requestCode})',
+                                style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-                        _InfoRow(
-                          label: 'Kode Booking',
-                          value: widget.item.requestCode,
-                          icon: Icons.qr_code_rounded,
-                        ),
-                        _InfoRow(
-                          label: 'Paket',
-                          value: widget.item.packageName,
-                          icon: Icons.inventory_2_rounded,
+                        const SizedBox(height: 12),
+
+                        // Order Breakdown Container
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.6)),
+                            ),
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('RINCIAN PESANAN', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+                                  const SizedBox(height: 8),
+                                  _breakdownRow(
+                                    'Paket 1: ${widget.item.packageName}',
+                                    _formatPrice(widget.item.packagePrice),
+                                  ),
+                                  // Package 2 if exists (isPackage == true in addOns)
+                                  for (final addon in widget.item.addOns.where((a) => a.isPackage)) ...[
+                                    const SizedBox(height: 6),
+                                    _breakdownRow(
+                                      'Paket 2: ${addon.name}',
+                                      _formatPrice(addon.lineTotal),
+                                    ),
+                                  ],
+                                  // Add-ons
+                                  if (widget.item.addOns.where((a) => !a.isPackage).isNotEmpty) ...[
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 6),
+                                      child: Divider(height: 1),
+                                    ),
+                                    for (final addon in widget.item.addOns.where((a) => !a.isPackage)) ...[
+                                      _breakdownRow(
+                                        '${addon.name} x${addon.qty}',
+                                        _formatPrice(addon.lineTotal),
+                                      ),
+                                      const SizedBox(height: 4),
+                                    ],
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
 

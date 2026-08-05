@@ -24,6 +24,7 @@ class QueueTransitionRequest extends FormRequest
                 'skipped',
                 'cancelled',
             ])],
+            'device_name' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

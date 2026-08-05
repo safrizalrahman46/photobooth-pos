@@ -58,6 +58,14 @@ class OrderSummaryPanel extends StatelessWidget {
                     price: _formatPrice(controller.packagePrice),
                   ),
 
+                  // Package item 2
+                  if (controller.selectedPackage2 != null)
+                    _OrderSummaryRow(
+                      title: 'Paket ${controller.selectedPackage2!.name}',
+                      subtitle: 'Durasi ${controller.selectedPackage2!.duration}',
+                      price: _formatPrice(controller.packagePrice2),
+                    ),
+
                   // Addon items
                   if (controller.selectedAddons.isNotEmpty)
                     Padding(

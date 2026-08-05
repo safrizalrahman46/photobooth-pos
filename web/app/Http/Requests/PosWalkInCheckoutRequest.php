@@ -32,6 +32,11 @@ class PosWalkInCheckoutRequest extends FormRequest
                 'integer',
                 Rule::exists('packages', 'id')->where(fn ($query) => $query->where('is_active', true)->whereNull('deleted_at')),
             ],
+            'package_id_2' => [
+                'nullable',
+                'integer',
+                Rule::exists('packages', 'id')->where(fn ($query) => $query->where('is_active', true)->whereNull('deleted_at')),
+            ],
             'addons' => ['nullable', 'array', 'max:20'],
             'addons.*.add_on_id' => [
                 'required_with:addons',

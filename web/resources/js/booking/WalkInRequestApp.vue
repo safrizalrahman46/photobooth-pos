@@ -61,6 +61,7 @@ const initialBranchId = asString(props.oldValues.branch_id || (props.branches.le
 
 const branchId = ref(initialBranchId);
 const packageId = ref(asString(props.oldValues.package_id));
+const packageId2 = ref(asString(props.oldValues.package_id_2 || ''));
 const customerName = ref(asString(props.oldValues.customer_name));
 const customerPhone = ref(digitsOnly(props.oldValues.customer_phone));
 const termsAccepted = ref(Boolean(props.oldValues.terms_accepted));
@@ -85,6 +86,7 @@ const filteredPackages = computed(() => {
 });
 
 const selectedPackage = computed(() => props.packages.find((item) => asString(item.id) === packageId.value) ?? null);
+const selectedPackage2 = computed(() => props.packages.find((item) => asString(item.id) === packageId2.value) ?? null);
 
 watch(branchId, () => {
     if (!packageId.value) {
@@ -92,10 +94,16 @@ watch(branchId, () => {
     }
 
     const stillAvailable = filteredPackages.value.some((item) => asString(item.id) === packageId.value);
-
     if (!stillAvailable) {
         packageId.value = '';
         addonQty.value = {};
+    }
+
+    if (packageId2.value) {
+        const stillAvailable2 = filteredPackages.value.some((item) => asString(item.id) === packageId2.value);
+        if (!stillAvailable2) {
+            packageId2.value = '';
+        }
     }
 });
 
@@ -109,7 +117,7 @@ const filteredAddOns = computed(() => {
             return true;
         }
 
-        return asString(item.package_id) === packageId.value;
+        return asString(item.package_id) === packageId.value || asString(item.package_id) === packageId2.value;
     });
 });
 
@@ -122,9 +130,10 @@ const selectedAddOns = computed(() => filteredAddOns.value
 
 const subtotal = computed(() => {
     const packagePrice = Number(selectedPackage.value?.base_price || 0);
+    const packagePrice2 = Number(selectedPackage2.value?.base_price || 0);
     const addOnTotal = selectedAddOns.value.reduce((sum, item) => sum + (Number(item.price || 0) * item.qty), 0);
 
-    return packagePrice + addOnTotal;
+    return packagePrice + packagePrice2 + addOnTotal;
 });
 
 const canSubmit = computed(() => Boolean(
@@ -154,7 +163,25 @@ const onPhoneInput = (event) => {
 };
 
 const selectPackage = (item) => {
-    packageId.value = asString(item.id);
+    const id = asString(item.id);
+    if (packageId.value === id) {
+        if (packageId2.value) {
+            packageId.value = packageId2.value;
+            packageId2.value = '';
+        } else {
+            packageId.value = '';
+        }
+    } else if (packageId2.value === id) {
+        packageId2.value = '';
+    } else {
+        if (!packageId.value) {
+            packageId.value = id;
+        } else if (!packageId2.value) {
+            packageId2.value = id;
+        } else {
+            packageId2.value = id;
+        }
+    }
     addonQty.value = {};
 };
 
@@ -252,14 +279,15 @@ const onSubmit = () => {
                             <input v-else type="hidden" name="branch_id" :value="branchId || asString(props.branches[0]?.id || '')">
 
                             <input type="hidden" name="package_id" :value="packageId">
+                            <input type="hidden" name="package_id_2" :value="packageId2">
 
                             <div class="grid gap-4 md:grid-cols-2">
                                 <button
                                     v-for="item in filteredPackages"
                                     :key="item.id"
                                     type="button"
-                                    class="rounded-2xl border p-4 text-left transition"
-                                    :class="packageId === asString(item.id) ? 'border-[#2563EB] bg-[#2563EB]/5 shadow-sm' : 'border-slate-200 bg-white hover:border-[#2563EB]/40'"
+                                    class="relative rounded-2xl border p-4 text-left transition"
+                                    :class="packageId === asString(item.id) || packageId2 === asString(item.id) ? 'border-[#2563EB] bg-[#2563EB]/5 shadow-sm' : 'border-slate-200 bg-white hover:border-[#2563EB]/40'"
                                     @click="selectPackage(item)"
                                 >
                                     <div class="flex items-start justify-between gap-3">
@@ -267,7 +295,11 @@ const onSubmit = () => {
                                             <h3 class="text-[#1F2937]" style="font-weight: 800;">{{ item.name }}</h3>
                                             <p class="mt-1 text-xs text-gray-500">{{ item.duration_minutes }} menit</p>
                                         </div>
-                                        <span class="rounded-full bg-[#2563EB]/10 px-3 py-1 text-xs text-[#2563EB]" style="font-weight: 700;">{{ formatRupiah(item.base_price) }}</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <span v-if="packageId === asString(item.id) && packageId2" class="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-white uppercase">Tema 1</span>
+                                            <span v-else-if="packageId2 === asString(item.id)" class="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-white uppercase">Tema 2</span>
+                                            <span class="rounded-full bg-[#2563EB]/10 px-3 py-1 text-xs text-[#2563EB]" style="font-weight: 700;">{{ formatRupiah(item.base_price) }}</span>
+                                        </div>
                                     </div>
                                     <p v-if="item.description" class="mt-3 line-clamp-2 text-sm text-gray-500">{{ item.description }}</p>
                                 </button>
@@ -310,8 +342,12 @@ const onSubmit = () => {
 
                     <div class="mt-4 space-y-3 text-sm">
                         <div class="flex justify-between gap-4">
-                            <span class="text-gray-500">Paket</span>
+                            <span class="text-gray-500">Paket 1</span>
                             <span class="text-right text-[#1F2937]" style="font-weight: 600;">{{ selectedPackage?.name || '-' }}</span>
+                        </div>
+                        <div v-if="selectedPackage2" class="flex justify-between gap-4">
+                            <span class="text-gray-500">Paket 2</span>
+                            <span class="text-right text-[#1F2937]" style="font-weight: 600;">{{ selectedPackage2.name }}</span>
                         </div>
                         <div v-for="item in selectedAddOns" :key="`summary-${item.id}`" class="flex justify-between gap-4">
                             <span class="text-gray-500">{{ item.name }} x{{ item.qty }}</span>

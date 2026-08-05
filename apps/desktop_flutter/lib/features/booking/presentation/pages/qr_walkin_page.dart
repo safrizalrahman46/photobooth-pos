@@ -83,15 +83,18 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
 
     if (reviewResult == null) return;
 
-    // Step 1.5: If data changed, update via API
+    final origPkg2List = item.addOns.where((a) => a.isPackage).toList();
+    final int? origPkg2Id = origPkg2List.isNotEmpty ? origPkg2List.first.addOnId : null;
+
     final changed = reviewResult.customerName != item.customerName ||
         reviewResult.customerPhone != item.customerPhone ||
         reviewResult.packageId != item.packageId ||
+        reviewResult.packageId2 != origPkg2Id ||
         reviewResult.addons.any((a) {
-          final orig = item.addOns.where((o) => o.addOnId == (a['add_on_id'] as int)).firstOrNull;
+          final orig = item.addOns.where((o) => o.addOnId == (a['add_on_id'] as int) && !o.isPackage).firstOrNull;
           return orig == null || orig.qty != (a['qty'] as int);
         }) ||
-        reviewResult.addons.length != item.addOns.length;
+        reviewResult.addons.length != item.addOns.where((a) => !a.isPackage).length;
 
     final client = ApiSession.client;
 
@@ -102,6 +105,8 @@ class _QrWalkinPageState extends State<QrWalkinPage> {
           customerName: reviewResult.customerName,
           customerPhone: reviewResult.customerPhone,
           packageId: reviewResult.packageId,
+          packageId2: reviewResult.packageId2,
+          clearPackage2: reviewResult.clearPackage2,
           addons: reviewResult.addons,
         );
 

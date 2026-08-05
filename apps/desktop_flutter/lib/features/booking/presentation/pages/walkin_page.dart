@@ -429,11 +429,20 @@ class _PackageSection extends StatelessWidget {
       spacing: 16,
       runSpacing: 16,
       children: List.generate(controller.packages.length, (index) {
+        final isPkg1 = controller.selectedPackageIndex == index;
+        final isPkg2 = controller.selectedPackageIndex2 == index;
+        final isSelected = isPkg1 || isPkg2;
+        String? label;
+        if (isSelected && controller.selectedPackageIndex2 != null) {
+          label = isPkg1 ? 'Tema 1' : 'Tema 2';
+        }
+
         return SizedBox(
           width: 220,
           child: PackageCard(
             package: controller.packages[index],
-            isSelected: controller.selectedPackageIndex == index,
+            isSelected: isSelected,
+            selectionLabel: label,
             onTap: () => controller.selectPackage(index),
           ),
         );

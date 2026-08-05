@@ -8,12 +8,16 @@ class WalkinReviewResult {
   final String customerName;
   final String customerPhone;
   final int packageId;
+  final int? packageId2;
+  final bool clearPackage2;
   final List<Map<String, dynamic>> addons;
 
   const WalkinReviewResult({
     required this.customerName,
     required this.customerPhone,
     required this.packageId,
+    this.packageId2,
+    this.clearPackage2 = false,
     required this.addons,
   });
 }
@@ -33,6 +37,9 @@ class _WalkinReviewDialogState extends State<WalkinReviewDialog> {
   late int _packageId;
   late String _packageName;
   late double _packagePrice;
+  int? _packageId2;
+  String? _packageName2;
+  double? _packagePrice2;
   late List<_EditedAddOn> _addOns;
   bool _loadingAddOns = false;
   bool _hasChanges = false;
@@ -46,7 +53,17 @@ class _WalkinReviewDialogState extends State<WalkinReviewDialog> {
     _packageId = item.packageId;
     _packageName = item.packageName;
     _packagePrice = item.packagePrice;
+
+    final pkg2List = item.addOns.where((a) => a.isPackage).toList();
+    if (pkg2List.isNotEmpty) {
+      final p2 = pkg2List.first;
+      _packageId2 = p2.addOnId;
+      _packageName2 = p2.name;
+      _packagePrice2 = p2.unitPrice;
+    }
+
     _addOns = item.addOns
+        .where((a) => !a.isPackage)
         .map((a) => _EditedAddOn(addOnId: a.addOnId, name: a.name, unitPrice: a.unitPrice, qty: a.qty))
         .toList();
     _nameCtrl.addListener(_detectChanges);
@@ -54,15 +71,19 @@ class _WalkinReviewDialogState extends State<WalkinReviewDialog> {
   }
 
   void _detectChanges() {
+    final origPkg2List = widget.item.addOns.where((a) => a.isPackage).toList();
+    final int? origPkg2Id = origPkg2List.isNotEmpty ? origPkg2List.first.addOnId : null;
+
     final changed = _nameCtrl.text != widget.item.customerName ||
         _phoneCtrl.text != widget.item.customerPhone ||
         _packageId != widget.item.packageId ||
+        _packageId2 != origPkg2Id ||
         _addOns.any((a) {
-          final orig = widget.item.addOns.where((o) => o.addOnId == a.addOnId);
+          final orig = widget.item.addOns.where((o) => o.addOnId == a.addOnId && !o.isPackage);
           final origQty = orig.isEmpty ? 0 : orig.first.qty;
           return a.qty != origQty;
         }) ||
-        _addOns.length != widget.item.addOns.length;
+        _addOns.length != widget.item.addOns.where((a) => !a.isPackage).length;
     if (changed != _hasChanges) {
       setState(() => _hasChanges = changed);
     }
@@ -80,7 +101,9 @@ class _WalkinReviewDialogState extends State<WalkinReviewDialog> {
   double get _addOnsTotal =>
       _addOns.fold(0.0, (sum, a) => sum + (a.unitPrice * a.qty));
 
-  double get _grandTotal => _packagePrice + _addOnsTotal;
+  double get _packagePrice2Total => _packagePrice2 ?? 0.0;
+
+  double get _grandTotal => _packagePrice + _packagePrice2Total + _addOnsTotal;
 
   Future<void> _pickPackage() async {
     final client = ApiSession.client;
@@ -93,9 +116,9 @@ class _WalkinReviewDialogState extends State<WalkinReviewDialog> {
       final selected = await showDialog<int>(
         context: context,
         builder: (ctx) => SimpleDialog(
-          title: const Text('Ganti Paket'),
+          title: const Text('Ganti Paket 1'),
           children: packages
-              .where((p) => p.id != _packageId)
+              .where((p) => p.id != _packageId2)
               .map((p) => SimpleDialogOption(
                     onPressed: () => Navigator.of(ctx).pop(p.id),
                     child: ListTile(
@@ -113,11 +136,93 @@ class _WalkinReviewDialogState extends State<WalkinReviewDialog> {
           _packageId = pkg.id;
           _packageName = pkg.name;
           _packagePrice = pkg.basePrice;
-          _addOns.clear();
         });
         _detectChanges();
       }
     } catch (_) {}
+  }
+
+  Future<void> _pickPackage2() async {
+    final client = ApiSession.client;
+    if (client == null) return;
+
+    try {
+      final packages = await client.fetchPackages();
+      if (!mounted) return;
+
+      final selected = await showDialog<int>(
+        context: context,
+        builder: (ctx) => SimpleDialog(
+          title: const Text('Ganti Paket 2'),
+          children: packages
+              .where((p) => p.id != _packageId && p.id != _packageId2)
+              .map((p) => SimpleDialogOption(
+                    onPressed: () => Navigator.of(ctx).pop(p.id),
+                    child: ListTile(
+                      title: Text(p.name),
+                      subtitle: Text(_currency(p.basePrice)),
+                    ),
+                  ))
+              .toList(),
+        ),
+      );
+
+      if (selected != null && mounted) {
+        final pkg = packages.firstWhere((p) => p.id == selected);
+        setState(() {
+          _packageId2 = pkg.id;
+          _packageName2 = pkg.name;
+          _packagePrice2 = pkg.basePrice;
+        });
+        _detectChanges();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _addPackage2() async {
+    final client = ApiSession.client;
+    if (client == null) return;
+
+    try {
+      final packages = await client.fetchPackages();
+      if (!mounted) return;
+
+      final selected = await showDialog<int>(
+        context: context,
+        builder: (ctx) => SimpleDialog(
+          title: const Text('Tambah Paket 2'),
+          children: packages
+              .where((p) => p.id != _packageId)
+              .map((p) => SimpleDialogOption(
+                    onPressed: () => Navigator.of(ctx).pop(p.id),
+                    child: ListTile(
+                      title: Text(p.name),
+                      subtitle: Text(_currency(p.basePrice)),
+                    ),
+                  ))
+              .toList(),
+        ),
+      );
+
+      if (selected != null && mounted) {
+        final pkg = packages.firstWhere((p) => p.id == selected);
+        setState(() {
+          _packageId2 = pkg.id;
+          _packageName2 = pkg.name;
+          _packagePrice2 = pkg.basePrice;
+        });
+        _detectChanges();
+      }
+    } catch (_) {}
+  }
+
+  void _removePackage2() {
+    setState(() {
+      _packageId2 = null;
+      _packageName2 = null;
+      _packagePrice2 = null;
+    });
+    _detectChanges();
   }
 
   Future<void> _addAddOn() async {
@@ -252,14 +357,14 @@ class _WalkinReviewDialogState extends State<WalkinReviewDialog> {
   }
 
   Widget _packageSection() {
-    return _section('PAKET', [
+    return _section('PAKET & TEMA', [
       Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_packageName,
+                Text('Paket 1: $_packageName',
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF1E293B))),
                 const SizedBox(height: 2),
                 Text(_currency(_packagePrice),
@@ -275,6 +380,48 @@ class _WalkinReviewDialogState extends State<WalkinReviewDialog> {
           ),
         ],
       ),
+      if (_packageId2 != null) ...[
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Paket 2: $_packageName2',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF1E293B))),
+                  const SizedBox(height: 2),
+                  Text(_currency(_packagePrice2!),
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _pickPackage2,
+              icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+              label: const Text('Ganti'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            ),
+            const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: _removePackage2,
+              icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+              label: const Text('Hapus', style: TextStyle(color: Colors.redAccent)),
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            ),
+          ],
+        ),
+      ] else ...[
+        const SizedBox(height: 8),
+        Center(
+          child: TextButton.icon(
+            onPressed: _addPackage2,
+            icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+            label: const Text('Tambah Paket 2'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          ),
+        ),
+      ],
     ]);
   }
 
@@ -351,7 +498,11 @@ class _WalkinReviewDialogState extends State<WalkinReviewDialog> {
       ),
       child: Column(
         children: [
-          _totalRow('Paket', _currency(_packagePrice)),
+          _totalRow('Paket 1', _currency(_packagePrice)),
+          if (_packageId2 != null) ...[
+            const SizedBox(height: 6),
+            _totalRow('Paket 2', _currency(_packagePrice2!)),
+          ],
           if (_addOns.isNotEmpty) ...[
             const SizedBox(height: 6),
             _totalRow('Add-on', _currency(_addOnsTotal)),
@@ -388,16 +539,24 @@ class _WalkinReviewDialogState extends State<WalkinReviewDialog> {
           Expanded(
             flex: 2,
             child: ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).pop(
-                WalkinReviewResult(
-                  customerName: _nameCtrl.text.trim(),
-                  customerPhone: _phoneCtrl.text.trim(),
-                  packageId: _packageId,
-                  addons: _addOns
-                      .map((a) => {'add_on_id': a.addOnId, 'qty': a.qty})
-                      .toList(),
-                ),
-              ),
+              onPressed: () {
+                final origPkg2List = widget.item.addOns.where((a) => a.isPackage).toList();
+                final int? origPkg2Id = origPkg2List.isNotEmpty ? origPkg2List.first.addOnId : null;
+                final clearPkg2 = origPkg2Id != null && _packageId2 == null;
+
+                Navigator.of(context).pop(
+                  WalkinReviewResult(
+                    customerName: _nameCtrl.text.trim(),
+                    customerPhone: _phoneCtrl.text.trim(),
+                    packageId: _packageId,
+                    packageId2: _packageId2,
+                    clearPackage2: clearPkg2,
+                    addons: _addOns
+                        .map((a) => {'add_on_id': a.addOnId, 'qty': a.qty})
+                        .toList(),
+                  ),
+                );
+              },
               icon: const Icon(Icons.payments_rounded, size: 18),
               label: Text(_hasChanges ? 'Simpan & Lanjutkan' : 'Lanjutkan ke Pembayaran'),
               style: ElevatedButton.styleFrom(

@@ -54,6 +54,7 @@ class BookingController extends ChangeNotifier {
   List<Package> packages = [];
 
   int selectedPackageIndex = 0;
+  int? selectedPackageIndex2;
 
   // Addons
   List<Addon> addons = [];
@@ -73,15 +74,20 @@ class BookingController extends ChangeNotifier {
       ? const Package(id: '0', name: '-', duration: '-', prints: '-', price: 0)
       : packages[selectedPackageIndex.clamp(0, packages.length - 1).toInt()];
 
+  Package? get selectedPackage2 => (selectedPackageIndex2 == null || packages.isEmpty)
+      ? null
+      : packages[selectedPackageIndex2!.clamp(0, packages.length - 1).toInt()];
+
   List<Addon> get selectedAddons =>
       addons.where((a) => a.quantity > 0).toList();
 
   double get packagePrice => selectedPackage.price;
+  double get packagePrice2 => selectedPackage2?.price ?? 0;
 
   double get addonsTotal =>
       addons.fold(0, (sum, a) => sum + (a.price * a.quantity));
 
-  double get subtotalTotal => packagePrice + addonsTotal;
+  double get subtotalTotal => packagePrice + packagePrice2 + addonsTotal;
 
   double get referralDiscount => referralPreview?.discountAmount ?? 0;
 
@@ -194,7 +200,22 @@ class BookingController extends ChangeNotifier {
   }
 
   void selectPackage(int index) {
-    selectedPackageIndex = index;
+    if (selectedPackageIndex == index) {
+      if (selectedPackageIndex2 != null) {
+        selectedPackageIndex = selectedPackageIndex2!;
+        selectedPackageIndex2 = null;
+      } else {
+        // Must select at least one package
+      }
+    } else if (selectedPackageIndex2 == index) {
+      selectedPackageIndex2 = null;
+    } else {
+      if (selectedPackageIndex2 == null) {
+        selectedPackageIndex2 = index;
+      } else {
+        selectedPackageIndex2 = index;
+      }
+    }
     for (final addon in addons) {
       addon.quantity = 0;
     }
@@ -479,6 +500,7 @@ class BookingController extends ChangeNotifier {
       final result = await client.checkoutWalkIn(
         branchId: branchId,
         packageId: int.parse(selectedPackage.id),
+        packageId2: selectedPackageIndex2 != null ? int.parse(selectedPackage2!.id) : null,
         customerName: customerName.trim(),
         customerPhone: whatsapp.trim(),
         customerEmail: email.trim().isEmpty ? null : email.trim(),

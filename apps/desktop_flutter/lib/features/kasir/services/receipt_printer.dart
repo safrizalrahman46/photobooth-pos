@@ -242,27 +242,27 @@ class ReceiptPrinter {
           pw.SizedBox(height: 2),
 
           // PAKET section
-          if (transaction.items.where((i) => i.itemType == 'package').isNotEmpty) ...[
+          final packageItems = transaction.items.where((i) => i.itemType == 'package' || i.itemType == 'booking').toList();
+          if (packageItems.isNotEmpty) ...[
             pw.Text(
               'PAKET',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8, color: const PdfColor.fromInt(0xFF64748B)),
             ),
             pw.SizedBox(height: 1),
-            ...transaction.items
-                .where((item) => item.itemType == 'package')
+            ...packageItems
                 .map((item) => _buildReceiptItem(item, highlightedItemIds)),
             pw.SizedBox(height: 3),
           ],
 
           // ADD-ON section
-          if (transaction.items.where((i) => i.itemType == 'add_on').isNotEmpty) ...[
+          final addOnItems = transaction.items.where((i) => i.itemType != 'package' && i.itemType != 'booking').toList();
+          if (addOnItems.isNotEmpty) ...[
             pw.Text(
               'ADD-ON',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8, color: const PdfColor.fromInt(0xFF64748B)),
             ),
             pw.SizedBox(height: 1),
-            ...transaction.items
-                .where((item) => item.itemType == 'add_on')
+            ...addOnItems
                 .map((item) => _buildReceiptItem(item, highlightedItemIds)),
           ],
 

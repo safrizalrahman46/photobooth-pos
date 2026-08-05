@@ -110,8 +110,13 @@ class QueueController extends Controller
         abort_unless($request->user()?->can('queue.manage'), 403);
 
         $status = QueueStatus::from($request->validated('status'));
+        $deviceName = $request->validated('device_name');
 
         try {
+            if ($status === QueueStatus::Called && !empty($deviceName)) {
+                $queueTicket->called_by_device = $deviceName;
+                $queueTicket->save();
+            }
             $ticket = $this->queueService->transition($queueTicket, $status);
         } catch (RuntimeException $exception) {
             return $this->responder->error($exception->getMessage(), 422);
@@ -127,12 +132,14 @@ class QueueController extends Controller
         $payload = $request->validate([
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'queue_date' => ['nullable', 'date_format:Y-m-d'],
+            'device_name' => ['nullable', 'string', 'max:50'],
         ]);
 
         $date = $payload['queue_date'] ?? now(config('app.queue_timezone', 'Asia/Jakarta'))->toDateString();
+        $deviceName = $payload['device_name'] ?? null;
 
         try {
-            $ticket = $this->queueService->callNext((int) $payload['branch_id'], $date);
+            $ticket = $this->queueService->callNext((int) $payload['branch_id'], $date, $deviceName);
         } catch (RuntimeException $exception) {
             return $this->responder->error($exception->getMessage(), 422);
         }

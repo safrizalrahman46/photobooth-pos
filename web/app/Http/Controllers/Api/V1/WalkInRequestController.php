@@ -85,11 +85,51 @@ class WalkInRequestController extends Controller
             $updateData['package_price'] = (float) $package->base_price;
         }
 
-        if ($request->has('addons')) {
-            $resolvedAddOns = $this->bookingService->resolveAddOnsForPackage(
-                (int) ($updateData['package_id'] ?? $locked->package_id),
-                $request->addons
-            );
+        if ($request->has('addons') || $request->has('package_id_2')) {
+            $package2 = null;
+            if ($request->has('package_id_2')) {
+                $pkg2Id = $request->input('package_id_2');
+                if (!empty($pkg2Id)) {
+                    $package2 = Package::query()
+                        ->whereKey((int) $pkg2Id)
+                        ->where('is_active', true)
+                        ->firstOrFail();
+
+                    if ($package2->branch_id !== null && (int) $package2->branch_id !== (int) $locked->branch_id) {
+                        return $this->responder->error('Paket kedua tidak tersedia di cabang ini.', 422);
+                    }
+                }
+            } else {
+                $existingPkg2 = collect($locked->add_ons_json ?? [])
+                    ->where('is_package', true)
+                    ->first();
+                if ($existingPkg2) {
+                    $package2 = Package::query()->whereKey((int) $existingPkg2['id'])->first();
+                }
+            }
+
+            if ($request->has('addons')) {
+                $resolvedAddOns = $this->bookingService->resolveAddOnsForPackage(
+                    (int) ($updateData['package_id'] ?? $locked->package_id),
+                    $request->addons ?? []
+                );
+            } else {
+                $resolvedAddOns = collect($locked->add_ons_json ?? [])
+                    ->where('is_package', '!=', true)
+                    ->toArray();
+            }
+
+            if ($package2) {
+                $resolvedAddOns[] = [
+                    'id' => (int) $package2->id,
+                    'name' => (string) $package2->name,
+                    'price' => (float) $package2->base_price,
+                    'qty' => 1,
+                    'line_total' => (float) $package2->base_price,
+                    'is_package' => true,
+                ];
+            }
+
             $updateData['add_ons_json'] = $resolvedAddOns;
         }
 

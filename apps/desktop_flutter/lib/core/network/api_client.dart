@@ -1004,6 +1004,7 @@ class ApiClient {
   Future<PosWalkInCheckoutResult> checkoutWalkIn({
     required int branchId,
     required int packageId,
+    int? packageId2,
     required String customerName,
     String? customerPhone,
     String? customerEmail,
@@ -1026,6 +1027,7 @@ class ApiClient {
       body: {
         'branch_id': branchId,
         'package_id': packageId,
+        if (packageId2 != null) 'package_id_2': packageId2,
         'customer_name': customerName,
         if (customerPhone != null && customerPhone.isNotEmpty)
           'customer_phone': customerPhone,
@@ -1060,12 +1062,17 @@ class ApiClient {
   Future<QueueTicketItem?> callNext({
     required int branchId,
     required String queueDate,
+    String? deviceName,
   }) async {
     final payload = await _send(
       method: 'POST',
       path: '/queue-tickets/call-next',
       authenticated: true,
-      body: {'branch_id': branchId, 'queue_date': queueDate},
+      body: {
+        'branch_id': branchId,
+        'queue_date': queueDate,
+        if (deviceName != null && deviceName.isNotEmpty) 'device_name': deviceName,
+      },
     );
 
     final data = payload['data'];
@@ -1080,12 +1087,16 @@ class ApiClient {
   Future<void> transitionQueueTicket({
     required int ticketId,
     required String status,
+    String? deviceName,
   }) async {
     await _send(
       method: 'PATCH',
       path: '/queue-tickets/$ticketId/status',
       authenticated: true,
-      body: {'status': status},
+      body: {
+        'status': status,
+        if (deviceName != null && deviceName.isNotEmpty) 'device_name': deviceName,
+      },
     );
   }
 
@@ -1324,6 +1335,8 @@ class ApiClient {
     String? customerName,
     String? customerPhone,
     int? packageId,
+    int? packageId2,
+    bool clearPackage2 = false,
     List<Map<String, dynamic>>? addons,
   }) async {
     try {
@@ -1331,6 +1344,11 @@ class ApiClient {
       if (customerName != null) body['customer_name'] = customerName;
       if (customerPhone != null) body['customer_phone'] = customerPhone;
       if (packageId != null) body['package_id'] = packageId;
+      if (packageId2 != null) {
+        body['package_id_2'] = packageId2;
+      } else if (clearPackage2) {
+        body['package_id_2'] = null;
+      }
       if (addons != null) body['addons'] = addons;
 
       final payload = await _send(
@@ -1643,6 +1661,27 @@ class ApiClient {
     } catch (e) {
       debugPrint('[downloadRaw] $path → exception: $e');
       return null;
+    }
+  }
+
+  Future<bool> updatePaymentMethod({
+    required int paymentId,
+    required String method,
+    required String reason,
+  }) async {
+    try {
+      await _send(
+        method: 'PATCH',
+        path: '/payments/$paymentId',
+        authenticated: true,
+        body: {
+          'method': method,
+          'reason': reason,
+        },
+      );
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 }

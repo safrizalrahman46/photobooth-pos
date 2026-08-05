@@ -25,6 +25,11 @@ class StoreWalkInRequest extends FormRequest
                 'integer',
                 Rule::exists('packages', 'id')->where(fn ($query) => $query->where('is_active', true)->whereNull('deleted_at')),
             ],
+            'package_id_2' => [
+                'nullable',
+                'integer',
+                Rule::exists('packages', 'id')->where(fn ($query) => $query->where('is_active', true)->whereNull('deleted_at')),
+            ],
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['required', 'string', 'max:30'],
             'customer_email' => ['nullable', 'email', 'max:255'],

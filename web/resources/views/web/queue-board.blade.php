@@ -20,7 +20,7 @@
                         <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold text-[var(--rtp-accent)]" style="background: #edf7f1;">Auto refresh 10 detik</span>
                     </div>
                     <h1 class="mt-4 text-3xl font-bold leading-tight text-[var(--rtp-ink)] sm:text-4xl">Antrean Kamu</h1>
-                    <p class="mt-3 text-sm leading-6 text-[var(--rtp-muted)]">Status dan posisi antrean untuk booking <strong>{{ $queueData['queue_code'] }}</strong>.</p>
+                    <p class="mt-3 text-sm leading-6 text-[var(--rtp-muted)]">Status dan posisi antrean untuk transaksi <strong>{{ $queueData['transaction_code'] }}</strong>.</p>
                 </header>
 
                 {{-- 2 kolom: nomor antrean (kiri) + status/posisi/estimasi (kanan) --}}
@@ -57,7 +57,11 @@
 
                     <div class="mt-5 space-y-2 text-sm">
                         <div class="flex justify-between border-b border-[var(--rtp-outline)] pb-2">
-                            <span class="text-[var(--rtp-muted)]">Kode Booking</span>
+                            <span class="text-[var(--rtp-muted)]">Nomor Transaksi</span>
+                            <span class="font-bold text-[var(--rtp-ink)]">{{ $queueData['transaction_code'] }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-[var(--rtp-outline)] pb-2">
+                            <span class="text-[var(--rtp-muted)]">Kode Antrean</span>
                             <span class="font-bold text-[var(--rtp-ink)]">{{ $queueData['queue_code'] }}</span>
                         </div>
                         <div class="flex justify-between border-b border-[var(--rtp-outline)] pb-2">
@@ -103,7 +107,7 @@
 
                 <div class="flex justify-center">
                     <a href="{{ route('queue.board', ['reset' => 1]) }}" class="inline-flex items-center justify-center rounded-2xl border border-[var(--rtp-outline)] bg-white px-6 py-3 text-sm font-bold text-[var(--rtp-muted)] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                        Cari Booking Lain
+                        Cari Transaksi Lain
                     </a>
                 </div>
             @else
@@ -113,22 +117,22 @@
                         <span class="badge inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.2em]">Cek Antrean</span>
                     </div>
                     <h1 class="mt-4 text-3xl font-bold leading-tight text-[var(--rtp-ink)] sm:text-4xl">Cek Posisi Antrean</h1>
-                    <p class="mt-3 max-w-2xl text-sm leading-6 text-[var(--rtp-muted)]">Masukkan kode booking atau kode walk-in yang tertera di nota kamu untuk melihat posisi antrean dan estimasi waktu tunggu.</p>
+                    <p class="mt-3 max-w-2xl text-sm leading-6 text-[var(--rtp-muted)]">Masukkan nomor transaksi yang tertera di nota kamu untuk melihat posisi antrean dan estimasi waktu tunggu.</p>
                 </header>
 
                 <section class="card-soft rounded-[2rem] p-6 sm:p-8">
                     <form method="post" action="{{ route('queue.board') }}" class="space-y-5">
                         @csrf
                         <div>
-                            <label for="code" class="mb-2 block text-sm font-bold text-[var(--rtp-ink)]">Kode Booking / Walk-in</label>
+                            <label for="code" class="mb-2 block text-sm font-bold text-[var(--rtp-ink)]">Nomor Transaksi</label>
                             <input
                                 type="text"
                                 id="code"
                                 name="code"
                                 value="{{ old('code') }}"
-                                placeholder="contoh: BKG-20260714-001"
+                                placeholder="contoh: TRX-20260714-0001"
                                 required
-                                maxlength="20"
+                                maxlength="40"
                                 class="w-full rounded-2xl border border-[var(--rtp-outline)] bg-[var(--rtp-paper)] px-5 py-4 text-base font-semibold text-[var(--rtp-ink)] outline-none transition focus:border-[var(--rtp-primary)] focus:ring-4 focus:ring-orange-100"
                             >
                             @error('code')
@@ -141,7 +145,7 @@
                         </button>
                     </form>
 
-                    <p class="mt-6 text-center text-xs leading-5 text-[var(--rtp-muted)]">Kode booking / walk-in bisa ditemukan di struk atau nota yang diberikan oleh kasir.</p>
+                    <p class="mt-6 text-center text-xs leading-5 text-[var(--rtp-muted)]">Nomor transaksi bisa ditemukan di struk atau nota yang diberikan oleh kasir.</p>
                 </section>
             @endif
         </div>

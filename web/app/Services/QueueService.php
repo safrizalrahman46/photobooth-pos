@@ -182,17 +182,22 @@ class QueueService
         return $ticket->refresh();
     }
 
-    public function callNext(int $branchId, string $date): ?QueueTicket
+    public function callNext(int $branchId, string $date, ?string $deviceName = null): ?QueueTicket
     {
-        $hasActiveTicket = QueueTicket::query()
+        $hasActiveTicketQuery = QueueTicket::query()
             ->where('branch_id', $branchId)
             ->where('queue_date', $date)
             ->whereIn('status', [
                 QueueStatus::Called->value,
                 QueueStatus::CheckedIn->value,
                 QueueStatus::InSession->value,
-            ])
-            ->exists();
+            ]);
+
+        if ($deviceName !== null && $deviceName !== '') {
+            $hasActiveTicketQuery->where('called_by_device', $deviceName);
+        }
+
+        $hasActiveTicket = $hasActiveTicketQuery->exists();
 
         if ($hasActiveTicket) {
             throw new RuntimeException('Selesaikan atau lewati antrean aktif sebelum memanggil antrean berikutnya.');
@@ -207,6 +212,11 @@ class QueueService
 
         if (! $ticket) {
             return null;
+        }
+
+        if ($deviceName !== null && $deviceName !== '') {
+            $ticket->called_by_device = $deviceName;
+            $ticket->save();
         }
 
         return $this->transition($ticket, QueueStatus::Called);

@@ -21,34 +21,26 @@ class QueueBoardController extends Controller
 
         if ($request->isMethod('post')) {
             $request->validate([
-                'code' => ['required', 'string', 'max:20'],
+                'code' => ['required', 'string', 'max:40'],
             ]);
 
-            $code = $request->code;
-            $ticket = null;
+            $code = trim($request->code);
 
-            $ticket = QueueTicket::where('queue_code', $code)
-                ->with(['transaction.items', 'transaction.payments', 'branch'])
+            $transaction = \App\Models\Transaction::where('transaction_code', $code)
+                ->with(['queueTicket.branch', 'items', 'payments'])
                 ->first();
 
-            if (!$ticket) {
-                $walkIn = WalkInRequest::where('request_code', $code)->first();
-
-                if ($walkIn) {
-                    if (!$walkIn->queue_ticket_id) {
-                        return back()->withErrors([
-                            'code' => 'Booking walk-in masih menunggu verifikasi kasir.',
-                        ])->withInput();
-                    }
-
-                    $ticket = QueueTicket::with(['transaction.items', 'transaction.payments', 'branch'])
-                        ->find($walkIn->queue_ticket_id);
-                }
+            if (!$transaction) {
+                return back()->withErrors([
+                    'code' => 'Nomor transaksi tidak ditemukan.',
+                ])->withInput();
             }
+
+            $ticket = $transaction->queueTicket;
 
             if (!$ticket) {
                 return back()->withErrors([
-                    'code' => 'Kode tidak ditemukan.',
+                    'code' => 'Antrean untuk transaksi ini belum aktif atau sudah dibatalkan.',
                 ])->withInput();
             }
 
@@ -75,28 +67,15 @@ class QueueBoardController extends Controller
 
     private function resolveQueueData(string $code): ?array
     {
-        $ticket = QueueTicket::where('queue_code', $code)
-            ->with(['transaction.items', 'transaction.payments', 'branch'])
+        $transaction = \App\Models\Transaction::where('transaction_code', $code)
+            ->with(['queueTicket.branch', 'items.transaction', 'payments'])
             ->first();
 
-        if (!$ticket) {
-            $walkIn = WalkInRequest::where('request_code', $code)
-                ->whereNotNull('queue_ticket_id')
-                ->first();
-
-            if (!$walkIn) {
-                return null;
-            }
-
-            $ticket = QueueTicket::with(['transaction.items', 'transaction.payments', 'branch'])
-                ->find($walkIn->queue_ticket_id);
-        }
-
-        if (!$ticket) {
+        if (!$transaction || !$transaction->queueTicket) {
             return null;
         }
 
-        $transaction = $ticket->transaction;
+        $ticket = $transaction->queueTicket;
         $today = now(config('app.queue_timezone', 'Asia/Jakarta'))->toDateString();
 
         $position = QueueTicket::where('branch_id', $ticket->branch_id)
@@ -135,9 +114,14 @@ class QueueBoardController extends Controller
 
         $rawStatus = $ticket->status?->value ?? $ticket->status;
 
+        $sortedItems = $transaction->items
+            ->sortBy(fn ($item) => in_array($item->item_type, ['package', 'booking']) ? 0 : 1)
+            ->values();
+
         return [
             'queue_number' => $ticket->queue_number,
             'queue_code' => $ticket->queue_code,
+            'transaction_code' => $transaction->transaction_code,
             'status' => $rawStatus,
             'status_label' => $statusLabels[$rawStatus] ?? '-',
             'position' => $position,
@@ -146,17 +130,17 @@ class QueueBoardController extends Controller
             'customer_name' => $ticket->customer_name,
             'branch_name' => $ticket->branch?->name ?? '-',
             'created_at' => $ticket->created_at?->format('d M Y, H:i'),
-            'items' => $transaction?->items->map(fn ($item) => [
+            'items' => $sortedItems->map(fn ($item) => [
                 'type' => $item->item_type,
                 'name' => $item->item_name,
                 'qty' => $item->qty,
                 'unit_price' => (float) $item->unit_price,
                 'line_total' => (float) $item->line_total,
-            ]) ?? [],
-            'total_amount' => (float) ($transaction?->total_amount ?? 0),
-            'paid_amount' => (float) ($transaction?->paid_amount ?? 0),
-            'payment_status' => $transaction?->status?->value ?? $transaction?->status ?? '-',
-            'payment_method' => $transaction?->payments->first()?->method?->value ?? '-',
+            ])->toArray(),
+            'total_amount' => (float) ($transaction->total_amount ?? 0),
+            'paid_amount' => (float) ($transaction->paid_amount ?? 0),
+            'payment_status' => $transaction->status?->value ?? $transaction->status ?? '-',
+            'payment_method' => $transaction->payments->first()?->method?->value ?? '-',
         ];
     }
 }
